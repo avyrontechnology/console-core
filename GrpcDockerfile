@@ -1,0 +1,18 @@
+FROM python:3.11
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /console-service
+COPY poetry.lock pyproject.toml ./
+
+RUN pip3 install poetry==1.8.2
+RUN poetry config virtualenvs.create false
+RUN poetry install
+
+COPY . ./
+EXPOSE 50051
+WORKDIR /console-service/src
+ENV PYTHONPATH="${PYTHONPATH}:/console-service/src"
+
+CMD [ "python", "rpc_main.py" ]

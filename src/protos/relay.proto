@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package relay;
+
+// Client-to-client relay via console-core (Phase-3).
+// talko/obotaai console-core ko call karte hain; console-core apne
+// Phase-2 client (src/grpc_client) se target plane ko forward karke
+// result wapas deta hai.
+//
+// Auth free me milta hai: rpc_main.py ke ApiKeyAuthInterceptor se —
+// relay ke liye alag auth code nahi hai. Rate-limit/audit Phase-3b me.
+service RelayService {
+    // Call signalling state via target plane (aaj: "telephony").
+    rpc RouteCallStatus (RouteCallStatusRequest) returns (RouteCallStatusResponse);
+
+    // Phase-4: server streaming. Ek request par status updates ka
+    // stream (poll relay khud karta hai, caller ko loop nahi chalana).
+    // Audio bidi (MediaPipe) isi shape ka bada roop hai — pehle ye
+    // chhota stream samjho, phir audio samjhega.
+    rpc WatchCallStatus (WatchCallStatusRequest) returns (stream CallStatusUpdate);
+}
+
+message RouteCallStatusRequest {
+    string call_id = 1;
+    string vendor_config_id = 2;
+    string target = 3; // "telephony" (future: "obotaai", ...)
+}
+
+message RouteCallStatusResponse {
+    string call_id = 1;
+    string call_status = 2;
+    bool connected = 3;
+    string via = 4; // "grpc" — jawab kis raste aaya
+}
+
+message WatchCallStatusRequest {
+    string call_id = 1;
+    string vendor_config_id = 2;
+    string target = 3; // "telephony"
+    int32 max_updates = 4; // 0 = server default (3); stream kab rukega, caller tay kare
+    int32 poll_interval_ms = 5; // 0 = server default (500ms)
+}
+
+message CallStatusUpdate {
+    string call_id = 1;
+    string call_status = 2;
+    bool connected = 3;
+    int64 seq = 4; // 1,2,3... — gap dikhe to update khoya (backpressure signal)
+}

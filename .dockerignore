@@ -1,0 +1,18 @@
+# console-core dockerignore — prod image me dev/test artefacts mat bhejo.
+# (Dockerfile + GrpcDockerfile dono `COPY . ./` karte hain.)
+
+# Mock plane + demo (DEV/TEST ONLY — src/grpc_client/mock_telephony_server.py)
+src/grpc_client/mock_telephony_server.py
+src/scripts/grpc_telephony_demo.py
+
+# Tests (prod me nahi chahiye)
+**/tests/
+**/test_*.py
+**/__pycache__/
+.pytest_cache/
+
+# Local runtime junk
+venv/
+*.log
+celerybeat-schedule
+.env

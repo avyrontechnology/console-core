@@ -1,0 +1,698 @@
+syntax = "proto3";
+
+package auth;
+
+// The authentication service definition.
+service AuthService {
+    // RPC to validate a token and return user information.
+    rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+
+    // RPC to get the list of child users for a given user.
+    rpc GetUserChildHierarchy (GetUserChildHierarchyRequest) returns (GetUserChildHierarchyResponse);
+
+    // RPC to get the list of child users for a given user along with their directory information.
+    rpc GetUserChildDetails (GetUserChildDetailsRequest) returns (GetUserChildDetailsResponse);
+
+    // RPC to get CurrentUserDetails.
+    rpc GetUserDetails (GetUserDetailsRequest) returns (GetUserDetailsResponse);
+
+    // RPC to get list of permission for given user.
+    rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+    // RPC to get User role
+    rpc GetUserRole (GetUserRoleRequest) returns (GetUserRoleResponse);
+
+    // RPC to resolve a user's effective role WITHIN a team (team override if
+    // set, else the user's global role) together with that role's permissions.
+    rpc GetUserTeamRole (GetUserTeamRoleRequest) returns (GetUserTeamRoleResponse);
+
+    // RPC to get the configured permission slugs granted to a specific role.
+    rpc GetRolePermissions (GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
+
+    // RPC to get service board user details
+    rpc GetServiceBoardUsersDetails(GetUsersDetailsRequest) returns (GetServiceBoardUserDetailsResponse);
+
+    // RPC to get partner details.
+    rpc GetPartnerDetails (GetPartnerDetailsRequest) returns (GetPartnerDetailsResponse);
+
+    // RPC to get publisher data.
+    rpc GetPublisherData (GetPublisherDataRequest) returns (GetPublisherDataResponse);
+
+    // RPC to get all publishers
+    rpc GetAllPublishers (GetAllPublishersRequest) returns (GetAllPublishersResponse);
+
+    //RPC to get all active users on basis of partner ID
+    rpc GetActiveUsersByPartnerId (GetUserDetailsByPartnerIdRequest) returns (GetUserDetailsByPartnerIdResponse);
+
+    // RPC to get parent user details for a list of user IDs.
+    rpc GetUserParentDetails (GetUserParentDetailsRequest) returns (GetUserParentDetailsResponse);
+
+    // RPC to get partner metadata details
+    rpc GetPartnerMetaDataDetails (GetPartnerMetaDataDetailsRequest) returns (GetPartnerMetaDataDetailsResponse);
+
+    // RPC to get fetching wallet and transaction details
+    rpc GetWalletTransactionHistory (GetWalletTransactionHistoryRequest) returns (GetWalletTransactionHistoryResponse);
+
+    //RPC to get Partner API KEY
+    rpc GetPartnerApiKey (GetPartnerApiKeyRequest) returns (GetPartnerApiKeyResponse);
+
+
+    //RPC method to get User Parent Hierarchy
+    rpc GetUserParentHierarchy (GetUserParentHierarchyRequest) returns (GetUserParentHierarchyResponse);
+
+    //RPC method to fetch location data
+    rpc GetCountriesByIds (GetCountriesByIdsRequest) returns (GetCountriesByIdsResponse);
+    rpc GetStatesByIds    (GetStatesByIdsRequest)    returns (GetStatesByIdsResponse);
+    rpc GetCitiesByIds    (GetCitiesByIdsRequest)    returns (GetCitiesByIdsResponse);
+
+    rpc GetCountriesByNames (GetCountriesByNamesRequest) returns (GetCountriesByNamesResponse);
+    rpc GetStatesByNames    (GetStatesByNamesRequest)    returns (GetStatesByNamesResponse);
+    rpc GetCitiesByNames    (GetCitiesByNamesRequest)    returns (GetCitiesByNamesResponse);
+    rpc GetAllRoles (GetAllRolesRequest) returns (GetAllRolesResponse);
+
+    // Teams
+    rpc GetUserTeams    (GetUserTeamsRequest)    returns (GetTeamsResponse);
+    rpc GetPartnerTeams (GetPartnerTeamsRequest) returns (GetTeamsResponse);
+    rpc GetTeamMembers  (GetTeamMembersRequest)  returns (GetTeamMembersResponse);
+}
+
+//  service for get partner meta data definitions
+service PartnerMetaDataService{
+    
+    // RPC to get partner enabled services
+    rpc GetPartnerServicesDetails (GetPartnerServiceRequest) returns (GetPartnerServiceDetailsResponse);
+
+}
+// Context message containing metadata for the request.
+message MContext {
+    string correlation_id = 1; // A unique ID to correlate requests.
+}
+
+// Body message containing the main request information.
+message MBody {
+    string token = 1; // The JWT token to validate.
+}
+
+// The request message for token validation.
+message ValidateTokenRequest {
+    MContext mcontext = 1; 
+    MBody mbody = 2;       
+}
+
+// The response message for token validation.
+message ValidateTokenResponse {
+    string message = 1;              
+    string correlation_id = 2;     
+    bool is_active = 3;                
+    int64 user_id = 4;            
+    string session_id = 6;           
+    int64 expires_in = 7;            
+    int64 partner_id = 8;
+    optional bool is_maglo_enabled = 9;
+    optional bool is_babbler_enabled = 10;
+    optional bool is_talko_enabled = 11;
+    optional bool is_internal = 12;
+    optional bool is_wallet_enabled = 13;
+    optional bool is_obotaai_enabled = 15;
+
+}
+
+// UserDetail message representing a user's directory information.
+message UserDetail {
+    int64 user_id = 1;        // User's ID.
+    string email = 2;         // Email of the child user.
+    bool is_active = 3;       // Indicates whether the user is active (true) or inactive (false).
+    bool is_suspended = 4;    // Indicates whether the user is suspended or not.
+    string name = 5;          // Full name of the user.
+    string role = 6;
+    int64 role_hierarchy = 7;
+    string current_status = 8;
+}
+
+// The request message for retrieving the child user list.
+message GetUserChildDetailsRequest {
+    MContext mcontext = 1; // Metadata context.
+    int64 user_id = 2;     // The current user's ID.
+}
+
+// The response message for the child user list.
+message GetUserChildDetailsResponse {
+    string message = 1;              // Response message.
+    repeated UserDetail user_detail = 2; // Directory information of child users.
+}
+
+// The request message for retrieving child user hierarchies.
+message GetUserChildHierarchyRequest {
+    MContext mcontext = 1; // Metadata context.
+    repeated int64 user_ids = 2; // List of user IDs.
+}
+
+// The response message for child user hierarchies.
+message GetUserChildHierarchyResponse {
+    string message = 1; // Response message.
+    repeated ChildHierarchy child_hierarchy = 2; // List of child hierarchy details.
+}
+
+// Message for a single user’s child hierarchy.
+message ChildHierarchy {
+    int64 user_id = 1; // The input user ID.
+    repeated int64 child_ids = 2; // List of child user IDs.
+}
+
+message UserProfile {
+    int64 user_id = 1;        // User's ID.
+    string name = 2;          // name of the user
+    string email = 3;         // Email of the user.
+    int64 partner_id = 4;     // Partner id of the user.
+    int64 role_hierarchy_level=5; // role_hierarchy of the user.
+    string partner_name = 6;  // Partner name of the user.
+    bool is_maglo_publisher = 7; // Indicates whether the user is a Maglo publisher.
+    bool is_maglo_enabled = 8; // Indicates maglo service is enabled
+    bool is_talko_enabled = 9; // Indicates talko service is enabled
+    bool is_babbler_enabled = 10; // Indicates babbler service is enabled
+    string phone_number = 11; // user registered phone_number
+    bool is_active = 12; // user is active
+    bool is_email_verified = 13; // user is email verified
+    bool is_phone_number_verified = 14; // user is phone number verified
+    bool is_walkthrough_completed = 15; // user is walkthrough completed 
+    string cloud_agent_number = 16; // user cloud agent number
+    bool is_gsm_calling_enabled = 17; // user gsm calling enabled
+    bool is_meeting_log_enabled =18;// meeting log enabled
+    map<string, bool> show_popup = 19;
+    bool can_view_contact = 20;
+    bool can_view_organization = 21;
+    bool enable_dialer = 22;
+    string role_data_scope = 23; // data_scope of the user's effective role (ALL/SUBTREE/OWN)
+    bool can_view_products = 24; // user can view products
+    bool can_view_inventory = 25; // user can view inventory
+    bool can_view_payment_history = 26; // user can view payment history
+    bool can_view_report_management = 27; // user can view report management
+    bool can_clone_service_board = 28; // user can clone a service board
+    optional string role_name = 29; // Optional user role name
+}
+
+// The request for retrieving current user details
+message GetUserDetailsRequest {
+    MContext mcontext = 1; // Metadata context.
+    int64 user_id=2;       // The current user's ID.
+}
+
+message GetUserDetailsResponse {
+    string message=1;
+    UserProfile user_profile = 2; // user profile information.
+}
+
+message GetUserPermissionsRequest {
+    int64 user_id = 1;  // user Id 
+}
+
+message GetUserPermissionsResponse {
+    string message = 1;
+    repeated string permissions = 2;  // List of user permission
+}
+
+message GetUserRoleRequest {
+    int64 user_id = 1; // user_id
+}
+
+message GetUserRoleResponse {
+    string message = 1;
+    string role = 2;
+    int64 hierarchy = 3;
+}
+
+message GetUserTeamRoleRequest {
+    int64 user_id = 1; // user_id
+    int64 team_id = 2; // team the user is acting within
+}
+
+message GetUserTeamRoleResponse {
+    string message = 1;
+    bool   is_member = 2;            // false => user is not a member of team_id
+    string role = 3;                 // effective role slug (team override else global)
+    int64  hierarchy = 4;            // effective role hierarchy
+    string data_scope = 5;           // effective role data_scope (ALL/SUBTREE/OWN)
+    repeated string permissions = 6; // permission slugs for the effective role
+}
+
+message GetRolePermissionsRequest {
+    int64 role_id = 1; // role to fetch configured permissions for
+}
+
+message GetRolePermissionsResponse {
+    string message = 1;
+    repeated string permissions = 2; // permission slugs configured for the role
+}
+
+// The request message for retrieving user list ids.
+message GetUsersDetailsRequest {
+    MContext mcontext = 1; // Metadata context.
+    repeated int64 user_ids = 2;     // List of user's ID.
+    bool show_inactive_users =3;     //active and inactive filter.
+}
+
+// The response message for the child user list.
+message GetServiceBoardUserDetailsResponse {
+    string message = 1;              // Response message.
+    repeated UserDetail user_detail = 2; // Directory information of child users.
+}
+
+// The request message for retrieving partner details.
+message GetPartnerDetailsRequest {
+    MContext mcontext = 1; // Metadata context.
+    int64 partner_id = 2;  // The partner's ID.
+}
+
+// The response message for partner details.
+message GetPartnerDetailsResponse {
+    string message = 1;              // Response message.
+    PartnerDetail partner_detail = 2; // Partner information.
+}
+
+message ServiceSubscriptionStatus {
+    string status = 1;
+    optional int64 entitlement_start_date = 2;
+    optional int64 entitlement_end_date = 3;
+    optional int64 grace_start_date = 4;       // only populated when status == "grace"
+    optional int64 grace_end_date = 5;          // only populated when status == "grace"
+}
+
+// PartnerDetail message representing a partner's information.
+message PartnerDetail {
+    int64 partner_id = 1;           // Partner's ID.
+    string name = 2;                // Name of the partner.
+    bool is_active = 3;             // Indicates whether the partner is active.
+    bool is_maglo_publisher = 4;    // Indicates whether the partner is a Maglo publisher.
+    string partner_status = 5;      // Status of the partner (enum value as string).
+    string partner_logo = 6;        // URL of the partner's logo.
+    int64 created_at = 7;           // Creation date of the partner.
+    string publisher_username = 8;   // Username of the publisher.
+    string publisher_email = 9;     // Email of the publisher.
+    bool is_feedback_enabled = 10;  // Indicates whether feedback is enabled for the partner.
+    bool is_publisher_onboarding_completed = 11;  // Indicates whether publisher onboarding is completed or not.
+    map<string, ServiceSubscriptionStatus> subscription_status = 12;
+    int64 active_license = 13;  // Active liscense of partner
+    string company_legal_name = 14; // Legal company name
+    string cin_no = 15;             // CIN number
+    string gst_no = 16;             // GST number
+}
+
+// Request message for GetPublisherData
+message GetPublisherDataRequest {
+    message MContext {
+        string request_id = 1;
+        string user_id = 2;
+    }
+    MContext mcontext = 1;
+    int32 partner_id = 2;
+}
+
+// Response message for GetPublisherData
+message GetPublisherDataResponse {
+    string message = 1;
+    PublisherDetails partner_detail = 2;
+    repeated PublisherAddressDetail address_details = 3;
+    repeated PublisherUserDetail user_details = 4;
+}
+
+// PublisherDetails message representing a partner's information for publisher data.
+message PublisherDetails {
+    int32 partner_id = 1;
+    string name = 2;
+}
+
+// PublisherAddressDetail message representing an address's information.
+message PublisherAddressDetail {
+    int32 id = 1;
+    string address_1 = 2;
+    string address_2 = 3;
+    string address_type = 4;
+    string city = 5;
+    string state = 6;
+    string country = 7;
+    string pincode = 8;
+}
+
+// PublisherUserDetail message representing a user's information for publisher data.
+message PublisherUserDetail {
+    int32 id = 1;
+    string name = 2;
+    string email = 3;
+    string phone_number = 4;
+    optional string alternate_phone_number = 5;
+}
+
+// Request to fetch all Maglo publishers
+message GetAllPublishersRequest {
+    MContext mcontext = 1; // Optional metadata context
+}
+
+// Publisher object with only id and name
+message PublisherSummary {
+    int64 id = 1;
+    string name = 2;
+}
+
+// Response with list of publisher summaries
+message GetAllPublishersResponse {
+    string message = 1;
+    repeated PublisherSummary publishers = 2;
+}
+
+//Active User details
+message ActiveUserDetails {
+    int64 id = 1;
+    string name = 2;
+    string email = 3;
+    string phone_number = 4;
+    string role = 5;
+    int64 role_hierarchy = 6;
+    string role_data_scope = 7;
+}
+
+//Get user details by partner id request
+message GetUserDetailsByPartnerIdRequest {
+    int64 partner_id = 1;
+}
+
+//Get user details by partner id request
+message GetUserDetailsByPartnerIdResponse {
+    string message = 1;
+    repeated ActiveUserDetails users = 2;
+}
+
+// The request message for retrieving parent user details.
+message GetUserParentDetailsRequest {
+    repeated int64 user_ids = 1; // List of user IDs.
+}
+
+// The response message for parent user details.
+message GetUserParentDetailsResponse {
+    string message = 1; // Response message.
+    repeated UserParentDetail user_details = 2; // List of user parent details.
+}
+
+// Message for a single user's parent details.
+message UserParentDetail {
+    int64 user_id = 1; // The input user ID.
+    string name = 2; // Name of the user.
+    int64 parent_id = 3; // The parent user ID.
+    string parent_name = 4; // Name of the parent user.
+}
+
+
+message GetPartnerMetaDataDetailsRequest{
+    int64 partner_id = 1;
+}
+
+message GetPartnerMetaDataDetailsResponse {
+    string type_of_business = 1;       
+    int32 years_in_business = 2;       
+    int64 annual_revenue = 3;         
+    bool is_maglo_enabled = 4;         
+    bool is_talko_enabled = 5;
+    bool is_babbler_enabled = 6;
+    bool is_email_verification_enabled = 7;
+    bool is_phone_number_verification_enabled = 8;
+    bool can_create_deals = 9;
+    bool can_add_workflow = 10;
+    bool can_view_workflow = 11;
+    bool is_wallet_enabled = 12;
+    string email_config_key = 13;
+    string smtp_username = 14;
+    string smtp_password = 15;
+    string from_email = 16;
+    string subscription_mode = 17;
+    bool is_rule_based_assignment_enabled = 18;
+    bool can_view_contact=19;
+    bool can_view_organization=20;
+    bool can_view_template_management=21;
+    bool can_view_product_management=22;
+    bool can_view_finance_management=23;
+    bool is_add_number_enabled = 24;
+    bool is_obotaai_enabled = 25;
+    string team_strict_hierarchy_mode = 26;
+    int64  team_strict_hierarchy_start_role_id = 27;
+    bool is_user_tracker_enabled = 28;
+    bool can_view_report_management = 29;
+    bool can_download_call_logs = 30;
+    bool is_international_tenant = 31;
+    bool can_view_helpdesk_management = 32;
+    bool is_agent_availability_based_assignment_enabled = 33;
+    bool is_sticky_dids_enabled = 34;
+    bool is_assignee_sync_enabled = 35;
+}
+
+message GetPartnerServiceRequest{
+    int64 partner_id = 1; //Partner id for get enabled services
+}
+
+message GetPartnerServiceDetailsResponse{
+    bool is_maglo_service_enabled=1;
+    bool is_maglo_service_free_trial_enabled=2;
+    bool is_talko_service_enabled=3;
+    bool is_talko_service_free_trial_enabled=4;
+    bool is_babbler_service_enabled=5;
+    bool is_babbler_service_free_trial_enabled=6;
+    bool is_email_verification_enabled=7;
+    bool is_phone_number_verification_enabled=8;
+    bool can_create_deals=9;
+    bool can_add_workflow=10;
+    bool can_view_workflow=11;
+    bool is_maglo_app_free_trial_enabled=12;
+    bool is_maglo_app_enabled=13;
+    bool is_mailer_enabled=14;
+    bool is_gsm_calling_enabled=15;
+    bool can_view_task_management=16;
+    bool is_meeting_log_enabled=17;
+    string subscription_mode = 18;
+    bool is_rule_based_assignment_enabled = 19;
+    bool can_view_pipeline_management = 20;
+    bool is_complementary_babbler_enabled = 21;
+    bool can_view_contact = 22;
+    bool can_view_organization = 23;
+    bool enable_dialer = 24;
+    bool is_bulk_workflow_enabled=25;
+    bool can_view_mview_management=26;
+    bool is_advance_filter_enabled=27;
+    bool can_view_template_management = 28;
+    bool can_view_product_management = 29;
+    bool can_view_finance_management = 30;
+    bool can_view_csf_lead_listing = 31;
+    bool is_teams_enabled = 32;
+    bool is_team_data_partition_enabled = 33;
+    bool can_view_products = 34;
+    bool can_view_inventory = 35;
+    bool can_view_order_management = 36;
+    bool is_partner_custom_roles_enabled = 37;
+    bool can_view_payment_history = 38;
+    bool is_user_tracker_enabled = 39;
+    bool is_reenquiry_chain_enabled = 40;
+    bool can_view_report_management = 41;
+    bool can_download_call_logs = 42;
+    bool is_inbox_enabled = 43;
+    bool is_international_tenant = 44;
+    bool is_field_tracking_enabled = 45;
+    bool can_view_helpdesk_management = 46;
+    bool can_view_inactive_agents = 47;
+    bool is_agent_availability_based_assignment_enabled = 48;
+    bool is_sticky_dids_enabled = 49;
+    bool can_add_address_with_google_places = 50;
+    bool is_assignee_sync_enabled = 51;
+
+}
+
+// Request to fetch wallet & transaction history
+message GetWalletTransactionHistoryRequest {
+    MContext mcontext = 1;         // Metadata context
+    int64 partner_id = 2;          // Partner ID
+    optional string service_name = 3; // Optional: Service name (Babbler, Talko, Maglo)
+    optional string transaction_type = 4; // Optional: CREDIT, DEBIT, FREEZE, UNFREEZE
+}
+
+// Response containing wallet info and list of transactions
+message GetWalletTransactionHistoryResponse {
+    string message = 1;                // Response message
+    WalletDetail wallet_detail = 2;    // Wallet summary details
+    repeated TransactionDetail transactions = 3; // List of transactions
+}
+
+// Wallet summary information
+message WalletDetail {
+    int64 wallet_id = 1;           // Wallet ID
+    double balance = 2;            // Current balance
+    double frozen_balance = 3;     // Frozen balance
+    string currency = 4;           // Currency type (e.g., INR, USD)
+}
+
+// Transaction information
+message TransactionDetail {
+    int64 id = 1;                  // Transaction ID
+    double amount = 2;             // Transaction amount
+    string service_name = 3;       // Service name
+    string transaction_type = 4;   // Transaction type (CREDIT, DEBIT, etc.)
+    string remarks = 5;            // Remarks or description
+    string created_at = 6;         // Created timestamp (ISO string)
+}
+
+
+message GetPartnerApiKeyRequest{
+    int64 partner_id = 1;
+}
+
+message GetPartnerApiKeyResponse{
+    string api_key = 1;
+}
+
+message GetUserParentHierarchyRequest {
+    int64 user_id = 1;
+}
+
+message ParentUser {
+    int64 user_id = 1;
+    string name = 2;
+    string role = 3;
+    int64 role_hierarchy = 4;
+}
+
+message GetUserParentHierarchyResponse {
+    string message = 1;
+    repeated ParentUser parents = 2;
+}
+
+// Countries
+message GetCountriesByIdsRequest {
+    repeated int64 ids = 1;
+}
+
+message CountryDetail {
+    int64  id   = 1;
+    string name = 2;
+    string slug = 3;
+}
+
+message GetCountriesByIdsResponse {
+    string                 message   = 1;
+    repeated CountryDetail countries = 2;
+}
+
+// States
+message GetStatesByIdsRequest {
+    repeated int64 ids = 1;
+}
+
+message StateDetail {
+    int64  id         = 1;
+    string name       = 2;
+    string slug       = 3;
+    int64  country_id = 4;
+}
+
+message GetStatesByIdsResponse {
+    string               message = 1;
+    repeated StateDetail states  = 2;
+}
+
+// Cities
+message GetCitiesByIdsRequest {
+    repeated int64 ids = 1;
+}
+
+message CityDetail {
+    int64  id       = 1;
+    string name     = 2;
+    string slug     = 3;
+    int64  state_id = 4;
+}
+
+message GetCitiesByIdsResponse {
+    string              message = 1;
+    repeated CityDetail cities  = 2;
+}
+
+message GetCountriesByNamesRequest {
+    repeated string names = 1;
+}
+message GetCountriesByNamesResponse {
+    string                 message   = 1;
+    repeated CountryDetail countries = 2;
+}
+
+message GetStatesByNamesRequest {
+    repeated string names       = 1;
+    repeated int64  country_ids = 2;  // optional — narrows to specific countries
+}
+message GetStatesByNamesResponse {
+    string               message = 1;
+    repeated StateDetail states  = 2;
+}
+
+message GetCitiesByNamesRequest {
+    repeated string names     = 1;
+    repeated int64  state_ids = 2;  // optional — narrows to specific states
+}
+message GetCitiesByNamesResponse {
+    string              message = 1;
+    repeated CityDetail cities  = 2;
+}
+
+message GetAllRolesRequest {}
+
+// A single role record.
+message RoleDetail {
+    int64  id          = 1;
+    string name        = 2;
+    string slug        = 3;
+    int64  hierarchy   = 4;   // lower = more senior (Admin=1, Agent=8, etc.)
+    bool   is_internal = 5;
+    bool   is_active   = 6;
+    string data_scope  = 7;   // ALL / SUBTREE / OWN
+}
+
+// Response containing all active roles.
+message GetAllRolesResponse {
+    string              message = 1;
+    repeated RoleDetail roles   = 2;
+}
+
+// ----------------------------- Teams ---------------------------------- //
+
+// A member of a team with the role effective within that team.
+message TeamMemberDetail {
+    int64  user_id        = 1;
+    string effective_role = 2;  // COALESCE(team_member.role_id, user.role_id) slug
+    int64  hierarchy      = 3;  // effective role hierarchy
+    string data_scope     = 4;  // data_scope of the effective role (ALL/SUBTREE/OWN)
+}
+
+// A team with its members.
+message TeamDetail {
+    int64  team_id        = 1;
+    string name           = 2;
+    int64  partner_id     = 3;
+    int64  parent_team_id = 4;
+    bool   is_internal    = 5;
+    repeated TeamMemberDetail members = 6;
+}
+
+message GetUserTeamsRequest {
+    int64 user_id = 1;
+}
+
+message GetPartnerTeamsRequest {
+    int64 partner_id = 1;
+}
+
+message GetTeamMembersRequest {
+    int64 team_id = 1;
+}
+
+message GetTeamsResponse {
+    string             message = 1;
+    repeated TeamDetail teams  = 2;
+}
+
+message GetTeamMembersResponse {
+    string              message = 1;
+    repeated UserDetail members = 2;
+}

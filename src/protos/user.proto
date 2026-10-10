@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package user;
+
+// User component service
+service UserService{
+
+    // RPC to get partner users details by hierarchy
+    rpc GetPartnerUserDetailsByHierarchy (GetPartnerUserDetailsByHierarchyRequest) returns (GetPartnerUserDetailsByHierarchyResponse);
+
+    // RPC to get current_status for a list of user ids
+    rpc GetUsersAvailabilityStatus (GetUsersAvailabilityStatusRequest) returns (GetUsersAvailabilityStatusResponse);
+
+}
+
+
+// UserDetail message representing a user's directory information.
+message UserDetail {
+    int64 user_id = 1;        // User's ID.
+    string email = 2;         // Email of the child user.
+    string name = 3;          // Full name of the user.
+    string role = 4;
+}
+
+
+message GetPartnerUserDetailsByHierarchyRequest{
+    int64 partner_id = 1;
+    int64 role_hierarchy_level = 2;
+}
+
+
+message GetPartnerUserDetailsByHierarchyResponse{
+    repeated UserDetail users_details = 1;
+}
+
+
+// UserAvailabilityStatus message representing a user's current status.
+message UserAvailabilityStatus {
+    int64 user_id = 1;        // User's ID.
+    string current_status = 2; // User's current status (e.g. Active, On Break, Offline, or a partner-defined custom status).
+}
+
+
+message GetUsersAvailabilityStatusRequest {
+    repeated int64 user_ids = 1;
+}
+
+
+message GetUsersAvailabilityStatusResponse {
+    repeated UserAvailabilityStatus users_availability_status = 1;
+}

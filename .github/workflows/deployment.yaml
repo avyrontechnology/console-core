@@ -1,0 +1,54 @@
+name: Build and Push Docker Image to DigitalOcean
+
+on:
+  push:
+    branches:
+      - feature--dev--2025  # This will trigger the action on pushing to the 'feature--dev--2025' branch
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest  # Runs on a GitHub-hosted runner with Ubuntu
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2  # Checks out the repository code
+
+    - name: See Submodule
+      run: git submodule status
+  
+    - name: Set up Git to use PAT for authentication
+      run: |
+        git config --global url."https://${{ secrets.ACTIONS_DEPLOY_KEY }}@github.com/".insteadOf "https://github.com/"
+      
+    - name: Verify and set submodule branch
+      run: |
+        # Initialize and update submodules
+        git submodule update --init
+        # Navigate to each submodule and set the desired branch
+        git submodule foreach 'git checkout feature-dev-2025 && git pull'
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        version: latest
+
+    - name: Log in to DigitalOcean Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ secrets.DOCKER_REGISTRY }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: ./Dockerfile  # Path to your Dockerfile (default is `Dockerfile`)
+        push: true
+        tags: ${{ secrets.DOCKER_REGISTRY }}/console-service:integrationlatest
+        build-args: |
+          # Optionally pass build args if needed, e.g. for versioning
+          VERSION=latest
+
+    - name: Logout from Docker
+      run: docker logout ${{ secrets.DOCKER_REGISTRY }}

@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = src
+relative_files = true
+omit =
+    */site-packages/*
+    */dependency_injector/*
+
+[report]
+show_missing = True
+skip_covered = True

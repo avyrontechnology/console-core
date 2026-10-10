@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package telephony;
+
+// NOTE (console-core): copied from talko/src/protos/telephony.proto.
+// Talko-service acts as gRPC CLIENT; the vendor telephony plane
+// (OTOBA / console media gateway) serves these RPCs.
+// Mirrors the existing REST semantics: POST /call, POST /call/hangup,
+// POST /call/transfer — same fields, same outcomes.
+//
+// console-core Phase-2 status: only GetCallStatus is wired
+// (see src/grpc_client/telephony_client.py). Hangup/Transfer/Hold/Mute
+// and MediaPipe.StreamAudio are future phases — the contract is kept
+// whole so stubs stay compatible when those phases land.
+
+// Unary call-control plane.
+service TelephonyControl {
+    // Hang up an in-progress call (mirrors POST /call/hangup).
+    rpc Hangup (HangupRequest) returns (HangupResponse);
+
+    // Blind-transfer an in-progress call (mirrors POST /call/transfer).
+    rpc Transfer (TransferRequest) returns (TransferResponse);
+
+    // Hold / unhold an in-progress call.
+    rpc Hold (HoldRequest) returns (HoldResponse);
+
+    // Mute / unmute a leg of an in-progress call.
+    rpc Mute (MuteRequest) returns (MuteResponse);
+
+    // Poll signalling state for a call.
+    rpc GetCallStatus (CallStatusRequest) returns (CallStatusResponse);
+}
+
+// Bidirectional media pipe. Both sides stream raw audio frames;
+// codec negotiated per stream (mulaw_8k matches Tata PSTN, pcm_48k
+// matches LiveKit — see TalkoAudioBridge in pstn/services.py).
+service MediaPipe {
+    // Bidi audio: Talko streams uplink frames, gateway streams downlink.
+    rpc StreamAudio (stream AudioChunk) returns (stream AudioChunk);
+}
+
+message HangupRequest {
+    string call_id = 1;
+    string vendor_config_id = 2;
+    bool enable_ai_bridge = 3;
+}
+
+message HangupResponse {
+    bool success = 1;
+    string message = 2;
+    string call_id = 3;
+}
+
+message TransferRequest {
+    string call_id = 1;
+    string destination_number = 2;
+    string vendor_config_id = 3;
+    bool enable_ai_bridge = 4;
+}
+
+message TransferResponse {
+    bool success = 1;
+    string message = 2;
+    string call_id = 3;
+}
+
+message HoldRequest {
+    string call_id = 1;
+    bool hold = 2;
+    string vendor_config_id = 3;
+}
+
+message HoldResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message MuteRequest {
+    string call_id = 1;
+    bool mute = 2;
+    string vendor_config_id = 3;
+}
+
+message MuteResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message CallStatusRequest {
+    string call_id = 1;
+    string vendor_config_id = 2;
+}
+
+message CallStatusResponse {
+    string call_id = 1;
+    string call_status = 2;
+    bool connected = 3;
+}
+
+message AudioChunk {
+    string call_id = 1;
+    bytes payload = 2;
+    string codec = 3; // "mulaw_8k" | "pcm_48k"
+    int64 seq = 4;
+    bool end_of_stream = 5;
+}

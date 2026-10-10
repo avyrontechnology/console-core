@@ -1,0 +1,109 @@
+version: '3'
+
+services:
+  console-service:
+    container_name: console-service
+    build: .
+    restart: on-failure
+    ports:
+      - "8001:8001"
+      - "50051:50051"
+    environment:
+      DATABASE_URL: "postgresql+psycopg2://jaggerbomb:jaggerbomb@console-db/userservice"
+    volumes:
+      - .:/console-service
+    env_file:
+      - .env
+    depends_on:
+      - console-db
+      - console-redis
+      - console-mongo-db
+    networks:
+      - makunai_console
+
+
+  # console-grpc:
+  #   build:
+  #     # context: ./src
+  #     dockerfile: GrpcDockerfile
+  #   hostname: console-grpc
+  #   container_name: console-grpc
+  #   ports:
+  #     - "50051:50051"
+  #   # env_file:
+  #   #   - bakery/.env
+  #   # volumes:
+  #     # - ./console-grpc:/console-service/
+  #   networks:
+  #     - makunai_console
+
+  celery-worker:
+    build: .
+    container_name: console-worker
+    command: poetry run celery -A src.console_celery.celery_app.celery worker -Q common_notifications_queue,notification_queue,user_queue,console_default_queue,report_queue,order_queue --loglevel=info --concurrency=4
+    volumes:
+      - .:/console-service
+    networks:
+      - makunai_console
+   
+
+  celery-beat:
+    build: .
+    container_name: console-beat
+    command: poetry run celery -A src.console_celery.celery_app.celery beat --loglevel=info
+    volumes:
+      - .:/console-service
+    networks:
+      - makunai_console
+
+
+  console-db:
+    container_name: console-db
+    image: postgres:11.5-alpine
+    environment:
+      - POSTGRES_USER=jaggerbomb
+      - POSTGRES_PASSWORD=jaggerbomb
+      - POSTGRES_DB=userservice
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - pgdata:/var/lib/posgresql/data
+    networks:
+      - makunai_console
+
+  console-redis:
+      container_name: console-redis
+      image: redis
+      ports:
+        - 6379:6379
+      volumes:
+        - redisdata:/data
+      networks:
+        - makunai_console
+
+  console-mongo-db:
+    container_name: console-mongo-db
+    image: mongo:6
+    restart: on-failure
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - makunai_console
+
+volumes:
+  pgdata:
+  redisdata:
+  mongodata:
+
+
+networks:
+  makunai_console:
+    external: true
