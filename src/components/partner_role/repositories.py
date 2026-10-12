@@ -348,7 +348,7 @@ class PartnerRoleRepository:
 
         Done in two passes within one transaction to avoid transient unique
         collisions on (partner_id, hierarchy). ``role_id`` FKs are untouched, so
-        user/team references stay valid.
+        user references stay valid.
         """
         async with self.__session_factory() as session:
             roles: List[Role] = (

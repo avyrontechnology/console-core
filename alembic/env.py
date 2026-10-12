@@ -64,7 +64,6 @@ from src.components.wallet.models import Wallet, WalletTransaction
 from src.components.plan.models import Plan
 from src.components.order.models import Order
 from src.components.entitlement.models import Entitlement
-from src.components.team.models import Team, TeamMember
 from src.components.notifications.models import NotificationHistory, NotificationSubscription
 from src.components.grace.models import GracePeriod
 

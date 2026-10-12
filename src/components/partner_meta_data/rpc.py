@@ -59,8 +59,6 @@ class PartnerMetaDataServiceGrpc(PartnerMetaDataService):
                 can_view_product_management=plan_details.can_view_product_management,
                 can_view_finance_management=plan_details.can_view_finance_management,
                 can_view_csf_lead_listing=plan_details.can_view_csf_lead_listing,
-                is_teams_enabled=plan_details.is_teams_enabled,
-                is_team_data_partition_enabled=plan_details.is_team_data_partition_enabled,
                 can_view_products=plan_details.can_view_products,
                 can_view_inventory=plan_details.can_view_inventory,
                 can_view_order_management=plan_details.can_view_order_management,

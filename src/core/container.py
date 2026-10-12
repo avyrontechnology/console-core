@@ -46,8 +46,6 @@ from src.components.partner_role_permission.repositories import (
     PartnerPermissionRepository,
 )
 from src.components.partner_role_permission.service import PartnerPermissionService
-from src.components.team.repositories import TeamRepository
-from src.components.team.service import TeamService
 from src.components.partner_role.repositories import PartnerRoleRepository
 from src.components.partner_role.service import PartnerRoleService
 from src.components.payment.repositories import PaymentRepository
@@ -102,9 +100,6 @@ class Container(containers.DeclarativeContainer):
                 "..components.partner.partner_filter_service",
                 "..components.partner_role_permission.controller",
                 "..components.partner_role_permission.repositories",
-                "..components.team.controllers",
-                "..components.team.repositories",
-                "..components.team.service",
                 "..components.partner_role.controllers",
                 "..components.partner_role.repositories",
                 "..components.partner_role.service",
@@ -296,12 +291,6 @@ class Container(containers.DeclarativeContainer):
         audit_service=audit_service,
     )
 
-    team_repository = providers.Factory(
-        TeamRepository,
-        session_factory=db.provided.session,
-        console_service_logger=console_service_logger,
-    )
-
     console_service = providers.Factory(
         UserService,
         user_repository=user_repository,
@@ -310,7 +299,6 @@ class Container(containers.DeclarativeContainer):
         audit_service=audit_service,
         auth_service_utility=auth_service_utility,
         session_factory=db.provided.session,
-        team_repository=team_repository,
     )
 
     partner_service = providers.Factory(
@@ -409,14 +397,6 @@ class Container(containers.DeclarativeContainer):
         partner_config_repository=partner_config_repository,
         console_service_logger=console_service_logger,
         console_service_cache=cache_helper,
-    )
-
-    team_service = providers.Factory(
-        TeamService,
-        team_repository=team_repository,
-        console_service_logger=console_service_logger,
-        audit_service=audit_service,
-        partner_config_service=partner_config_service,
     )
 
     partner_role_repository = providers.Factory(

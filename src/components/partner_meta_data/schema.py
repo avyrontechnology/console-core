@@ -66,8 +66,6 @@ class PartnerPlanDetailsResponse(BaseModel):
     can_view_finance_management: Optional[bool] = False
     is_add_number_enabled: Optional[bool] = False
     is_obotaai_enabled: Optional[bool] = False
-    is_teams_enabled: Optional[bool] = False
-    is_team_data_partition_enabled: Optional[bool] = False
     can_view_products: Optional[bool] = False
     can_view_inventory: Optional[bool] = False
     can_view_order_management: Optional[bool] = False

@@ -108,7 +108,6 @@ class BulkUploadColumns:
     CITY = "city"
     PARENT = "parent"
 
-    TEAM = "team"
     CUSTOM_ROLE = "custom_role"
 
     MANDATORY = [
@@ -128,6 +127,5 @@ class BulkUploadColumns:
     ]
 
     CONDITIONAL = {
-        TEAM: "is_teams_enabled",
         CUSTOM_ROLE: "is_partner_custom_roles_enabled",
     }

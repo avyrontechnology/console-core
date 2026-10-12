@@ -60,8 +60,6 @@ from src.pub.auth_pb2 import (
     GetServiceBoardUserDetailsResponse,
     GetStatesByIdsResponse,
     GetStatesByNamesResponse,
-    GetTeamMembersResponse,
-    GetTeamsResponse,
     GetUserChildDetailsResponse,
     GetUserChildHierarchyResponse,
     GetUserDetailsByPartnerIdResponse,
@@ -71,19 +69,15 @@ from src.pub.auth_pb2 import (
     GetRolePermissionsResponse,
     GetUserPermissionsResponse,
     GetUserRoleResponse,
-    GetUserTeamRoleResponse,
     ParentUser,
     RoleDetail,
     StateDetail,
-    TeamDetail,
-    TeamMemberDetail,
     UserDetail,
     UserParentDetail,
     UserProfile,
     ValidateTokenResponse,
 )
 from src.pub.auth_pb2_grpc import AuthServiceServicer
-from src.components.team.models import Team, TeamMember
 
 SECRET_KEY = ENV.SECRET_KEY
 ALGORITHM = ENV.ALGORITHM
@@ -562,112 +556,6 @@ class AuthServiceGRPC(AuthServiceServicer):
                 status_code=StatusCode.INTERNAL,
             )
 
-    async def __resolve_team_effective_role(
-        self, session, user_id: UUID, team_id: UUID
-    ):
-        """Resolve the effective role for a user WITHIN a team.
-
-        Returns ``(is_member, effective_role_id, slug, hierarchy, data_scope)``.
-        ``is_member`` is False when the user has no membership row in the team
-        (the caller turns that into an is_member=False response). The effective
-        role is ``COALESCE(team_member.role_id, user.role_id)`` — mirroring
-        ``__build_team_detail`` but for a single (user, team) pair.
-        """
-        row = (
-            await session.execute(
-                select(
-                    TeamMember.role_id,
-                    User.role_id.label("default_role_id"),
-                )
-                .join(User, User.id == TeamMember.user_id)
-                .where(
-                    TeamMember.team_id == team_id,
-                    TeamMember.user_id == user_id,
-                )
-            )
-        ).one_or_none()
-        if row is None:
-            return False, None, "", 0, ""
-
-        effective_role_id: Optional[UUID] = row.role_id or row.default_role_id
-        role_slug: str = ""
-        role_hierarchy: int = 0
-        role_data_scope: str = ""
-        if effective_role_id is not None:
-            role_row = (
-                await session.execute(
-                    select(Role.slug, Role.hierarchy, Role.data_scope).where(
-                        Role.id == effective_role_id
-                    )
-                )
-            ).one_or_none()
-            if role_row is not None:
-                role_slug = role_row.slug or ""
-                role_hierarchy = role_row.hierarchy or 0
-                role_data_scope = role_row.data_scope or ""
-        return True, effective_role_id, role_slug, role_hierarchy, role_data_scope
-
-    @inject
-    async def GetUserTeamRole(
-        self,
-        request,
-        context,
-        partner_config_service: PartnerConfigService = Depends(
-            Provide[Container.partner_config_service]
-        ),
-    ):
-        """Resolve a user's effective role within a team + that role's permissions.
-
-        Effective role = the per-team override (``team_member.role_id``) if set,
-        else the user's global ``User.role_id``. Permissions are computed for that
-        effective role (super-admin / system-admin still get everything).
-        """
-        if not request.user_id or not request.team_id:
-            raise GrpcException(
-                details=RPCExceptionMsg.USER_ID_NOT_FOUND,
-                status_code=StatusCode.INVALID_ARGUMENT,
-            )
-        user_id = parse_uuid(request.user_id, "user_id")
-        team_id = parse_uuid(request.team_id, "team_id")
-        self.__logger.info(
-            "GetUserTeamRole called user_id={} team_id={}".format(user_id, team_id)
-        )
-        try:
-            async with self.__db_session_manager.session() as session:
-                (
-                    is_member,
-                    effective_role_id,
-                    role_slug,
-                    role_hierarchy,
-                    role_data_scope,
-                ) = await self.__resolve_team_effective_role(session, user_id, team_id)
-
-            if not is_member:
-                return GetUserTeamRoleResponse(
-                    message="User is not a member of the team",
-                    is_member=False,
-                )
-
-            permissions: list[str] = (
-                await partner_config_service.team_role_permission_check(
-                    user_id, effective_role_id
-                )
-            )
-            return GetUserTeamRoleResponse(
-                message="Success",
-                is_member=True,
-                role=role_slug,
-                hierarchy=role_hierarchy,
-                data_scope=role_data_scope,
-                permissions=permissions,
-            )
-        except Exception as exc:
-            self.__logger.error(f"Error fetching team role: {exc}")
-            raise GrpcException(
-                details=RPCExceptionMsg.ERROR_MSG,
-                status_code=StatusCode.INTERNAL,
-            )
-
     @inject
     async def GetRolePermissions(
         self,
@@ -1052,8 +940,6 @@ class AuthServiceGRPC(AuthServiceServicer):
                 can_view_finance_management=services_enabled_dict.get("can_view_finance_management", False),
                 is_add_number_enabled=services_enabled_dict.get("is_add_number_enabled", False),
                 is_obotaai_enabled=services_enabled_dict.get("is_obotaai_enabled", False),
-                team_strict_hierarchy_mode=get_str_value("team_strict_hierarchy_mode"),
-                team_strict_hierarchy_start_role_id=uuid_str(services_enabled_dict.get("team_strict_hierarchy_start_role_id")),
                 is_user_tracker_enabled=services_enabled_dict.get("is_user_tracker_enabled", False),
                 can_view_report_management=services_enabled_dict.get("can_view_report_management", False),
                 can_view_helpdesk_management=services_enabled_dict.get("can_view_helpdesk_management", False),
@@ -1593,161 +1479,3 @@ class AuthServiceGRPC(AuthServiceServicer):
             self.__logger.error("GetAllRoles unexpected error: {}".format(exc))
             await context.abort(StatusCode.INTERNAL, "Internal error fetching roles")
 
-    # ------------------------------- Teams -------------------------------- #
-
-    async def __build_team_detail(self, session, team: Team) -> TeamDetail:
-        """Build a TeamDetail (with members + effective roles) for a team."""
-        members = (
-            await session.execute(
-                select(TeamMember).where(TeamMember.team_id == team.id)
-            )
-        ).scalars().all()
-
-        member_details: List[TeamMemberDetail] = []
-        for member in members:
-            # Effective role = per-team override if set, else the user's role.
-            effective_role_id: Optional[UUID] = member.role_id
-            if effective_role_id is None:
-                effective_role_id = (
-                    await session.execute(
-                        select(User.role_id).where(User.id == member.user_id)
-                    )
-                ).scalar_one_or_none()
-
-            role_slug: str = ""
-            role_hierarchy: int = 0
-            role_data_scope: str = ""
-            if effective_role_id is not None:
-                role_row = (
-                    await session.execute(
-                        select(Role.slug, Role.hierarchy, Role.data_scope).where(
-                            Role.id == effective_role_id
-                        )
-                    )
-                ).one_or_none()
-                if role_row is not None:
-                    role_slug = role_row.slug or ""
-                    role_hierarchy = role_row.hierarchy or 0
-                    role_data_scope = role_row.data_scope or ""
-
-            member_details.append(
-                TeamMemberDetail(
-                    user_id=uuid_str(member.user_id),
-                    effective_role=role_slug,
-                    hierarchy=role_hierarchy,
-                    data_scope=role_data_scope,
-                )
-            )
-
-        return TeamDetail(
-            team_id=uuid_str(team.id),
-            name=team.name or "",
-            partner_id=uuid_str(team.partner_id),
-            parent_team_id=uuid_str(team.parent_team_id),
-            is_internal=bool(team.is_internal),
-            members=member_details,
-        )
-
-    async def GetUserTeams(self, request, context):
-        """Return all active teams a user belongs to (with members + roles)."""
-        user_id = parse_uuid(request.user_id, "user_id")
-        self.__logger.info("GetUserTeams called for user_id={}".format(user_id))
-        try:
-            async with self.__db_session_manager.session() as session:
-                teams = (
-                    await session.execute(
-                        select(Team)
-                        .join(TeamMember, TeamMember.team_id == Team.id)
-                        .where(
-                            TeamMember.user_id == user_id,
-                            Team.is_deleted == False,  # noqa: E712
-                            Team.is_active == True,  # noqa: E712
-                        )
-                    )
-                ).scalars().all()
-                team_details = [
-                    await self.__build_team_detail(session, team) for team in teams
-                ]
-            return GetTeamsResponse(message="Success", teams=team_details)
-        except Exception as exc:
-            self.__logger.error("GetUserTeams unexpected error: {}".format(exc))
-            await context.abort(StatusCode.INTERNAL, "Internal error fetching teams")
-
-    async def GetPartnerTeams(self, request, context):
-        """Return all active teams of a partner (with members + roles)."""
-        partner_id = parse_uuid(request.partner_id, "partner_id")
-        self.__logger.info("GetPartnerTeams called for partner_id={}".format(partner_id))
-        try:
-            async with self.__db_session_manager.session() as session:
-                teams = (
-                    await session.execute(
-                        select(Team).where(
-                            Team.partner_id == partner_id,
-                            Team.is_deleted == False,  # noqa: E712
-                            Team.is_active == True,  # noqa: E712
-                        )
-                    )
-                ).scalars().all()
-                team_details = [
-                    await self.__build_team_detail(session, team) for team in teams
-                ]
-            return GetTeamsResponse(message="Success", teams=team_details)
-        except Exception as exc:
-            self.__logger.error("GetPartnerTeams unexpected error: {}".format(exc))
-            await context.abort(StatusCode.INTERNAL, "Internal error fetching teams")
-
-    async def GetTeamMembers(self, request, context):
-        """Return the members of a team as directory UserDetail records."""
-        team_id = parse_uuid(request.team_id, "team_id")
-        self.__logger.info("GetTeamMembers called for team_id={}".format(team_id))
-        try:
-            async with self.__db_session_manager.session() as session:
-                rows = (
-                    await session.execute(
-                        select(
-                            User.id,
-                            User.name,
-                            User.email,
-                            User.is_active,
-                            User.is_suspended,
-                            User.current_status,
-                            TeamMember.role_id,
-                            User.role_id.label("default_role_id"),
-                        )
-                        .join(TeamMember, TeamMember.user_id == User.id)
-                        .where(TeamMember.team_id == team_id)
-                    )
-                ).all()
-
-                members: List[UserDetail] = []
-                for row in rows:
-                    effective_role_id = row.role_id or row.default_role_id
-                    role_slug = ""
-                    role_hierarchy = 0
-                    if effective_role_id is not None:
-                        role_row = (
-                            await session.execute(
-                                select(Role.slug, Role.hierarchy).where(
-                                    Role.id == effective_role_id
-                                )
-                            )
-                        ).one_or_none()
-                        if role_row is not None:
-                            role_slug = role_row.slug or ""
-                            role_hierarchy = role_row.hierarchy or 0
-                    members.append(
-                        UserDetail(
-                            user_id=uuid_str(row.id),
-                            email=row.email or "",
-                            is_active=bool(row.is_active),
-                            is_suspended=bool(row.is_suspended),
-                            name=row.name or "",
-                            role=role_slug,
-                            role_hierarchy=role_hierarchy,
-                            current_status=row.current_status or "Away",
-                        )
-                    )
-            return GetTeamMembersResponse(message="Success", members=members)
-        except Exception as exc:
-            self.__logger.error("GetTeamMembers unexpected error: {}".format(exc))
-            await context.abort(StatusCode.INTERNAL, "Internal error fetching members")

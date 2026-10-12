@@ -250,8 +250,6 @@ class UserRepository:
             try:
                 user_data_dict: dict = user_data.model_dump()
                 user_data_dict["hashed_password"] = user_data_dict.pop("password")
-                user_data_dict.pop("team_id", None)
-                user_data_dict.pop("team_role_id", None)
                 user = User(**user_data_dict, is_active=True)
                 # _safe_dict(user) to hide hashed_password
                 self.__console_service_logger.info(

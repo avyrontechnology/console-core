@@ -79,7 +79,6 @@ from src.components.session_mangement.models import UserSession
 from src.components.session_mangement.services import UserSessionService
 from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
-from src.components.team.repositories import TeamRepository
 from src.components.user.repositories import UserRepository
 from src.components.user.schema import Contrasts
 from src.components.user.services import UserService
@@ -367,7 +366,6 @@ class AuthService:
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
-        team_repository: TeamRepository = Depends(Provide["team_repository"]),
     ):
         try:
             self.__auth_service_logger.info("Attempting to create new user")
@@ -451,45 +449,9 @@ class AuthService:
                 if partner_object.is_internal and user_role.hierarchy >= parent_role.hierarchy:
                     raise AuthException(AuthExceptionMsg.PARENT_VALIDATION)
   
-            # Validate team BEFORE creating user so a bad team_id leaves no orphan user
-            if user_data.team_role_id and not user_data.team_id:
-                raise AuthException("team_role_id requires team_id to be set")
-
-            if user_data.team_id:
-                teams_cfg = await partner_config_service.get_partner_config_by_key(
-                    partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-                )
-                if not (teams_cfg and teams_cfg.value):
-                    raise AuthException("Teams is not enabled for this partner")
-                team = await team_repository.get_team_by_id(user_data.team_id, partner_id)
-                if team is None:
-                    raise AuthException(
-                        "Team {} does not exist or does not belong to partner {}".format(
-                            user_data.team_id, partner_id
-                        )
-                    )
-                if user_data.team_role_id and not (
-                    await team_repository.is_role_in_partner_catalog(
-                        user_data.team_role_id, partner_id
-                    )
-                ):
-                    raise AuthException(
-                        "Team role {} is not part of this partner's role catalog".format(
-                            user_data.team_role_id
-                        )
-                    )
-
             user = await user_repository.add_user(
                 user_data=user_data, services=services
             )
-
-            if user_data.team_id:
-                await team_repository.add_member(
-                    team_id=user_data.team_id,
-                    user_id=user.id,
-                    role_id=user_data.team_role_id,
-                    created_by=user.id,
-                )
 
             # Log the successful creation of the user
             self.__auth_service_logger.info(

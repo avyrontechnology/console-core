@@ -178,8 +178,6 @@ class TestUserService:
         assert result.users_data[0].phone_number == "+1-202-555-0123"
         assert result.users_data[0].cloud_agent_number == "09876"
         assert result.users_data[0].current_status == "Active"
-        # No team_repository/partner_config_service wired -> team_count omitted.
-        assert result.users_data[0].team_count is None
 
         # Verify mocks
         self.user_repository_mock.get_all.assert_called_once_with(
@@ -220,111 +218,6 @@ class TestUserService:
         )
 
         assert result.users_data[0].current_status == StandardStatuses.AWAY
-
-    async def test_get_users_team_count_populated_when_teams_enabled(self):
-        """team_count is populated per-user when teams are enabled for the partner."""
-        current_user_id, limit, offset = 1, 10, 0
-
-        user_mock = AsyncMock(spec=User)
-        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
-        user_mock.name = "John Doe"
-        user_mock.email = "john@example.com"
-        user_mock.designation = "Manager"
-        user_mock.phone_number = "+1-202-555-0123"
-        user_mock.parent_id = None
-        user_mock.partner_id= UUID("10101010-1010-1010-1010-101010101010")
-        user_mock.role_id= UUID("11111111-1111-1111-1111-111111111111")
-        user_mock.country_id = None
-        user_mock.country = None
-        user_mock.state_id = None
-        user_mock.city_id = None
-        user_mock.parent = None
-        user_mock.is_active = True
-        user_mock.cloud_agent_number = None
-        user_mock.current_status = "Active"
-
-        self.user_repository_mock.get_all.return_value = ([user_mock], 1)
-        self.auth_utility_mock.get_role_by_id.return_value = None
-
-        team_repository_mock = AsyncMock()
-        team_repository_mock.get_member_counts_for_users.return_value = {UUID("11111111-1111-1111-1111-111111111111"): 4}
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = Mock(
-            value=True
-        )
-
-        service_with_teams = UserService(
-            user_repository=self.user_repository_mock,
-            audit_service=self.audit_log_mock,
-            console_service_logger=self.mock_logger,
-            console_service_cache=self.redis_mock,
-            auth_service_utility=self.auth_utility_mock,
-            session_factory=MagicMock(),
-            team_repository=team_repository_mock,
-        )
-
-        result = await service_with_teams.get_users(
-            current_user_id,
-            limit,
-            offset,
-            auth_service=self.auth_utility_mock,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        assert result.users_data[0].team_count == 4
-        team_repository_mock.get_member_counts_for_users.assert_awaited_once_with([UUID("11111111-1111-1111-1111-111111111111")])
-
-    async def test_get_users_team_count_none_when_teams_disabled(self):
-        """team_count stays None when teams aren't enabled for the partner."""
-        current_user_id, limit, offset = 1, 10, 0
-
-        user_mock = AsyncMock(spec=User)
-        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
-        user_mock.name = "John Doe"
-        user_mock.email = "john@example.com"
-        user_mock.designation = "Manager"
-        user_mock.phone_number = "+1-202-555-0123"
-        user_mock.parent_id = None
-        user_mock.partner_id= UUID("10101010-1010-1010-1010-101010101010")
-        user_mock.role_id= UUID("11111111-1111-1111-1111-111111111111")
-        user_mock.country_id = None
-        user_mock.country = None
-        user_mock.state_id = None
-        user_mock.city_id = None
-        user_mock.parent = None
-        user_mock.is_active = True
-        user_mock.cloud_agent_number = None
-        user_mock.current_status = "Active"
-
-        self.user_repository_mock.get_all.return_value = ([user_mock], 1)
-        self.auth_utility_mock.get_role_by_id.return_value = None
-
-        team_repository_mock = AsyncMock()
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = Mock(
-            value=False
-        )
-
-        service_with_teams = UserService(
-            user_repository=self.user_repository_mock,
-            audit_service=self.audit_log_mock,
-            console_service_logger=self.mock_logger,
-            console_service_cache=self.redis_mock,
-            auth_service_utility=self.auth_utility_mock,
-            session_factory=MagicMock(),
-            team_repository=team_repository_mock,
-        )
-
-        result = await service_with_teams.get_users(
-            current_user_id,
-            limit,
-            offset,
-            auth_service=self.auth_utility_mock,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        assert result.users_data[0].team_count is None
-        team_repository_mock.get_member_counts_for_users.assert_not_called()
 
     async def test_get_users_exception(self):
         """Test handling of exceptions in get_users method."""

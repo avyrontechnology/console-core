@@ -52,13 +52,8 @@ class PartnerConfigEnum(str, Enum):
     CAN_VIEW_INVENTORY: str = "can_view_inventory"
     CAN_VIEW_ORDER_MANAGEMENT: str = "can_view_order_management"
 
-    # Teams feature flags
-    IS_TEAMS_ENABLED: str = "is_teams_enabled"
+    # Custom roles feature flag (formerly gated on teams; standalone now)
     IS_PARTNER_CUSTOM_ROLES_ENABLED: str = "is_partner_custom_roles_enabled"
-    IS_TEAM_DATA_PARTITION_ENABLED: str = "is_team_data_partition_enabled"
-    # Strict-hierarchy-in-teams policy (off | full | partial)
-    TEAM_STRICT_HIERARCHY_MODE: str = "team_strict_hierarchy_mode"
-    TEAM_STRICT_HIERARCHY_START_ROLE_ID: str = "team_strict_hierarchy_start_role_id"
 
 
     IS_OBOTAAI_ENABLED = "is_obotaai_enabled"

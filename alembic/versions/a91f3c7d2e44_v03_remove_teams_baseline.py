@@ -1,6 +1,6 @@
-"""v02_uuid_pks_baseline
+"""v03_remove_teams_baseline
 
-Revision ID: 18b8951a5a36
+Revision ID: a91f3c7d2e44
 Revises: 
 Create Date: 2026-10-11 03:01:31.177422
 
@@ -13,7 +13,7 @@ import sqlalchemy_utils
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '18b8951a5a36'
+revision: str = 'a91f3c7d2e44'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -592,32 +592,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_console_states_country_id'), 'console_states', ['country_id'], unique=False)
     op.create_index(op.f('ix_console_states_name'), 'console_states', ['name'], unique=False)
     op.create_index(op.f('ix_console_states_updated_by'), 'console_states', ['updated_by'], unique=False)
-    op.create_table('console_team',
-    sa.Column('name', sa.String(length=128), nullable=False),
-    sa.Column('slug', sa.String(length=128), nullable=False),
-    sa.Column('partner_id', sa.UUID(), nullable=False),
-    sa.Column('parent_team_id', sa.UUID(), nullable=True),
-    sa.Column('is_internal', sa.Boolean(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=True),
-    sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_by', sa.UUID(), nullable=True),
-    sa.Column('deleted_by', sa.UUID(), nullable=True),
-    sa.Column('description', sa.String(length=200), nullable=True),
-    sa.Column('additional_info', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-    sa.Column('updated_by', sa.UUID(), nullable=True),
-    sa.Column('created_at', sa.BigInteger(), nullable=False),
-    sa.Column('updated_at', sa.BigInteger(), nullable=True),
-    sa.Column('deleted_at', sa.BigInteger(), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('partner_id', 'slug', name='uq_team_partner_slug')
-    )
-    op.create_index(op.f('ix_console_team_is_active'), 'console_team', ['is_active'], unique=False)
-    op.create_index(op.f('ix_console_team_is_deleted'), 'console_team', ['is_deleted'], unique=False)
-    op.create_index(op.f('ix_console_team_is_internal'), 'console_team', ['is_internal'], unique=False)
-    op.create_index(op.f('ix_console_team_parent_team_id'), 'console_team', ['parent_team_id'], unique=False)
-    op.create_index(op.f('ix_console_team_partner_id'), 'console_team', ['partner_id'], unique=False)
-    op.create_index(op.f('ix_console_team_updated_by'), 'console_team', ['updated_by'], unique=False)
     op.create_table('console_user_metadata',
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('meta_key', sa.String(length=50), nullable=False),
@@ -819,25 +793,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_console_payments_partner_id'), 'console_payments', ['partner_id'], unique=False)
     op.create_index(op.f('ix_console_payments_payment_id'), 'console_payments', ['payment_id'], unique=True)
     op.create_index(op.f('ix_console_payments_updated_by'), 'console_payments', ['updated_by'], unique=False)
-    op.create_table('console_team_member',
-    sa.Column('team_id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('role_id', sa.UUID(), nullable=True),
-    sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_by', sa.UUID(), nullable=True),
-    sa.Column('deleted_by', sa.UUID(), nullable=True),
-    sa.Column('description', sa.String(length=200), nullable=True),
-    sa.Column('additional_info', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-    sa.Column('updated_by', sa.UUID(), nullable=True),
-    sa.Column('created_at', sa.BigInteger(), nullable=False),
-    sa.Column('updated_at', sa.BigInteger(), nullable=True),
-    sa.Column('deleted_at', sa.BigInteger(), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('team_id', 'user_id', name='uq_team_member_team_user')
-    )
-    op.create_index(op.f('ix_console_team_member_team_id'), 'console_team_member', ['team_id'], unique=False)
-    op.create_index(op.f('ix_console_team_member_updated_by'), 'console_team_member', ['updated_by'], unique=False)
-    op.create_index(op.f('ix_console_team_member_user_id'), 'console_team_member', ['user_id'], unique=False)
     op.create_table('console_wallet_transactions',
     sa.Column('wallet_id', sa.UUID(), nullable=False),
     sa.Column('transaction_type', sa.Enum('CREDIT', 'DEBIT', 'FREEZE', 'UNFREEZE', name='transactiontype'), nullable=False),
@@ -893,11 +848,6 @@ def upgrade() -> None:
     op.create_foreign_key(None, 'console_role', 'console_users', ['deleted_by'], ['id'])
     op.create_foreign_key(None, 'console_role', 'console_users', ['updated_by'], ['id'])
     op.create_foreign_key(None, 'console_states', 'console_countries', ['country_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(None, 'console_team', 'console_partners', ['partner_id'], ['id'], ondelete='RESTRICT')
-    op.create_foreign_key(None, 'console_team', 'console_team', ['parent_team_id'], ['id'], ondelete='RESTRICT')
-    op.create_foreign_key(None, 'console_team_member', 'console_role', ['role_id'], ['id'], ondelete='RESTRICT')
-    op.create_foreign_key(None, 'console_team_member', 'console_team', ['team_id'], ['id'], ondelete='RESTRICT')
-    op.create_foreign_key(None, 'console_team_member', 'console_users', ['user_id'], ['id'], ondelete='RESTRICT')
     op.create_foreign_key(None, 'console_user_metadata', 'console_users', ['user_id'], ['id'])
     op.create_foreign_key(None, 'console_user_sessions', 'console_users', ['user_id'], ['id'])
     op.create_foreign_key(None, 'console_users', 'console_cities', ['city_id'], ['id'])
@@ -914,7 +864,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     # ### squashed baseline: drop indexes, then tables CASCADE (FK-safe) ###
     op.execute('DROP TABLE IF EXISTS console_wallet_transactions CASCADE')
-    op.execute('DROP TABLE IF EXISTS console_team_member CASCADE')
     op.execute('DROP TABLE IF EXISTS console_payments CASCADE')
     op.execute('DROP TABLE IF EXISTS console_partner_role_permission CASCADE')
     op.execute('DROP TABLE IF EXISTS console_grace_periods CASCADE')
@@ -924,7 +873,6 @@ def downgrade() -> None:
     op.execute('DROP TABLE IF EXISTS console_wallets CASCADE')
     op.execute('DROP TABLE IF EXISTS console_user_sessions CASCADE')
     op.execute('DROP TABLE IF EXISTS console_user_metadata CASCADE')
-    op.execute('DROP TABLE IF EXISTS console_team CASCADE')
     op.execute('DROP TABLE IF EXISTS console_states CASCADE')
     op.execute('DROP TABLE IF EXISTS console_permission CASCADE')
     op.execute('DROP TABLE IF EXISTS console_partner_meta_data CASCADE')

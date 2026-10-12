@@ -65,11 +65,6 @@ class AuthServiceStub(object):
                 request_serializer=auth__pb2.GetUserRoleRequest.SerializeToString,
                 response_deserializer=auth__pb2.GetUserRoleResponse.FromString,
                 _registered_method=True)
-        self.GetUserTeamRole = channel.unary_unary(
-                '/auth.AuthService/GetUserTeamRole',
-                request_serializer=auth__pb2.GetUserTeamRoleRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetUserTeamRoleResponse.FromString,
-                _registered_method=True)
         self.GetRolePermissions = channel.unary_unary(
                 '/auth.AuthService/GetRolePermissions',
                 request_serializer=auth__pb2.GetRolePermissionsRequest.SerializeToString,
@@ -150,21 +145,6 @@ class AuthServiceStub(object):
                 request_serializer=auth__pb2.GetAllRolesRequest.SerializeToString,
                 response_deserializer=auth__pb2.GetAllRolesResponse.FromString,
                 _registered_method=True)
-        self.GetUserTeams = channel.unary_unary(
-                '/auth.AuthService/GetUserTeams',
-                request_serializer=auth__pb2.GetUserTeamsRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetTeamsResponse.FromString,
-                _registered_method=True)
-        self.GetPartnerTeams = channel.unary_unary(
-                '/auth.AuthService/GetPartnerTeams',
-                request_serializer=auth__pb2.GetPartnerTeamsRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetTeamsResponse.FromString,
-                _registered_method=True)
-        self.GetTeamMembers = channel.unary_unary(
-                '/auth.AuthService/GetTeamMembers',
-                request_serializer=auth__pb2.GetTeamMembersRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetTeamMembersResponse.FromString,
-                _registered_method=True)
 
 
 class AuthServiceServicer(object):
@@ -208,14 +188,6 @@ class AuthServiceServicer(object):
 
     def GetUserRole(self, request, context):
         """RPC to get User role
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetUserTeamRole(self, request, context):
-        """RPC to resolve a user's effective role WITHIN a team (team override if
-        set, else the user's global role) together with that role's permissions.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -327,25 +299,6 @@ class AuthServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetUserTeams(self, request, context):
-        """Teams
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetPartnerTeams(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetTeamMembers(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -378,11 +331,6 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.GetUserRole,
                     request_deserializer=auth__pb2.GetUserRoleRequest.FromString,
                     response_serializer=auth__pb2.GetUserRoleResponse.SerializeToString,
-            ),
-            'GetUserTeamRole': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetUserTeamRole,
-                    request_deserializer=auth__pb2.GetUserTeamRoleRequest.FromString,
-                    response_serializer=auth__pb2.GetUserTeamRoleResponse.SerializeToString,
             ),
             'GetRolePermissions': grpc.unary_unary_rpc_method_handler(
                     servicer.GetRolePermissions,
@@ -463,21 +411,6 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.GetAllRoles,
                     request_deserializer=auth__pb2.GetAllRolesRequest.FromString,
                     response_serializer=auth__pb2.GetAllRolesResponse.SerializeToString,
-            ),
-            'GetUserTeams': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetUserTeams,
-                    request_deserializer=auth__pb2.GetUserTeamsRequest.FromString,
-                    response_serializer=auth__pb2.GetTeamsResponse.SerializeToString,
-            ),
-            'GetPartnerTeams': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPartnerTeams,
-                    request_deserializer=auth__pb2.GetPartnerTeamsRequest.FromString,
-                    response_serializer=auth__pb2.GetTeamsResponse.SerializeToString,
-            ),
-            'GetTeamMembers': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetTeamMembers,
-                    request_deserializer=auth__pb2.GetTeamMembersRequest.FromString,
-                    response_serializer=auth__pb2.GetTeamMembersResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -643,33 +576,6 @@ class AuthService(object):
             '/auth.AuthService/GetUserRole',
             auth__pb2.GetUserRoleRequest.SerializeToString,
             auth__pb2.GetUserRoleResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetUserTeamRole(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetUserTeamRole',
-            auth__pb2.GetUserTeamRoleRequest.SerializeToString,
-            auth__pb2.GetUserTeamRoleResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -1102,87 +1008,6 @@ class AuthService(object):
             '/auth.AuthService/GetAllRoles',
             auth__pb2.GetAllRolesRequest.SerializeToString,
             auth__pb2.GetAllRolesResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetUserTeams(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetUserTeams',
-            auth__pb2.GetUserTeamsRequest.SerializeToString,
-            auth__pb2.GetTeamsResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetPartnerTeams(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetPartnerTeams',
-            auth__pb2.GetPartnerTeamsRequest.SerializeToString,
-            auth__pb2.GetTeamsResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetTeamMembers(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetTeamMembers',
-            auth__pb2.GetTeamMembersRequest.SerializeToString,
-            auth__pb2.GetTeamMembersResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -302,8 +302,6 @@ class PartnerMetaDataServices:
                 can_add_address_with_google_places=services_enabled_dict.get("can_add_address_with_google_places", False),
                 can_view_finance_management=services_enabled_dict.get("can_view_finance_management", False),
                 can_view_csf_lead_listing=services_enabled_dict.get("can_view_csf_lead_listing", False),
-                is_teams_enabled=bool(services_enabled_dict.get("is_teams_enabled")),
-                is_team_data_partition_enabled=bool(services_enabled_dict.get("is_team_data_partition_enabled")),
                 can_view_products=services_enabled_dict.get("can_view_products", False),
                 can_view_inventory=services_enabled_dict.get("can_view_inventory", False),
                 can_view_order_management=services_enabled_dict.get("can_view_order_management", False),

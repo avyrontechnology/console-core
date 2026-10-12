@@ -57,7 +57,6 @@ from src.components.partner.models import Partner
 from src.components.partner.repositories import PartnerRepository
 from src.components.partner_config.constants import PartnerConfigEnum
 from src.components.session_mangement.services import UserSessionService
-from src.components.team.repositories import TeamRepository
 from src.components.user.constants import (
     OBOTAAI_PARTNER_ID,
     UserResponseMsg,
@@ -95,7 +94,6 @@ class UserService:
         console_service_cache: CacheHelper,
         auth_service_utility: AuthUtility,
         session_factory: Callable[..., AbstractContextManager[Session]],
-        team_repository: Optional[TeamRepository] = None,
     ) -> None:
         self.__repository: UserRepository = user_repository
         self.__audit_service: AuditService = audit_service
@@ -103,8 +101,6 @@ class UserService:
         self.__console_service_cache: CacheHelper = console_service_cache
         self.__auth_service_utility: AuthUtility = auth_service_utility
         self._session_factory = session_factory
-        # Optional: when absent, GET /users simply omits team_count (see get_users).
-        self.__team_repository: Optional[TeamRepository] = team_repository
 
     async def get_users(
         self,
@@ -140,18 +136,6 @@ class UserService:
             self.__console_service_logger.info(
                 "Fetched all the users successfully : {}".format(all_users)
             )
-
-            teams_enabled: bool = False
-            team_counts: Dict[int, int] = {}
-            if self.__team_repository and partner_config_service and all_users:
-                teams_config = await partner_config_service.get_partner_config_by_key(
-                    all_users[0].partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-                )
-                teams_enabled = bool(teams_config and getattr(teams_config, "value", False))
-                if teams_enabled:
-                    team_counts = await self.__team_repository.get_member_counts_for_users(
-                        [user.id for user in all_users]
-                    )
 
             users_data: List[AllUsersDataResponse] = []
             for user in all_users:
@@ -191,7 +175,6 @@ class UserService:
                     parent_name=parent_name,
                     is_active=user.is_active,
                     cloud_agent_number=user.cloud_agent_number,
-                    team_count=team_counts.get(user.id, 0) if teams_enabled else None,
                     current_status=user.current_status or StandardStatuses.AWAY,
                 )
                 users_data.append(user_response)
@@ -1132,14 +1115,10 @@ class UserService:
         partner_id: UUID,
         partner_config_service = Provide["partner_config_service"],
     ) -> dict:
-        teams_cfg = await partner_config_service.get_partner_config_by_key(
-            partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-        )
         custom_roles_cfg = await partner_config_service.get_partner_config_by_key(
             partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
         )
         return {
-            "is_teams_enabled": bool(teams_cfg.value) if teams_cfg else False,
             "is_partner_custom_roles_enabled": (
                 bool(custom_roles_cfg.value) if custom_roles_cfg else False
             ),

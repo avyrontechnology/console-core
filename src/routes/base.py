@@ -17,7 +17,6 @@ from src.components.partner_role_permission.controller import (
 )
 from src.components.release_note.controllers import ReleaseNoteController
 from src.components.session_mangement.controllers import UserSessionController
-from src.components.team.controllers import TeamController
 from src.components.partner_role.controllers import PartnerRoleController
 
 from ..components.api_logs.controllers import ApiLogsController
@@ -51,11 +50,6 @@ class Router:
             PartnerPermissionController.partner_role_permission_router,
             prefix="",
             tags=["Partner Role Permission"],
-        )
-        router.include_router(
-            TeamController.team_router,
-            prefix="",
-            tags=["Teams"],
         )
         router.include_router(
             PartnerRoleController.partner_role_router,

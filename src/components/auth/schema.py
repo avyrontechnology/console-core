@@ -63,10 +63,6 @@ class UserData(UserBase):
     alternate_phone_number: Optional[str] = None
     partner_id: UUID
     password: str = Field(..., min_length=8)
-    team_id: Optional[UUID] = None
-    # Optional per-team role override for the new team membership; ignored
-    # unless team_id is also set. When omitted, the user's default role applies.
-    team_role_id: Optional[UUID] = None
 
     @field_validator("password")
     def validate_password(cls, password: str) -> str:
@@ -247,8 +243,6 @@ class AllUsersDataResponse(UserBase):
     role_name: Optional[str] = None
     parent_name: Optional[str] = None
     is_active: bool
-    # Populated only when teams are enabled for the user's partner; None otherwise.
-    team_count: Optional[int] = None
     current_status: Optional[str] = None
 
     model_config = ConfigDict(

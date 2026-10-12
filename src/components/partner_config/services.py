@@ -81,16 +81,6 @@ class PartnerConfigService:
                 value=partner_config_data.value,
             )
 
-            if partner_config_data.key == PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value:
-                if str(partner_config_data.value).lower() in ("true", "1"):
-                    existing = await self.get_partner_config_by_key(
-                        partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-                    )
-                    if not (existing and existing.value):
-                        raise PartnerConfigException(
-                            "IS_TEAMS_ENABLED must be enabled before enabling IS_PARTNER_CUSTOM_ROLES_ENABLED"
-                        )
-
             partner_config: PartnerConfig = (
                 await self.__partner_config_repository.create_partner_config(
                     request_data, partner_id
@@ -225,16 +215,6 @@ class PartnerConfigService:
                 "Trying to update partner config for partner id: {}".format(partner_id)
             )
 
-            if update_partner_config_data.is_partner_custom_roles_enabled is True:
-                if not update_partner_config_data.is_teams_enabled:
-                    existing = await self.get_partner_config_by_key(
-                        partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-                    )
-                    if not (existing and existing.value):
-                        raise PartnerConfigException(
-                            "IS_TEAMS_ENABLED must be enabled before enabling IS_PARTNER_CUSTOM_ROLES_ENABLED"
-                        )
-
             if update_partner_config_data.is_partner_custom_roles_enabled is False:
                 if await self.__partner_config_repository.has_users_on_partner_roles(partner_id):
                     raise TeamException(
@@ -355,11 +335,7 @@ class PartnerConfigService:
                 PartnerConfigEnum.CAN_VIEW_PRODUCTS,
                 PartnerConfigEnum.CAN_VIEW_INVENTORY,
                 PartnerConfigEnum.CAN_VIEW_ORDER_MANAGEMENT,
-                PartnerConfigEnum.IS_TEAMS_ENABLED,
                 PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED,
-                PartnerConfigEnum.IS_TEAM_DATA_PARTITION_ENABLED,
-                PartnerConfigEnum.TEAM_STRICT_HIERARCHY_MODE,
-                PartnerConfigEnum.TEAM_STRICT_HIERARCHY_START_ROLE_ID,
                 PartnerConfigEnum.IS_USER_TRACKER_ENABLED,
                 PartnerConfigEnum.CAN_VIEW_PAYMENT_HISTORY,
                 PartnerConfigEnum.IS_REENQUIRY_CHAIN_ENABLED,
@@ -516,96 +492,6 @@ class PartnerConfigService:
             )
             raise exec
 
-    async def team_role_permission_check(
-        self,
-        user_id: UUID,
-        effective_role_id: Optional[UUID],
-        auth_repo: AuthRepository = Provide["auth_repository"],
-        user_service: UserService = Provide["console_service"],
-        user_config_repo: UserConfigRepository = Provide["user_config_repository"],
-        user_repo: UserRepository = Provide["user_repository"],
-    ) -> list[str]:
-        """Permission slugs for a user acting under a specific (team) role.
-
-        Mirrors :meth:`custom_role_permission_check` but is keyed on
-        ``effective_role_id`` (the team override coalesced with the global role)
-        instead of ``User.role_id``. The super-admin / system-admin
-        all-permissions bypass is preserved by design.
-        """
-        try:
-            # Bypass: super admin / system admin see everything, team role aside.
-            user_config: UserConfig = await user_config_repo.get_user_config_by_key(
-                user_id, "is_super_admin"
-            )
-            if getattr(user_config, "value", False):
-                permissions = await auth_repo.get_all_permission()
-                return [permission.slug for permission in permissions]
-
-            sys_admin: Optional[User] = await user_repo.get_system_admin_user()
-            if sys_admin is not None and user_id == sys_admin.id:
-                permissions = await auth_repo.get_all_permission()
-                return [permission.slug for permission in permissions]
-
-            # No resolvable role -> no permissions (a safe, complete empty set).
-            if effective_role_id is None:
-                return []
-
-            user: User = await user_service.get_user_by_id(user_id)
-            partner_id: UUID = user.partner_id
-
-            default_permissions = (
-                await auth_repo.get_default_role_permissions_by_role_id(
-                    effective_role_id
-                )
-            )
-            default_permission_list: list[str] = [
-                permission.slug for permission in default_permissions
-            ]
-
-            key = PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED
-            cfg_list = (
-                await self.__partner_config_repository.get_partner_config_by_key(
-                    partner_id, key
-                )
-            )
-            if isinstance(cfg_list, list):
-                cfg = cfg_list[0] if len(cfg_list) > 0 else None
-            else:
-                cfg = cfg_list
-
-            if cfg and getattr(cfg, "value", False) == True:
-                # Partner-custom perms live on the partner-owned copy of the role.
-                resolved_role_id: UUID = await auth_repo.resolve_role_for_partner(
-                    effective_role_id, partner_id
-                )
-                partner_permissions = (
-                    await auth_repo.get_partner_role_permissions_by_partner_and_role(
-                        partner_id, resolved_role_id
-                    )
-                )
-                partner_permission_list: list[str] = [
-                    permission.slug for permission in partner_permissions
-                ]
-                user_permission_list: list[str] = list(
-                    set(partner_permission_list + default_permission_list)
-                )
-
-                if user.is_internal:
-                    return user_permission_list
-
-                internal_permission_list: list = (
-                    await auth_repo.get_internal_permissions()
-                )
-                return list(set(user_permission_list) - set(internal_permission_list))
-
-            return default_permission_list
-        except Exception as exec:
-            self.__console_service_logger.error(
-                "An unexpected error occurred while team role permission check: {}".format(
-                    exec
-                )
-            )
-            raise exec
 
     async def role_permission_check(
         self,

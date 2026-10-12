@@ -22,9 +22,6 @@ service AuthService {
     // RPC to get User role
     rpc GetUserRole (GetUserRoleRequest) returns (GetUserRoleResponse);
 
-    // RPC to resolve a user's effective role WITHIN a team (team override if
-    // set, else the user's global role) together with that role's permissions.
-    rpc GetUserTeamRole (GetUserTeamRoleRequest) returns (GetUserTeamRoleResponse);
 
     // RPC to get the configured permission slugs granted to a specific role.
     rpc GetRolePermissions (GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
@@ -64,10 +61,6 @@ service AuthService {
     rpc GetCitiesByNames    (GetCitiesByNamesRequest)    returns (GetCitiesByNamesResponse);
     rpc GetAllRoles (GetAllRolesRequest) returns (GetAllRolesResponse);
 
-    // Teams
-    rpc GetUserTeams    (GetUserTeamsRequest)    returns (GetTeamsResponse);
-    rpc GetPartnerTeams (GetPartnerTeamsRequest) returns (GetTeamsResponse);
-    rpc GetTeamMembers  (GetTeamMembersRequest)  returns (GetTeamMembersResponse);
 }
 
 //  service for get partner meta data definitions
@@ -210,20 +203,6 @@ message GetUserRoleResponse {
     int64 hierarchy = 3;
 }
 
-message GetUserTeamRoleRequest {
-    string user_id = 1; // user_id
-    string team_id = 2; // team the user is acting within
-}
-
-message GetUserTeamRoleResponse {
-    string message = 1;
-    bool   is_member = 2;            // false => user is not a member of team_id
-    string role = 3;                 // effective role slug (team override else global)
-    int64  hierarchy = 4;            // effective role hierarchy
-    string data_scope = 5;           // effective role data_scope (ALL/SUBTREE/OWN)
-    repeated string permissions = 6; // permission slugs for the effective role
-}
-
 message GetRolePermissionsRequest {
     string role_id = 1; // role to fetch configured permissions for
 }
@@ -330,6 +309,7 @@ message GetPartnerMetaDataDetailsRequest{
 }
 
 message GetPartnerMetaDataDetailsResponse {
+    reserved 26, 27; // removed with the Teams feature
     string type_of_business = 1;       
     int32 years_in_business = 2;       
     int64 annual_revenue = 3;         
@@ -353,8 +333,6 @@ message GetPartnerMetaDataDetailsResponse {
     bool can_view_finance_management=23;
     bool is_add_number_enabled = 24;
     bool is_obotaai_enabled = 25;
-    string team_strict_hierarchy_mode = 26;
-    string team_strict_hierarchy_start_role_id = 27;
     bool is_user_tracker_enabled = 28;
     bool can_view_report_management = 29;
     bool can_download_call_logs = 30;
@@ -370,6 +348,7 @@ message GetPartnerServiceRequest{
 }
 
 message GetPartnerServiceDetailsResponse{
+    reserved 32, 33; // removed with the Teams feature
     bool is_talko_service_enabled=3;
     bool is_talko_service_free_trial_enabled=4;
     bool is_email_verification_enabled=7;
@@ -394,8 +373,6 @@ message GetPartnerServiceDetailsResponse{
     bool can_view_product_management = 29;
     bool can_view_finance_management = 30;
     bool can_view_csf_lead_listing = 31;
-    bool is_teams_enabled = 32;
-    bool is_team_data_partition_enabled = 33;
     bool can_view_products = 34;
     bool can_view_inventory = 35;
     bool can_view_order_management = 36;
@@ -568,46 +545,4 @@ message RoleDetail {
 message GetAllRolesResponse {
     string              message = 1;
     repeated RoleDetail roles   = 2;
-}
-
-// ----------------------------- Teams ---------------------------------- //
-
-// A member of a team with the role effective within that team.
-message TeamMemberDetail {
-    string user_id = 1;
-    string effective_role = 2;  // COALESCE(team_member.role_id, user.role_id) slug
-    int64  hierarchy      = 3;  // effective role hierarchy
-    string data_scope     = 4;  // data_scope of the effective role (ALL/SUBTREE/OWN)
-}
-
-// A team with its members.
-message TeamDetail {
-    string team_id = 1;
-    string name           = 2;
-    string partner_id = 3;
-    string parent_team_id = 4;
-    bool   is_internal    = 5;
-    repeated TeamMemberDetail members = 6;
-}
-
-message GetUserTeamsRequest {
-    string user_id = 1;
-}
-
-message GetPartnerTeamsRequest {
-    string partner_id = 1;
-}
-
-message GetTeamMembersRequest {
-    string team_id = 1;
-}
-
-message GetTeamsResponse {
-    string             message = 1;
-    repeated TeamDetail teams  = 2;
-}
-
-message GetTeamMembersResponse {
-    string              message = 1;
-    repeated UserDetail members = 2;
 }

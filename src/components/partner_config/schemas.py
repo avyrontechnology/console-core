@@ -89,13 +89,8 @@ class PartnerConfigData(BaseModel):
     can_view_products: Optional[bool] = False
     can_view_inventory: Optional[bool] = False
     can_view_order_management: Optional[bool] = False
-    # Teams feature
-    is_teams_enabled: Optional[bool] = None
     is_partner_custom_roles_enabled: Optional[bool] = None
-    is_team_data_partition_enabled: Optional[bool] = None
     is_reenquiry_chain_enabled: Optional[bool] = False
-    team_strict_hierarchy_mode: Optional[str] = None
-    team_strict_hierarchy_start_role_id: Optional[UUID] = None
     is_user_tracker_enabled: Optional[bool] = False
     can_view_payment_history: Optional[bool] = False
     can_view_report_management: Optional[bool] = False
