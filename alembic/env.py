@@ -52,7 +52,6 @@ from src.components.db_constants.models import (
 )
 from src.components.release_note.models import ReleaseNotes
 from src.components.default_role_permission.models import DefaultRolePermission
-from src.components.digital_assets.models import DigitalAssets
 from src.components.location.models import Cities, Countries, States
 from src.components.partner.models import Partner
 from src.components.partner_config.models import PartnerConfig

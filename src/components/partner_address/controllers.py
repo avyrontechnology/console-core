@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -81,7 +82,7 @@ class PartnerAddressController:
     @inject
     async def get_partner_address_by_id(
         request: Request,
-        address_id: int,
+        address_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -113,7 +114,7 @@ class PartnerAddressController:
     @inject
     async def delete_partner_address_by_id(
         request: Request,
-        address_id: int,
+        address_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -145,7 +146,7 @@ class PartnerAddressController:
     @inject
     async def get_partner_address_by_partner_id(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -180,7 +181,7 @@ class PartnerAddressController:
     async def upsert_partner_address(
         request: Request,
         address_data: UpdatePartnerAddressRequest,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         is_upserting_publisher_address: Optional[bool]=False,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
@@ -192,10 +193,10 @@ class PartnerAddressController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not is_upserting_publisher_address:
                 if not (partner_id and await user_svc.is_user_internal(user_id)):
-                    partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+                    partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             console_service_logger.info(
                 "trying to update the partner addresses for partner id: {}".format(

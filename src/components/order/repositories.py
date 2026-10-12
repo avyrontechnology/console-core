@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func, or_, select, update, case
@@ -34,8 +35,8 @@ class OrderRepository:
     async def initiate_order(
         self,
         order_data: OrderBase,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         duration: int,
         order_type: str = OrderType.FRESH,
     ) -> Order:
@@ -80,16 +81,16 @@ class OrderRepository:
 
     async def create_manual_order(
         self,
-        partner_id: int,
-        plan_id: int,
+        partner_id: UUID,
+        plan_id: UUID,
         add_ons: dict,
         amount: int,
         currency: str,
         duration_days: int,
-        created_by: int,
+        created_by: UUID,
         order_type: str = OrderType.FRESH,
         payment_method: str = PaymentMethod.DIRECT,
-        original_order_id: Optional[int] = None,
+        original_order_id: Optional[UUID] = None,
     ) -> Order:
         """
         Persist a manually-created order.
@@ -143,7 +144,7 @@ class OrderRepository:
     # =========================================================================
 
     async def update_order(
-        self, order_id: int, update_data: dict, user_id: int
+        self, order_id: UUID, update_data: dict, user_id: UUID
     ) -> Order:
         async with self.session_factory() as session:
             try:
@@ -170,7 +171,7 @@ class OrderRepository:
                 raise
 
     async def update_order_if_not_finalized(
-        self, order_id: int, update_data: dict, user_id: int
+        self, order_id: UUID, update_data: dict, user_id: UUID
     ) -> Optional[Order]:
         """
         Atomically finalize an order only if it hasn't already been
@@ -225,7 +226,7 @@ class OrderRepository:
                 self.logger.error("Error updating order {}: {}".format(order_id, e))
                 raise
 
-    async def get_order_by_id(self, order_id: int) -> Order:
+    async def get_order_by_id(self, order_id: UUID) -> Order:
         """
         Fetch a single order by primary key with its plan eagerly loaded.
         Used by manual order renewal to load the original order.
@@ -249,7 +250,7 @@ class OrderRepository:
                 )
                 raise
 
-    async def get_latest_order_by_partner(self, partner_id: int) -> Optional[Order]:
+    async def get_latest_order_by_partner(self, partner_id: UUID) -> Optional[Order]:
         """
         Return the most recent SUCCESS order for the partner (by created_at desc),
         with its plan eagerly loaded.

@@ -1,10 +1,11 @@
+from uuid import UUID
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
 
 class UserMetadataSchema(BaseModel):
-    id: int
+    id: UUID
     meta_key: str
     meta_value: str
 
@@ -14,7 +15,7 @@ class UserMetadataSchema(BaseModel):
 
 
 class UserMetadataResponse(UserMetadataSchema):
-    id: int
+    id: UUID
     meta_key: str
 
     model_config = ConfigDict(

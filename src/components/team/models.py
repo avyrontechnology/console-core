@@ -1,12 +1,7 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    ForeignKey,
-    Integer,
-    String,
-    UniqueConstraint,
-)
+import uuid
+from sqlalchemy import Boolean, Column, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 
@@ -26,13 +21,13 @@ class Team(MetaData):
     name = Column(String(128), nullable=False)
     slug = Column(String(128), nullable=False)
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     parent_team_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_team.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -70,19 +65,19 @@ class TeamMember(MetaData):
     __tablename__ = "console_team_member"
 
     team_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_team.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     user_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_users.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     role_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_role.id", ondelete="RESTRICT"),
         nullable=True,
     )

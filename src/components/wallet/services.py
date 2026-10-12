@@ -1,4 +1,5 @@
 """Wallet Service module."""
+from uuid import UUID
 from fastapi import Depends
 import asyncio
 import base64
@@ -15,8 +16,6 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
 
-from src.components.digital_assets.services import DigitalAssetEnum, DigitalAssetService, StorageHelper
-from src.components.wallet.constants import WalletEmailConstants
 from src.components.wallet.enum import (
     GRID_COLOR,
     HEADER_BG_COLOR,
@@ -39,7 +38,6 @@ from src.components.wallet.schema import WalletRPCResponse, WalletResponse, Wall
 from src.loggers.console_service_logger import ConsoleServiceLogger
 from dependency_injector.wiring import Provide
 from fastapi import Depends
-from src.components.services.email_service import EmailService
 
 class WalletService:
     """Service layer for wallet operations."""
@@ -50,7 +48,7 @@ class WalletService:
         self.__wallet_repository: WalletRepository = wallet_repository
         self.__logger: ConsoleServiceLogger = logger
 
-    async def get_wallet(self, partner_id: int) -> Wallet:
+    async def get_wallet(self, partner_id: UUID) -> Wallet:
         """Retrieve wallet details for the given partner."""
         try:
             wallet: Optional[Wallet] = (
@@ -140,7 +138,7 @@ class WalletService:
 
     async def get_wallet_transactions(
         self,
-        partner_id: int,
+        partner_id: UUID,
         start_date: Optional[int],
         end_date: Optional[int],
         limit: int,
@@ -204,7 +202,7 @@ class WalletService:
             )
             raise
 
-    async def create_wallet(self, partner_id: int) -> Wallet:
+    async def create_wallet(self, partner_id: UUID) -> Wallet:
         """
         Create a wallet for a given partner.
 
@@ -250,7 +248,7 @@ class WalletService:
 
     async def generate_statement(
         self,
-        partner_id: int,
+        partner_id: UUID,
         start_date: int,
         end_date: int,
         service_name: str | None,
@@ -389,8 +387,8 @@ class WalletService:
 
     async def perform_transaction(
         self,
-        current_user_id: int,
-        partner_id: int,
+        current_user_id: UUID,
+        partner_id: UUID,
         transaction_type: TransactionType,
         amount: float,
         service_name: ServiceName,
@@ -516,21 +514,12 @@ class WalletService:
             self.__logger.error(f"Got an exception while creating CSV : {exp}")
     
 
-    def __send_wallet_report_to_internal_partner(self, csv_url: str, timestamp:int, email = Depends(Provide['email_service'])):
-        try:
-
-            formatted_date = datetime.fromtimestamp(int(timestamp/1000)).strftime("%d-%B-%Y")
-            email.send_email(
-                to_emails=WalletEmailConstants.LIST_OF_RECIEVERS,
-                subject=WalletEmailConstants.SUBJECT,
-                body = {"report_period" : f"24 Hours {formatted_date}"},
-                html_template='wallet_report.html',
-                attachments = [{"filename" : f"wallet_status_{formatted_date}.csv", "content" : csv_url}]
-            )
-            self.__logger.info("email sent")
-        except Exception as exp:
-            self.__logger.info(f"got an issue : {exp}")
-            raise
+    def __send_wallet_report_to_internal_partner(self, csv_url: str, timestamp: int):
+        formatted_date = datetime.fromtimestamp(int(timestamp / 1000)).strftime("%d-%B-%Y")
+        self.__logger.info(
+            f"Wallet report email retired with the mailer; CSV ready (not sent): "
+            f"wallet_status_{formatted_date}.csv"
+        )
         
     
     async def send_partner_wallet_balance_email(self) -> None:

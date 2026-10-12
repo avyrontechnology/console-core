@@ -1,4 +1,7 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.core.db import Base
 
@@ -6,7 +9,7 @@ from src.core.db import Base
 class Organization(Base):
     __tablename__ = "console_organization"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
     name = Column(String(80), nullable=False, unique=True, index=True)
     org_key = Column(String(80), nullable=False, unique=True, index=True)
     # created_by = FK to user

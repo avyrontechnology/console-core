@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Optional
 
 
@@ -27,7 +28,7 @@ class EnvironmentNotFoundException(Exception):
 
 
 class PartnerException(Exception):
-    def __init__(self, message: str, id: Optional[int] = None):
+    def __init__(self, message: str, id: Optional[UUID] = None):
         self.message = message
         self.id = id
         super().__init__(message)

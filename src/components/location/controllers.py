@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -59,7 +60,7 @@ class LocationController:
     @inject
     async def get_states_by_country(
         request: Request,
-        country_id: Optional[int] = Query(
+        country_id: Optional[UUID] = Query(
             None, description="filter states by country id"
         ),
         search_by: Optional[str] = Query(None, description="filter state by name"),
@@ -107,7 +108,7 @@ class LocationController:
     @inject
     async def get_cities_by_state(
         request: Request,
-        state_id: Optional[int] = Query(None, description="filter cities by state id"),
+        state_id: Optional[UUID] = Query(None, description="filter cities by state id"),
         search_by: Optional[str] = Query(None, description="filter city by name"),
         limit: Optional[int] = Query(
             None, description="number of records per page", ge=1

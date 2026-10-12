@@ -16,13 +16,6 @@ from src.components.db_constants.models import (
 )
 
 
-# Mock StorageHelper for LazyConstantLoader tests
-@pytest_asyncio.fixture
-def mock_storage_helper():
-    with patch("src.components.db_constants.initializer.StorageHelper") as mock:
-        yield mock
-
-
 @pytest_asyncio.fixture
 async def mock_session():
     session = MagicMock()
@@ -231,30 +224,27 @@ async def test_lazy_constant_loader_dict_default():
 
 
 @pytest.mark.asyncio
-async def test_lazy_constant_loader_model(mock_storage_helper):
-    # Setup
-    mock_storage_helper.get_presigned_url.return_value = "presigned_url"
+async def test_lazy_constant_loader_model():
+    # Setup (storage retired: model path returns the key itself)
     loader = LazyConstantLoader("TEST_KEY", model=Constants, default="default")
 
     # Execute
     result = loader.__repr__()
 
     # Assert
-    assert result == "presigned_url"
-    assert mock_storage_helper.get_presigned_url.called_with("TEST_KEY")
+    assert result == "TEST_KEY"
 
 
 @pytest.mark.asyncio
-async def test_lazy_constant_loader_model_none(mock_storage_helper):
-    # Setup
-    mock_storage_helper.get_presigned_url.return_value = None
+async def test_lazy_constant_loader_model_none():
+    # Setup (storage retired: model path returns the key itself)
     loader = LazyConstantLoader("TEST_KEY", model=Constants, default="default")
 
     # Execute
     result = loader.__repr__()
 
     # Assert
-    assert result == "default"
+    assert result == "TEST_KEY"
 
 
 @pytest.mark.asyncio

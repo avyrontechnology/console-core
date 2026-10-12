@@ -1,5 +1,7 @@
-from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
+import uuid
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String, text
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils import force_auto_coercion
 
 from src.components.database.base_model import MetaData
@@ -16,7 +18,7 @@ force_auto_coercion()
 class Partner(MetaData):
     __tablename__ = "console_partners"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
     name = Column(String(128), unique=True, nullable=False, index=True)
     company_legal_name = Column(String(128), unique=True, nullable=False, index=True)
     description = Column(String(256))
@@ -24,23 +26,19 @@ class Partner(MetaData):
     gst_no = Column(String(32), unique=True, nullable=True)
     active_license = Column(Integer, default=0)
     created_by = Column(
-        Integer, ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
+        UUID(as_uuid=True), ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
     )
     updated_by = Column(
-        Integer, ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
+        UUID(as_uuid=True), ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
     )
     deleted_by = Column(
-        Integer, ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
+        UUID(as_uuid=True), ForeignKey("console_users.id", ondelete="RESTRICT"), index=True
     )
     parent_id = Column(
-        Integer, ForeignKey("console_partners.id", ondelete="RESTRICT"), index=True
-    )
-    partner_logo_id = Column(
-        Integer, ForeignKey("digital_assets.id", ondelete="SET NULL"), index=True
+        UUID(as_uuid=True), ForeignKey("console_partners.id", ondelete="RESTRICT"), index=True
     )
     is_active = Column(Boolean, default=True, index=True)
     is_deleted = Column(Boolean, default=False)
-    is_maglo_publisher = Column(Boolean, default=False)
     partner_status = Column(String(32), default=PartnerStatus.ACTIVE, nullable=False)
     is_feedback_enabled = Column(Boolean, default=True, index=True)
     is_internal = Column(Boolean, default=False, index=True)
@@ -68,9 +66,6 @@ class Partner(MetaData):
         "PartnerRolePermission", back_populates="partner"
     )
     addresses = relationship("PartnerAddress", back_populates="partner")
-    partner_logo = relationship(
-        "DigitalAssets", foreign_keys=[partner_logo_id], uselist=False
-    )
 
     users = relationship(
         "User", foreign_keys="[User.partner_id]", back_populates="partner"

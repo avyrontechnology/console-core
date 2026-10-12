@@ -1,3 +1,4 @@
+from uuid import UUID
 from collections import defaultdict
 from typing import Any, Iterator, Optional
 
@@ -7,7 +8,6 @@ from fastapi import Depends, HTTPException, status
 from src.components.audit_log.schema import AuditLogSchema
 from src.components.audit_log.services import AuditService
 from src.components.auth.constant import PermissionAttributes
-from src.components.cache.helper import CacheHelper
 from src.components.auth.service import AuthService
 from src.components.auth.models import Role
 from src.components.common.actions import AuditActions
@@ -40,14 +40,12 @@ class PartnerPermissionService:
         audit_service: AuditService,
         console_service_logger: ConsoleServiceLogger,
         partner_perm_repository: PartnerPermissionRepository,
-        cache_helper: CacheHelper,
     ):
         self.__audit_service: AuditService = audit_service
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
         self.__partner_perm_repository: PartnerPermissionRepository = (
             partner_perm_repository
         )
-        self.__cache: CacheHelper = cache_helper
 
     async def add_partner_permission(
         self,
@@ -78,8 +76,8 @@ class PartnerPermissionService:
                     ExceptionMsg.CANT_CREATE_IF_ONE_IS_INTERNAL
                 )
 
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             key = PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED
             is_custom_role_permission_enabled: PartnerConfigResponse = (
                 await partner_config_service.get_partner_config_by_key(partner_id, key)
@@ -112,9 +110,6 @@ class PartnerPermissionService:
                 details="Partner role permission created with id: {}".format(result.id),
             )
             await self.__audit_service.log_action(log_entry)
-            # Granting a permission to a role changes the RBAC set maglo caches
-            # per user (GRPC_GET_USER_PERMISSIONS, ONE_WEEK).
-            await self.__cache.invalidate_user_permissions_cache()
             return result
         except PartnerRolePermissionException as ex:
             self.__console_service_logger.error(
@@ -170,7 +165,7 @@ class PartnerPermissionService:
             )
             raise ex
 
-    async def get_partner_role_permission_by_id(self, id: int) -> PartnerRolePermission:
+    async def get_partner_role_permission_by_id(self, id: UUID) -> PartnerRolePermission:
         try:
             self.__console_service_logger.info(
                 "Attempting get Partner Role Permission by ID: {}".format(id)
@@ -198,7 +193,7 @@ class PartnerPermissionService:
             )
             raise ex
 
-    async def get_by_partner_id(self, id: int) -> Iterator[PartnerRolePermission]:
+    async def get_by_partner_id(self, id: UUID) -> Iterator[PartnerRolePermission]:
         try:
             self.__console_service_logger.info(
                 "Attempting get Partner Role Permission by Partner ID: {}".format(id)
@@ -227,7 +222,7 @@ class PartnerPermissionService:
             )
             raise ex
 
-    async def delete_partner_role_permission(self, id: int, current_user: dict) -> None:
+    async def delete_partner_role_permission(self, id: UUID, current_user: dict) -> None:
         try:
             self.__console_service_logger.info(
                 "Attempting delete Partner Role Permission ID {}".format(id)
@@ -251,9 +246,6 @@ class PartnerPermissionService:
             self.__console_service_logger.info(
                 "successfully deleted partner role permission, id {}".format(id)
             )
-            # Revoking a permission from a role changes the RBAC set maglo caches
-            # per user (GRPC_GET_USER_PERMISSIONS, ONE_WEEK).
-            await self.__cache.invalidate_user_permissions_cache()
             return result
         except PartnerRolePermissionException as ex:
             raise ex
@@ -267,7 +259,7 @@ class PartnerPermissionService:
 
     async def get_partner_permissions_matrix_by_config(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),

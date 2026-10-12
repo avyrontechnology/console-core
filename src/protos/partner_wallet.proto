@@ -16,8 +16,8 @@ service WalletRPCService {
 
 // Single wallet response
 message WalletRPCResponse {
-    int64 id = 1;
-    int64 partner_id = 2;
+    string id = 1;
+    string partner_id = 2;
     double balance = 3;
     string currency = 4;
     double frozen_balance = 5;
@@ -29,7 +29,7 @@ message WalletRPCResponse {
 
 // Batch request
 message GetWalletsByPartnerIdsRequest {
-    repeated int64 partner_ids = 1;
+    repeated string partner_ids = 1;
 }
 
 // Batch response

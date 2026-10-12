@@ -1,3 +1,4 @@
+from uuid import UUID
 import copy
 import json
 from typing import List, Optional
@@ -58,7 +59,7 @@ class UserMetadataService:
         except UserMetadataException as ex:
             raise ex
 
-    async def get_user_metadata_by_user_id(self, user_id: int):
+    async def get_user_metadata_by_user_id(self, user_id: UUID):
         self.__console_service_logger.info(
             "Fetching metadata for user_id={}".format(user_id)
         )
@@ -84,7 +85,7 @@ class UserMetadataService:
             raise ex
 
     async def add_user_metadata(
-        self, user_id: int, user_metadata: CreateUserMetaDataSchema, current_user: dict
+        self, user_id: UUID, user_metadata: CreateUserMetaDataSchema, current_user: dict
     ) -> UserMetadataSchema:
         """
         Creates user metadata after validating the input.
@@ -137,7 +138,7 @@ class UserMetadataService:
             raise ex
 
     async def update_user_metadata(
-        self, current_user: dict, user_id: int, user_metadata: UpdateUserMetadataSchema
+        self, current_user: dict, user_id: UUID, user_metadata: UpdateUserMetadataSchema
     ) -> UserMetadataSchema:
         """
         Updates user metadata for a given user ID.
@@ -219,7 +220,7 @@ class UserMetadataService:
             raise ex
 
     async def delete_user_metadata_by_id(
-        self, user_id: int, current_user: dict
+        self, user_id: UUID, current_user: dict
     ) -> dict:
         """Deletes user metadata for a given user ID."""
         try:

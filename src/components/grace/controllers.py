@@ -168,9 +168,7 @@ class GraceController:
                     "partner_id": {
                         "value": partner_id,
                         "required": True,
-                        "type": FieldType.INTEGER,
-                        "min": 1,
-                        "max": 2147483647,
+                        "type": FieldType.UUID,
                     },
                 }
             )

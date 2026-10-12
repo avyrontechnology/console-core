@@ -1,5 +1,6 @@
 """Tests for GraceRepository — all DB interactions mocked via session_factory."""
 
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,8 +10,8 @@ from src.components.grace.repositories import GraceRepository
 
 
 def _make_grace(
-    grace_id=1,
-    partner_id=10,
+    grace_id= UUID("11111111-1111-1111-1111-111111111111"),
+    partner_id= UUID("10101010-1010-1010-1010-101010101010"),
     service_name="console",
     granted_days=7,
     attempt_number=1,
@@ -20,7 +21,7 @@ def _make_grace(
     consumed_days=None,
     settled_at=None,
     settled_by_order_id=None,
-    created_by=99,
+    created_by= UUID("99999999-9999-9999-9999-999999999999"),
     created_at=1_700_000_000_000,
 ):
     g = MagicMock()
@@ -79,12 +80,12 @@ class TestGraceRepository:
     async def test_create_grace_calls_session_add_and_commit(self):
         with self._now():
             await self.repo.create_grace(
-                partner_id=10,
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"),
                 service_name="console",
                 remark="reason",
                 granted_days=7,
                 attempt_number=1,
-                created_by=99,
+                created_by= UUID("99999999-9999-9999-9999-999999999999"),
             )
         self.session.add.assert_called_once()
         self.session.commit.assert_awaited_once()
@@ -102,12 +103,12 @@ class TestGraceRepository:
         with self._now():
             try:
                 await self.repo.create_grace(
-                    partner_id=10,
+                    partner_id= UUID("10101010-1010-1010-1010-101010101010"),
                     service_name="console",
                     remark="r",
                     granted_days=granted_days,
                     attempt_number=1,
-                    created_by=1,
+                    created_by= UUID("11111111-1111-1111-1111-111111111111"),
                 )
             except Exception:
                 pass  # refresh may fail — we only care about add()
@@ -126,12 +127,12 @@ class TestGraceRepository:
         with self._now():
             try:
                 await self.repo.create_grace(
-                    partner_id=10,
+                    partner_id= UUID("10101010-1010-1010-1010-101010101010"),
                     service_name="console",
                     remark="r",
                     granted_days=5,
                     attempt_number=1,
-                    created_by=1,
+                    created_by= UUID("11111111-1111-1111-1111-111111111111"),
                 )
             except Exception:
                 pass
@@ -145,12 +146,12 @@ class TestGraceRepository:
         with self._now():
             with pytest.raises(Exception, match="DB write failed"):
                 await self.repo.create_grace(
-                    partner_id=10,
+                    partner_id= UUID("10101010-1010-1010-1010-101010101010"),
                     service_name="console",
                     remark="r",
                     granted_days=5,
                     attempt_number=1,
-                    created_by=1,
+                    created_by= UUID("11111111-1111-1111-1111-111111111111"),
                 )
 
         self.session.rollback.assert_awaited_once()
@@ -159,12 +160,12 @@ class TestGraceRepository:
     async def test_create_grace_logs_success(self):
         with self._now():
             await self.repo.create_grace(
-                partner_id=10,
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"),
                 service_name="console",
                 remark="r",
                 granted_days=5,
                 attempt_number=1,
-                created_by=1,
+                created_by= UUID("11111111-1111-1111-1111-111111111111"),
             )
         self.mock_logger.info.assert_called()
 
@@ -235,9 +236,9 @@ class TestGraceRepository:
 
     async def test_get_all_for_service_returns_all_statuses(self):
         graces = [
-            _make_grace(grace_id=1, status=GraceStatus.ACTIVE),
-            _make_grace(grace_id=2, status=GraceStatus.SETTLED),
-            _make_grace(grace_id=3, status=GraceStatus.EXPIRED),
+            _make_grace(grace_id= UUID("11111111-1111-1111-1111-111111111111"), status=GraceStatus.ACTIVE),
+            _make_grace(grace_id= UUID("22222222-2222-2222-2222-222222222222"), status=GraceStatus.SETTLED),
+            _make_grace(grace_id= UUID("33333333-3333-3333-3333-333333333333"), status=GraceStatus.EXPIRED),
         ]
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = graces
@@ -314,8 +315,8 @@ class TestGraceRepository:
     # =========================================================================
 
     async def test_get_unsettled_returns_active_and_expired_only(self):
-        active = _make_grace(grace_id=1, status=GraceStatus.ACTIVE)
-        expired = _make_grace(grace_id=2, status=GraceStatus.EXPIRED)
+        active = _make_grace(grace_id= UUID("11111111-1111-1111-1111-111111111111"), status=GraceStatus.ACTIVE)
+        expired = _make_grace(grace_id= UUID("22222222-2222-2222-2222-222222222222"), status=GraceStatus.EXPIRED)
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = [active, expired]
         self.session.execute = AsyncMock(return_value=result_mock)
@@ -400,10 +401,10 @@ class TestGraceRepository:
         # SETTLED 3 days (ACTIVE) + 5 days (EXPIRED) = 8 total
         payment = NOW_MS + (3 * GRACE_MS_PER_DAY)
         active = _make_grace(
-            grace_id=1, start_date=NOW_MS, granted_days=7, status=GraceStatus.ACTIVE
+            grace_id= UUID("11111111-1111-1111-1111-111111111111"), start_date=NOW_MS, granted_days=7, status=GraceStatus.ACTIVE
         )
         expired = _make_grace(
-            grace_id=2,
+            grace_id= UUID("22222222-2222-2222-2222-222222222222"),
             start_date=NOW_MS - GRACE_MS_PER_DAY,
             granted_days=5,
             status=GraceStatus.EXPIRED,

@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Query
@@ -38,10 +39,7 @@ class UserRoleFilterBuilder(BaseFilterBuilder):
         "status": ("User", "is_active"),
         "designation": ("User", "designation"),
         "description": ("User", "description"),
-        "is_maglo_enabled": ("User", "is_maglo_enabled"),
         "is_talko_enabled": ("User", "is_talko_enabled"),
-        "is_babbler_enabled": ("User", "is_babbler_enabled"),
-        "is_maglo_publisher": ("User", "is_maglo_publisher"),
         "is_internal": ("User", "is_internal"),
         "is_staff": ("User", "is_staff"),
         "is_admin": ("User", "is_admin"),
@@ -105,7 +103,7 @@ class UserRoleFilterBuilder(BaseFilterBuilder):
             for field_name in field_names or []
         )
 
-    def __init__(self, criteria: BaseFilterCriteria, base_query: Query, partner_id: int | None = None):
+    def __init__(self, criteria: BaseFilterCriteria, base_query: Query, partner_id: UUID | None = None):
         # Pass both User and Role models to the base class
         super().__init__([User, Role], criteria, base_query)
         self.partner_id = partner_id

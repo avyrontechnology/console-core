@@ -13,8 +13,8 @@ class ApiRequestLog(BaseModel):
 
 class ApiResponseLog(BaseModel):
     response_status_code: int
-    # Any to match ApiRequestLog.request_body. Non-JSON endpoints (HTML pages
-    # like /oauth/bridge, plain text, raw decoded fallback in the logging
+    # Any to match ApiRequestLog.request_body. Non-JSON endpoints (HTML pages,
+    # plain text, raw decoded fallback in the logging
     # middleware) return a str here; binary responses are pre-coerced to a
     # placeholder dict. Restricting this to dict caused every non-JSON
     # response to spam an ERROR-level "API log persistence failed: 1

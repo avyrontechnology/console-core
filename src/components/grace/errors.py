@@ -1,3 +1,4 @@
+from uuid import UUID
 """Custom exceptions for the Grace Period feature."""
 
 
@@ -18,7 +19,7 @@ class GraceNotEligibleError(Exception):
 
     def __init__(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
         reason: str = "active or scheduled entitlement exists",
     ):
@@ -32,7 +33,7 @@ class GraceNotEligibleError(Exception):
 class GraceMaxAttemptsError(Exception):
     """Raised when the partner has exhausted the maximum allowed grace attempts for a service."""
 
-    def __init__(self, partner_id: int, service_name: str, max_attempts: int):
+    def __init__(self, partner_id: UUID, service_name: str, max_attempts: int):
         super().__init__(
             "Partner {} has reached the maximum of {} grace attempts for service {}.".format(
                 partner_id, max_attempts, service_name
@@ -43,7 +44,7 @@ class GraceMaxAttemptsError(Exception):
 class GraceAlreadyActiveError(Exception):
     """Raised when an ACTIVE grace record already exists for the partner + service."""
 
-    def __init__(self, partner_id: int, service_name: str):
+    def __init__(self, partner_id: UUID, service_name: str):
         super().__init__(
             "An active grace period already exists for partner_id={} service={}.".format(
                 partner_id, service_name
@@ -68,7 +69,7 @@ class GraceNoPriorOrderError(Exception):
     Without a prior order we cannot determine which services to extend.
     """
 
-    def __init__(self, partner_id: int, service_name: str):
+    def __init__(self, partner_id: UUID, service_name: str):
         super().__init__(
             "No prior successful order found for partner_id={} service={}. "
             "Cannot grant grace without an order history.".format(
@@ -80,5 +81,5 @@ class GraceNoPriorOrderError(Exception):
 class GraceNotFoundError(Exception):
     """Raised when a grace record is expected but not found."""
 
-    def __init__(self, grace_id: int):
+    def __init__(self, grace_id: UUID):
         super().__init__("Grace record with id={} not found.".format(grace_id))

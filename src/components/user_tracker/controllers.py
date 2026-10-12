@@ -1,3 +1,4 @@
+from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 
@@ -58,8 +59,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             result: UserAvailabilityStatusResponse = (
                 await user_tracker_service.get_user_availability_status(
@@ -99,8 +100,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             result: UpdateUserStatusResponse = (
                 await user_tracker_service.update_user_status(
@@ -151,8 +152,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = dict(request.state.user)
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             # role_hierarchy_level is not carried in the JWT — always resolve the
             # user's current role fresh from the DB by their user_id.

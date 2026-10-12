@@ -12,9 +12,7 @@ class TransactionType(str, Enum):
 
 
 class ServiceName(str, Enum):
-    BABBLER = "Babbler"
     TALKO = "Talko"
-    MAGLO = "Maglo"
     OBOTAAI = "Obotaai"
 
 

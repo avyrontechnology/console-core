@@ -1,9 +1,10 @@
+from uuid import UUID
 from pydantic import BaseModel 
 from typing import Optional , List , Dict ,Any , Union
     
     
 class ReleaseNotesResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     version_history:List[Dict[str, Any]] 
     description: Optional[str]=None
@@ -18,15 +19,15 @@ class ReleaseNotesResponse(BaseModel):
         from_attributes = True
         
 class ReleaseNotesbyidResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     version_history: List[Dict[str, Any]]
     description: Optional[str]=None
     file_path: Optional[str]=None
     file_url: Optional[str]=None
-    created_by: int
+    created_by: UUID
     created_at: int
-    updated_by: Optional[int]=None
+    updated_by: Optional[UUID]=None
     svc_name: Optional[str] = None
     markup: Optional[str] = None   
     
@@ -39,7 +40,7 @@ class ReleaseNoteHistoryItem(BaseModel):
     description: Optional[str]=None
     file_path: Optional[str] = None
     file_url: Optional[str] = None
-    created_by: int
+    created_by: UUID
     created_at: int
     markup: Optional[str] = None 
 
@@ -53,7 +54,7 @@ class ReleaseNoteHistoryResponse(BaseModel):
     data: List[ReleaseNoteHistoryItem]
     
 class ReleaseNotesbyallResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     version: Optional[Union[str, int]] = None 
     description: Optional[str] = None

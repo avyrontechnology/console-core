@@ -16,7 +16,6 @@ class ENV:
     SECRET_KEY = os.getenv("SECRET_KEY")
     ALGORITHM = os.getenv("ALGORITHM")
     ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-    APP_ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("APP_ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # ----------------------
     # Storage Spaces
@@ -64,30 +63,6 @@ class ENV:
     KEY = os.getenv("KEY", "None")
 
     # ----------------------
-    # Mail Configs (MailMG)
-    # ----------------------
-    MAILMG_CLIENT_NAME = os.getenv("MAILMG_CLIENT_NAME", "")
-    MAILMG_CHANNEL_KEY = os.getenv("MAILMG_CHANNEL_KEY", "")
-    MAILMG_API_URL = os.getenv("MAILMG_API_URL", "")
-    MAILMG_NO_REPLY_CHANNEL_KEY = os.getenv("MAILMG_NO_REPLY_CHANNEL_KEY", "")
-
-    # ----------------------
-    # Babbler Configs
-    # ----------------------
-
-    BABBLER_OTP_TEMPLATE_NAME = os.getenv("BABBLER_OTP_TEMPLATE_NAME", "")
-    BABBLER_OTP_SENDER_NUMBER = os.getenv("BABBLER_OTP_SENDER_NUMBER", "")
-    BABBLER_PHONE_NUMBER_ID = os.getenv("BABBLER_PHONE_NUMBER_ID", "")
-    BABBLER_BASE_URL = os.getenv("BABBLER_BASE_URL", "")
-
-    # ----------------------
-    # External API (Maglo)
-    # ----------------------
-    MAGLO_LEAD_INBOUND_API = os.getenv("MAGLO_LEAD_INBOUND_API", "")
-    SOURCE_KEY = os.getenv("SOURCE_KEY", "")
-    CHANNEL_KEY = os.getenv("CHANNEL_KEY", "")
-
-    # ----------------------
     # Payment Configs
     # ----------------------
 
@@ -96,9 +71,6 @@ class ENV:
     RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
     PAYMENT_CLIENT = os.getenv("PAYMENT_CLIENT", "")
-    # Maglo COnfig
-    # ----------------------
-    MAGLO_BASE_URL = os.getenv("MAGLO_BASE_URL", "")
 
     # ----------------------
     # Telephony gRPC (Phase-2: console-core as CLIENT)
@@ -131,52 +103,6 @@ class ENV:
     # ----------------------
 
     WALKTHROUGH_LAUNCH_DATE = os.getenv("WALKTHROUGH_LAUNCH_DATE")
-
-    # ----------------------
-    # Maglo Mailer Configs
-    # ----------------------
-
-    MAGLO_MAILER_CHANNEL_KEY = os.getenv("MAGLO_MAILER_CHANNEL_KEY")
-
-    FIREBASE_CREDENTIALS_MAGLO_JSON = os.getenv("FIREBASE_CREDENTIALS_MAGLO_JSON", '{"type": "service_account", "project_id": "your-project", "private_key_id": "...", "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n", "client_email": "...", "client_id": "...", "auth_uri": "...", "token_uri": "...", "auth_provider_x509_cert_url": "...", "client_x509_cert_url": "..."}')
-    FIREBASE_CREDENTIALS_BABBLER_JSON = os.getenv("FIREBASE_CREDENTIALS_BABBLER_JSON", '{"type": "service_account","project_id": "babbler-app-da3d7","private_key_id": "...","private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email": "...","client_id": "...","auth_uri": "...","token_uri": "...","auth_provider_x509_cert_url": "...","client_x509_cert_url": "..."}')
-    # ----------------------
-    # OAuth 2.1 self-hosted authorization server
-    # ----------------------
-    # Only the *truthy-default* OAuth knobs live on this class so
-    # validate_env_vars() (which rejects any empty-string class attr when
-    # ENV is set) stays happy in deployments where OAuth is disabled. The
-    # URL-shaped variables (OAUTH_ISSUER_URL, OAUTH_RESOURCE_URL,
-    # OAUTH_LOGIN_REDIRECT_URL, OAUTH_CONSENT_REDIRECT_URL) are read inline
-    # by ``src/components/oauth_server/config.py`` via ``os.getenv`` — they
-    # don't need a redundant declaration here.
-    #
-    # Master gate — when "false" the OAuth routes are never registered. Safe
-    # to leave "false" on every existing deployment; flipping to "true"
-    # requires OAUTH_ISSUER_URL and OAUTH_SIGNING_KEY_PATH to be set.
-    OAUTH_ENABLED = os.getenv("OAUTH_ENABLED", "false")
-
-    # Directory of *.pem RSA signing keys (filename minus extension = kid).
-    OAUTH_SIGNING_KEY_PATH = os.getenv("OAUTH_SIGNING_KEY_PATH", "/secrets/oauth-keys")
-
-    # Token TTLs (seconds).
-    OAUTH_ACCESS_TOKEN_TTL_SECONDS = os.getenv("OAUTH_ACCESS_TOKEN_TTL_SECONDS", "3600")
-    OAUTH_REFRESH_TOKEN_TTL_SECONDS = os.getenv("OAUTH_REFRESH_TOKEN_TTL_SECONDS", "2592000")
-    OAUTH_AUTH_CODE_TTL_SECONDS = os.getenv("OAUTH_AUTH_CODE_TTL_SECONDS", "600")
-    OAUTH_AUTHORIZE_REQUEST_TTL_SECONDS = os.getenv("OAUTH_AUTHORIZE_REQUEST_TTL_SECONDS", "600")
-
-    # DCR abuse guards.
-    OAUTH_REGISTRATION_ENABLED = os.getenv("OAUTH_REGISTRATION_ENABLED", "true")
-    OAUTH_REGISTRATION_RATE_PER_IP_PER_HOUR = os.getenv(
-        "OAUTH_REGISTRATION_RATE_PER_IP_PER_HOUR", "30"
-    )
-    OAUTH_REGISTRATION_RATE_GLOBAL_PER_HOUR = os.getenv(
-        "OAUTH_REGISTRATION_RATE_GLOBAL_PER_HOUR", "1000"
-    )
-
-    # Dev-only: allow http://127.0.0.1 redirect URIs at registration time.
-    OAUTH_ALLOW_LOCAL_REDIRECT = os.getenv("OAUTH_ALLOW_LOCAL_REDIRECT", "false")
-
 
     # ----------------------
     # Validation

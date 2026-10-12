@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -34,12 +35,12 @@ class TestPartnerRepository:
         self.mock_logger = mock_logger
 
         self.mock_partner = Partner(
-            id=1, name="Tech Solutions", is_active=True, gst_no="1234567890GST"
+            id= UUID("11111111-1111-1111-1111-111111111111"), name="Tech Solutions", is_active=True, gst_no="1234567890GST"
         )
 
     async def test_get_partner_by_id(self):
         """Test for getting partner by id."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_partner_data = Partner(
             name="Tech Solutions",
             company_legal_name="Tech Solutions Pvt Ltd",
@@ -65,7 +66,7 @@ class TestPartnerRepository:
 
     async def test_get_partner_by_id_not_found(self):
         """ "Test for get partner by by id when the partner with the perticular id is not found"""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_scalars = MagicMock()
         mock_scalars.first.return_value = None
         mock_execute = MagicMock()
@@ -86,7 +87,7 @@ class TestPartnerRepository:
         """Test for the generic exception when partner with perticular id is not found"""
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
         with pytest.raises(Exception) as exc_info:
-            await self.partner_repository.get_by_id(partner_id=1)
+            await self.partner_repository.get_by_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
             "Error while get Partner by id: Unexpected Error"
@@ -94,7 +95,7 @@ class TestPartnerRepository:
 
     async def test_delete_partner_by_id(self):
         """Test for delete partner by id."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mocking the return value of scalars().first and session.execute()
         mock_scalars = MagicMock()
         mock_scalars.first.return_value = self.mock_partner
@@ -107,7 +108,7 @@ class TestPartnerRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
-        result = await self.partner_repository.delete_by_id(partner_id, user_id=1)
+        result = await self.partner_repository.delete_by_id(partner_id, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         # Asserting the result
         assert result.id == partner_id
@@ -115,7 +116,7 @@ class TestPartnerRepository:
 
     async def test_delete_partner_partner_not_found(self):
         """Test for delete partner by id when partner is not found."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the session's execute method to return None for the partner
         mock_scalars = MagicMock()
@@ -124,7 +125,7 @@ class TestPartnerRepository:
 
         # Test: Check that PartnerNotFoundError is raised when partner is not found
         with pytest.raises(PartnerNotFoundError):
-            await self.partner_repository.delete_by_id(partner_id=partner_id, user_id=1)
+            await self.partner_repository.delete_by_id(partner_id=partner_id, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         # Ensure that the logger's error method was called with the correct message
         self.mock_logger.error.assert_called_with(
@@ -136,7 +137,7 @@ class TestPartnerRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.partner_repository.delete_by_id(partner_id=1, user_id=1)
+            await self.partner_repository.delete_by_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -146,8 +147,8 @@ class TestPartnerRepository:
     async def test_update_partner_success(self):
         """Test for successful partner update."""
 
-        partner_id = 1
-        user_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_data = BasePartnerData(
             name="Updated Tech Solutions",
             company_legal_name="Updated Tech Solutions Pvt Ltd",
@@ -189,8 +190,8 @@ class TestPartnerRepository:
     async def test_update_partner_integrity_error(self):
         """Test for integrity error during partner update."""
 
-        partner_id = 1
-        user_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_data = BasePartnerData(
             name="Updated Tech Solutions",
             company_legal_name="Updated Tech Solutions Pvt Ltd",
@@ -244,8 +245,8 @@ class TestPartnerRepository:
     async def test_update_partner_generic_exception(self):
         """Test for a generic exception during partner update."""
 
-        partner_id = 1
-        user_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_data = BasePartnerData(
             name="Updated Tech Solutions",
             company_legal_name="Updated Tech Solutions Pvt Ltd",
@@ -289,42 +290,6 @@ class TestPartnerRepository:
         # Print the error call count for debugging
         print(f"Error call count: {self.mock_logger.error.call_count}")
 
-    async def test_update_partner_logo_success(self):
-        """Test successful update of partner logo."""
-        # Arrange
-        partner_id = 1
-        partner_logo_id = 123
-        user_id = 1
-        mock_partner = MagicMock(id=partner_id, partner_logo_id=None)
-
-        # Mock the database execution and response
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = mock_partner
-        mock_execute = MagicMock()
-        mock_execute.scalars.return_value = mock_scalars
-        self.session.execute = AsyncMock(return_value=mock_execute)
-
-        # Mock commit and refresh
-        self.session.commit = AsyncMock()
-        self.session.refresh = AsyncMock()
-
-        # Act
-        result = await self.partner_repository.update_partner_logo(
-            partner_id=partner_id,
-            partner_logo_id=partner_logo_id,
-            user_id=user_id,
-        )
-
-        # Assert
-        assert result == mock_partner
-        assert result.partner_logo_id == partner_logo_id
-        assert result.updated_by == user_id
-        self.session.execute.assert_called_once()
-        self.session.commit.assert_called_once()
-        self.session.refresh.assert_called_once_with(mock_partner)
-        self.mock_logger.info.assert_called_with(
-            f"Updating logo for partner_id: {partner_id}"
-        )
 
     async def test_add_partner_success(self):
         partner_data = BasePartnerData(
@@ -334,7 +299,6 @@ class TestPartnerRepository:
             cin_no="U12345TG2024PTC000999",
             active_license=1,
             description="A new partner",
-            is_maglo_publisher=False,
         )
 
         self.session.scalar = AsyncMock(return_value=None)
@@ -363,18 +327,16 @@ class TestPartnerRepository:
         assert isinstance(result, Partner)
         assert result.name == partner_data.name
 
-    async def test_add_partner_raises_if_existing_maglo_publisher(self):
+    async def test_add_partner_raises_if_existing_partner(self):
         # Arrange
         existing_partner = Partner(
-            id=42,
+            id= UUID("42424242-4242-4242-4242-424242424242"),
             name="Tech Solutions",
-            is_maglo_publisher=True,
         )
 
         partner_data = BasePartnerData(
             name="Tech Solutions",
             company_legal_name="Tech Solutions Pvt Ltd",
-            is_maglo_publisher=True,
         )
 
         self.session.scalar = AsyncMock(return_value=existing_partner)
@@ -394,7 +356,6 @@ class TestPartnerRepository:
         partner_data = BasePartnerData(
             name="Unexpected Partner",
             company_legal_name="Oops Ltd",
-            is_maglo_publisher=False,
         )
 
         self.session.scalar = AsyncMock(side_effect=RuntimeError("Database down"))
@@ -413,7 +374,7 @@ class TestPartnerRepository:
     async def test_change_partner_status_success(self):
         """Test successful update of partner status and feedback flag."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "ACTIVE"
         is_feedback_enabled = True
         mock_partner = Partner(
@@ -455,7 +416,7 @@ class TestPartnerRepository:
     async def test_change_partner_status_exception(self):
         """Test change partner status with an unexpected exception."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "ACTIVE"
         is_feedback_enabled = True
         self.session.execute = AsyncMock(side_effect=Exception("Database error"))
@@ -487,9 +448,9 @@ class TestPartnerRepository:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -525,9 +486,9 @@ class TestPartnerRepository:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -558,9 +519,9 @@ class TestPartnerRepository:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -610,9 +571,9 @@ class TestPartnerRepository:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -626,7 +587,7 @@ class TestPartnerRepository:
         # Correct mock setup
         partner_result_mock = MagicMock()
         partner_result_mock.scalars.return_value.first.return_value = Partner(
-            id=1, name="Tech Solutions"
+            id= UUID("11111111-1111-1111-1111-111111111111"), name="Tech Solutions"
         )
 
         self.session.execute = AsyncMock(return_value=partner_result_mock)
@@ -643,11 +604,11 @@ class TestPartnerRepository:
 
     async def test_toggle_partner_activation_success(self):
         """Test toggling partner activation successfully updates status and returns users."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_data = MagicMock(is_active=False)
         partner_data.dict.return_value = {"is_active": False}
         mock_partner = MagicMock(id=partner_id, is_active=True)
-        mock_users = [MagicMock(id=101), MagicMock(id=102)]
+        mock_users = [MagicMock(id= UUID("10110110-1101-1011-0110-110110110110")), MagicMock(id= UUID("10210210-2102-1021-0210-210210210210"))]
 
         # Mock partner query
         partner_scalars = MagicMock()
@@ -675,7 +636,7 @@ class TestPartnerRepository:
 
         # Assert
         assert result_is_active == partner_data.is_active
-        assert result_users == [{"id": 101}, {"id": 102}]
+        assert result_users == [{"id": UUID("10110110-1101-1011-0110-110110110110")}, {"id": UUID("10210210-2102-1021-0210-210210210210")}]
         self.session.commit.assert_awaited_once()
         self.session.refresh.assert_awaited_once_with(mock_partner)
         self.mock_logger.info.assert_any_call(
@@ -684,7 +645,7 @@ class TestPartnerRepository:
 
     async def test_toggle_partner_activation_partner_not_found(self):
         """Test toggling activation when partner does not exist raises error."""
-        partner_id = 999
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
         partner_data = MagicMock(is_active=True)
         partner_data.dict.return_value = {"is_active": True}
 
@@ -712,7 +673,7 @@ class TestPartnerRepository:
 
     async def test_toggle_partner_activation_generic_exception(self):
         """Test toggling activation raises generic exception and logs error."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_data = MagicMock(is_active=True)
         partner_data.dict.return_value = {"is_active": True}
 

@@ -2,6 +2,7 @@
 Pydantic schemas for partner database configuration.
 """
 
+from uuid import UUID
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -54,7 +55,7 @@ class PartnerDBConfigRequest(BaseModel):
 class PartnerDBConfigResponse(BaseModel):
     """Response schema — password is always masked."""
 
-    partner_id: int
+    partner_id: UUID
     db_host: str
     db_port: int
     db_name: str
@@ -63,20 +64,5 @@ class PartnerDBConfigResponse(BaseModel):
     ssl_required: bool = True
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class PartnerDBConfigInternalResponse(BaseModel):
-    """
-    Internal-only response that includes the decrypted password.
-    Used by maglo-service via the internal API — never exposed to end users.
-    """
-
-    partner_id: int
-    db_host: str
-    db_port: int
-    db_name: str
-    db_user: str
-    db_password: str
-    ssl_required: bool = True
 
     model_config = ConfigDict(from_attributes=True)

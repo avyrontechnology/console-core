@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock
 
 import pytest
@@ -29,16 +30,16 @@ class TestLocationService:
             console_service_cache=self.console_service_cache,
         )
 
-        self.country_id = 1
-        self.state_id = 1
-        self.city_id = 1
+        self.country_id= UUID("11111111-1111-1111-1111-111111111111")
+        self.state_id= UUID("11111111-1111-1111-1111-111111111111")
+        self.city_id= UUID("11111111-1111-1111-1111-111111111111")
         self.country_response = CountryResponse(
             id=self.country_id, name="India", slug="india"
         )
         self.state_response = StateResponse(
             id=self.state_id, name="Maharashtra", slug="maharashtra"
         )
-        self.city_response = CityResponse(id=1, name="Mumbai", slug="mumbai")
+        self.city_response = CityResponse(id= UUID("11111111-1111-1111-1111-111111111111"), name="Mumbai", slug="mumbai")
 
     async def test_get_countries_success(self):
         self.location_repository_mock.get_all_countries.return_value = [
@@ -213,7 +214,7 @@ class TestLocationService:
             )
 
         self.logger_mock.error.assert_called_with(
-            "Country not found: Country not found, id: 1"
+            "Country not found: Country not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_validate_location_hierarchy_state_not_found(self):
@@ -229,7 +230,7 @@ class TestLocationService:
             )
 
         self.logger_mock.error.assert_called_with(
-            "State not found: State not found, id: 1"
+            "State not found: State not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_validate_location_hierarchy_city_not_found(self):
@@ -248,7 +249,7 @@ class TestLocationService:
             )
 
         self.logger_mock.error.assert_called_with(
-            "City not found: City not found, id: 1"
+            "City not found: City not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     @pytest.mark.asyncio

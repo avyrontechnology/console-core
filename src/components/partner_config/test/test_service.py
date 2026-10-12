@@ -1,9 +1,9 @@
+from uuid import UUID
 import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
-from httpx import AsyncClient, Response
 from sqlalchemy.exc import IntegrityError
 
 from src.components.cache.helper import CacheHelper
@@ -11,11 +11,9 @@ from src.components.common.constants import CurrentUserMap
 from src.components.partner.models import Partner
 from src.components.partner_config.errors import (
     PartnerConfigKeyError,
-    PartnerConfigMailMGError,
     PartnerConfigValidationError,
 )
 from src.components.partner_config.schemas import (
-    EmailConfigUpsertSchema,
     PartnerConfigData,
     PartnerConfigRequest,
     PartnerConfigUpdateRequest,
@@ -23,6 +21,10 @@ from src.components.partner_config.schemas import (
 from src.components.partner_config.services import PartnerConfigService
 from src.components.user_config.models import UserConfig
 from src.exceptions import AuthException, PartnerConfigException
+
+
+def _perm(slug: str) -> SimpleNamespace:
+    return SimpleNamespace(slug=slug)
 
 
 @pytest.mark.asyncio
@@ -39,7 +41,7 @@ class TestPartnerConfigService:
         )
 
     async def test_create_partner_config_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_config_data = PartnerConfigRequest(key="some_key", value="val")
         repo_response = SimpleNamespace(
             key="some_key", value="val", created_at=987654321245
@@ -66,7 +68,7 @@ class TestPartnerConfigService:
         self.mock_cache.clear_pattern.assert_awaited()
 
     async def test_create_partner_config_integrity_error(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_config_data = PartnerConfigRequest(key="some_key", value="val")
 
         self.partner_config_repository.create_partner_config.side_effect = (
@@ -83,7 +85,7 @@ class TestPartnerConfigService:
         )
 
     async def test_create_partner_config_general_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         partner_config_data = PartnerConfigRequest(key="some_key", value="val")
 
         self.partner_config_repository.create_partner_config.side_effect = Exception(
@@ -101,11 +103,11 @@ class TestPartnerConfigService:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_by_key_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "is_custom_role_permission_enabled"
 
         repo_config = SimpleNamespace(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_id=partner_id,
             key=key,
             value="val",
@@ -147,11 +149,11 @@ class TestPartnerConfigService:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_by_key_cache_hit(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "is_custom_role_permission_enabled"
 
         cached_data = {
-            "id": 1,
+            "id": UUID("11111111-1111-1111-1111-111111111111"),
             "partner_id": partner_id,
             "key": key,
             "value": "val",
@@ -185,7 +187,7 @@ class TestPartnerConfigService:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_by_key_none(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "is_custom_role_permission_enabled"
 
         # Cache miss
@@ -213,7 +215,7 @@ class TestPartnerConfigService:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_partner_config_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "is_custom_role_permission_enabled"
 
         # Cache miss
@@ -239,7 +241,7 @@ class TestPartnerConfigService:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_general_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "is_custom_role_permission_enabled"
 
         self.mock_cache.get_cache.return_value = None
@@ -262,22 +264,22 @@ class TestPartnerConfigService:
         )
 
     async def test_update_partner_config_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_user = {
-            CurrentUserMap.USER_ID: 42,
+            CurrentUserMap.USER_ID: UUID("42424242-4242-4242-4242-424242424242"),
             CurrentUserMap.PARTNER_ID: partner_id,  # auth pass
         }
-        update_partner_config_data = PartnerConfigData(is_maglo_enabled=True)
+        update_partner_config_data = PartnerConfigData(is_talko_enabled=True)
 
         repo_response = [
             SimpleNamespace(
-                id=1,
+                id= UUID("11111111-1111-1111-1111-111111111111"),
                 partner_id=partner_id,
                 key="some_key",
                 value="new_val",
                 created_at=98765434567,
                 updated_at=98765434568,
-                updated_by=42,
+                updated_by= UUID("42424242-4242-4242-4242-424242424242"),
                 history=None,
             )
         ]
@@ -295,9 +297,6 @@ class TestPartnerConfigService:
         mock_user_session_service = AsyncMock()
         mock_user_session_service.deactivate_all_sessions_by_partner_id.return_value = 1
 
-        # Mock wallet service to avoid DB calls
-        mock_wallet_service = AsyncMock()
-
         # Call service
         result = await self.partner_config_service.update_partner_config(
             partner_id,
@@ -305,7 +304,6 @@ class TestPartnerConfigService:
             current_user,
             user_service=mock_user_service,
             user_session_service=mock_user_session_service,  # inject mock
-            wallet_service=mock_wallet_service,  # inject mock
         )
 
         # Logs check
@@ -323,7 +321,7 @@ class TestPartnerConfigService:
         self.partner_config_repository.update_partner_config.assert_awaited_once()
         self.mock_cache.clear_pattern.assert_awaited()
         mock_user_session_service.deactivate_all_sessions_by_partner_id.assert_awaited_once_with(
-            partner_id, True
+            partner_id, None
         )
 
         # Result check
@@ -332,13 +330,13 @@ class TestPartnerConfigService:
         assert result[0].value == "new_val"
 
     async def test_update_partner_config_partner_config_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_user = {
-            CurrentUserMap.USER_ID: 42,
+            CurrentUserMap.USER_ID: UUID("42424242-4242-4242-4242-424242424242"),
             CurrentUserMap.PARTNER_ID: partner_id,  # required for auth pass
         }
         update_partner_config_data = PartnerConfigData(
-            is_maglo_enabled=None  
+            is_talko_enabled=None
         )
 
 
@@ -363,13 +361,13 @@ class TestPartnerConfigService:
         )
 
     async def test_update_partner_config_general_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_user = {
-            CurrentUserMap.USER_ID: 42,
+            CurrentUserMap.USER_ID: UUID("42424242-4242-4242-4242-424242424242"),
             CurrentUserMap.PARTNER_ID: partner_id,  # required for auth pass
         }
         update_partner_config_data = PartnerConfigData(
-            is_maglo_enabled=None  
+            is_talko_enabled=None
         )
 
         # simulate repo raising generic Exception
@@ -393,25 +391,25 @@ class TestPartnerConfigService:
         )
 
     async def test_get_partner_configs_by_partner_id_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_response = [
             SimpleNamespace(
-                id=1,
+                id= UUID("11111111-1111-1111-1111-111111111111"),
                 partner_id=partner_id,
                 key="key1",
                 value="val1",
                 history=["h1", "h2", "h3", "h4", "h5", "h6"],
                 created_at=1234567890,
-                created_by=42,
+                created_by= UUID("42424242-4242-4242-4242-424242424242"),
             ),
             SimpleNamespace(
-                id=2,
+                id= UUID("22222222-2222-2222-2222-222222222222"),
                 partner_id=partner_id,
                 key="key2",
                 value="val2",
                 history=None,
                 created_at=1234567891,
-                created_by=43,
+                created_by= UUID("43434343-4343-4343-4343-434343434343"),
             ),
         ]
         self.mock_cache.get_cache.return_value = None
@@ -440,7 +438,7 @@ class TestPartnerConfigService:
         assert result[1].history is None
 
     async def test_get_partner_configs_by_partner_id_general_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_cache.get_cache.return_value = None
         self.partner_config_repository.get_partner_configs_by_partner_id.side_effect = (
             Exception("Some error")
@@ -456,8 +454,8 @@ class TestPartnerConfigService:
         )
 
     async def test_custom_role_permission_check_enabled(self):
-        user_id = 42
-        partner_id = 1
+        user_id= UUID("42424242-4242-4242-4242-424242424242")
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mocks
         mock_auth_repo = AsyncMock()
@@ -470,12 +468,12 @@ class TestPartnerConfigService:
         mock_user_service.get_user_by_id.return_value = mock_user
 
         # Mock system admin user (not the current user)
-        mock_sys_admin = SimpleNamespace(id=1)
+        mock_sys_admin = SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111"))
         mock_user_repo.get_system_admin_user.return_value = mock_sys_admin
 
         # Mock PartnerConfig: custom role permission enabled
         mock_partner_config = SimpleNamespace(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_id=partner_id,
             key="is_custom_role_enabled",
             value=True,
@@ -488,7 +486,7 @@ class TestPartnerConfigService:
 
         # Mock UserConfig: not a super admin
         mock_user_config = UserConfig(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             user_id=user_id,
             key="is_super_admin",
             value=False,
@@ -523,8 +521,8 @@ class TestPartnerConfigService:
         assert set(result) == {"perm1", "perm2", "perm3"}
 
     async def test_custom_role_permission_check_disabled(self):
-        user_id = 42
-        partner_id = 1
+        user_id= UUID("42424242-4242-4242-4242-424242424242")
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mocks
         mock_auth_repo = AsyncMock()
@@ -537,12 +535,12 @@ class TestPartnerConfigService:
         mock_user_service.get_user_by_id.return_value = mock_user
 
         # Mock system admin user (not the current user)
-        mock_sys_admin = SimpleNamespace(id=1)
+        mock_sys_admin = SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111"))
         mock_user_repo.get_system_admin_user.return_value = mock_sys_admin
 
         # Mock PartnerConfig: custom role permission disabled
         mock_partner_config = SimpleNamespace(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_id=partner_id,
             key="is_custom_role_enabled",
             value=False,
@@ -555,7 +553,7 @@ class TestPartnerConfigService:
 
         # Mock UserConfig: not a super admin
         mock_user_config = UserConfig(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             user_id=user_id,
             key="is_super_admin",
             value=False,
@@ -589,19 +587,19 @@ class TestPartnerConfigService:
         assert result == ["permA", "permB"]
 
     async def test_custom_role_permission_check_exception(self):
-        user_id = 42
+        user_id= UUID("42424242-4242-4242-4242-424242424242")
         mock_auth_repo = AsyncMock()
         mock_user_service = AsyncMock()
         mock_user_config_repo = AsyncMock()
         mock_user_repo = AsyncMock()
 
         # Mock system admin user (not the current user)
-        mock_sys_admin = SimpleNamespace(id=1)
+        mock_sys_admin = SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111"))
         mock_user_repo.get_system_admin_user.return_value = mock_sys_admin
 
         mock_user_service.get_user_by_id.side_effect = Exception("Some error")
         mock_user_config = UserConfig(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             user_id=user_id,
             key="is_super_admin",
             value=False,
@@ -624,13 +622,13 @@ class TestPartnerConfigService:
         )
 
     async def test_update_partner_config_auth_exception(self):
-        partner_id = 99  # different from current_user partner_id
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")  # different from current_user partner_id
         current_user = {
-            CurrentUserMap.USER_ID: 42,
+            CurrentUserMap.USER_ID: UUID("42424242-4242-4242-4242-424242424242"),
             CurrentUserMap.PARTNER_ID: 1,  # mismatch to trigger auth check
         }
         update_partner_config_data = PartnerConfigData(
-            is_maglo_enabled=True
+            is_talko_enabled=True
         )
 
         mock_user_service = AsyncMock()
@@ -651,159 +649,10 @@ class TestPartnerConfigService:
             f"for partner id: {partner_id}"
         )
 
-    async def test__get_mailmg_partner_channel_key_success(self, mock_logger):
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-
-        # Patch httpx.AsyncClient.get
-        async def mock_get(*args, **kwargs):
-            await asyncio.sleep(0)
-            class MockResp:
-                status_code = 200
-
-                def json(self):
-                    return {"channel_key": "abc123"}
-
-                text = '{"channel_key": "abc123"}'
-
-            return MockResp()
-
-        with patch("httpx.AsyncClient.get", new=mock_get):
-            key = await service._get_mailmg_partner_channel_key(1)
-            assert key == "abc123"
-
-        # Instead of hardcoding, check the log contains the expected substring
-        log_messages = [call.args[0] for call in mock_logger.info.call_args_list]
-        assert any("Fetching channel key from URL=" in msg for msg in log_messages)
-        assert any("MailMG GET response for partner_id" in msg for msg in log_messages)
-
-    async def test__create_mailmg_partner_failure(self, mock_logger):
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-        payload = {"some": "data"}
-
-        def mock_post(*args, **kwargs):
-            class MockResp:
-                status_code = 400
-                text = "Bad request"
-
-                def json(self):
-                    return {"message": "Failed"}
-
-            return MockResp()
-
-        with patch("httpx.AsyncClient.post", new=mock_post):
-            with pytest.raises(PartnerConfigMailMGError):
-                await service._create_mailmg_partner(payload)
-
-    async def test__update_mailmg_partner_failure(self, mock_logger):
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-        payload = {"some": "data"}
-
-        def mock_put(*args, **kwargs):
-            class MockResp:
-                status_code = 400
-                text = "Bad request"
-
-                def json(self):
-                    return {"message": "Failed"}
-
-            return MockResp()
-
-        with patch("httpx.AsyncClient.put", new=mock_put):
-            with pytest.raises(PartnerConfigMailMGError):
-                await service._update_mailmg_partner(payload)
-
-    def test__validate_create_body_failure(self, mock_logger):
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-        # Provide valid dummy values to pass Pydantic validation
-        schema = EmailConfigUpsertSchema(
-            smtp_username="test_user",
-            smtp_password="test_pass", # NOSONAR
-            from_email="dummy@example.com",
-        )
-
-        # Override values to trigger validation failure in your method
-        schema.smtp_username = ""
-        schema.smtp_password = ""
-        schema.from_email = None
-
-        with pytest.raises(PartnerConfigValidationError):
-            service._validate_create_body(schema)
-
-    async def test_upsert_email_config_create_flow_channel_key_missing(
-        self, mock_logger
-    ):
-        # Ensure that if channel key is missing after creation, it raises PartnerConfigKeyError
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-        current_user = {"partner_id": 1}
-        email_config_data = EmailConfigUpsertSchema(
-            smtp_username="test_user",
-            smtp_password="test_pass",  # NOSONAR
-            from_email="test@user.com" 
-        )
-
-        mock_partner_repo = AsyncMock()
-        mock_partner_repo.get_by_id.return_value = Partner(id=1, name="P")
-
-        service._create_mailmg_partner = AsyncMock(return_value="Created")
-        service._get_mailmg_partner_channel_key = AsyncMock(
-            return_value=None
-        )  # simulate missing channel key
-
-        with pytest.raises(PartnerConfigKeyError):
-            await service.upsert_email_config(
-                current_user, email_config_data, partner_repo=mock_partner_repo
-            )
-
-    async def test_upsert_email_config_update_flow_success(self, mock_logger):
-        service = PartnerConfigService(
-            partner_config_repository=AsyncMock(),
-            console_service_logger=mock_logger,
-            console_service_cache=AsyncMock(),
-        )
-        current_user = {"partner_id": 1}
-        email_config_data = EmailConfigUpsertSchema(
-            smtp_username="test_user",
-            smtp_password="test_pass",  # NOSONAR
-            from_email="test@user.com"
-        )
-
-        # simulate update flow
-        service._get_mailmg_partner_channel_key = AsyncMock(return_value="key123")
-        service._update_mailmg_partner = AsyncMock(return_value="Updated")
-        service._create_mailmg_partner = AsyncMock(return_value="Created")
-
-        result = await service.upsert_email_config(current_user, email_config_data)
-        assert result["channel_key"] == "key123"
-        assert result["message"] == "Updated"
-
-
-def _perm(slug: str) -> SimpleNamespace:
-    return SimpleNamespace(slug=slug)
-
-
 @pytest.mark.asyncio
 class TestTeamRolePermissionCheck:
     """team_role_permission_check: permissions keyed on the effective team role."""
+
 
     @pytest.fixture(autouse=True)
     def setup(self, mock_logger):
@@ -835,6 +684,9 @@ class TestTeamRolePermissionCheck:
         self.user_config_repo.get_user_config_by_key.return_value = SimpleNamespace(
             value=True
         )
+        self.user_config_repo.get_user_config_by_key.return_value = SimpleNamespace(
+            value=True
+        )
         self.auth_repo.get_all_permission.return_value = [_perm("a"), _perm("b")]
         result = await self._call(1, 10)
         assert set(result) == {"a", "b"}
@@ -846,7 +698,7 @@ class TestTeamRolePermissionCheck:
 
     async def test_custom_role_permission_disabled_returns_defaults(self):
         self.user_service.get_user_by_id.return_value = SimpleNamespace(
-            partner_id=1, is_internal=False
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), is_internal=False
         )
         self.auth_repo.get_default_role_permissions_by_role_id.return_value = [
             _perm("d1"),
@@ -860,7 +712,7 @@ class TestTeamRolePermissionCheck:
 
     async def test_custom_role_permission_enabled_internal_unions(self):
         self.user_service.get_user_by_id.return_value = SimpleNamespace(
-            partner_id=1, is_internal=True
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), is_internal=True
         )
         self.auth_repo.get_default_role_permissions_by_role_id.return_value = [
             _perm("d1")
@@ -878,7 +730,7 @@ class TestTeamRolePermissionCheck:
 
     async def test_custom_role_permission_enabled_external_subtracts_internal(self):
         self.user_service.get_user_by_id.return_value = SimpleNamespace(
-            partner_id=1, is_internal=False
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), is_internal=False
         )
         self.auth_repo.get_default_role_permissions_by_role_id.return_value = [
             _perm("d1")
@@ -929,7 +781,7 @@ class TestRolePermissionCheck:
 
     async def test_partner_role_custom_disabled_returns_defaults(self):
         self.auth_repo.get_role_by_id.return_value = SimpleNamespace(
-            partner_id=5, is_internal=False
+            partner_id= UUID("55555555-5555-5555-5555-555555555555"), is_internal=False
         )
         self.auth_repo.get_default_role_permissions_by_role_id.return_value = [
             _perm("d1")
@@ -943,7 +795,7 @@ class TestRolePermissionCheck:
 
     async def test_partner_role_custom_enabled_unions_partner_perms(self):
         self.auth_repo.get_role_by_id.return_value = SimpleNamespace(
-            partner_id=5, is_internal=False
+            partner_id= UUID("55555555-5555-5555-5555-555555555555"), is_internal=False
         )
         self.auth_repo.get_default_role_permissions_by_role_id.return_value = [
             _perm("d1")
@@ -957,7 +809,7 @@ class TestRolePermissionCheck:
         result = await self._call(10)
         assert set(result) == {"d1", "p1"}
         self.auth_repo.get_partner_role_permissions_by_partner_and_role.assert_awaited_once_with(
-            5, 10
+            UUID("55555555-5555-5555-5555-555555555555"), 10
         )
 
     

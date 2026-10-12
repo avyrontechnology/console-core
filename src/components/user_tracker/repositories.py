@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, Dict, Optional, Tuple
 
@@ -28,7 +29,7 @@ class UserTrackerRepository:
     # console_users operations
 
     async def get_user_current_status(
-        self, user_id: int
+        self, user_id: UUID
     ) -> Tuple[str, Optional[str]]:
         """
         Read User.current_status and the user's own current_status_icon
@@ -63,7 +64,7 @@ class UserTrackerRepository:
 
     async def update_user_current_status(
         self,
-        user_id: int,
+        user_id: UUID,
         status: str,
         status_icon_override: Optional[str] = None,
     ) -> str:
@@ -140,7 +141,7 @@ class UserTrackerRepository:
                     pass
         return migrated
 
-    async def get_custom_statuses(self, partner_id: int) -> Dict[str, dict]:
+    async def get_custom_statuses(self, partner_id: UUID) -> Dict[str, dict]:
         """
         Read partner's custom statuses from console_partner_config.
         Returns {} if no config row exists yet.
@@ -172,9 +173,9 @@ class UserTrackerRepository:
 
     async def upsert_custom_statuses(
         self,
-        partner_id: int,
+        partner_id: UUID,
         custom_statuses: Dict[str, dict],  # {uuid: {display_id, name}}
-        updated_by: int,
+        updated_by: UUID,
     ) -> Dict[str, dict]:
         """
         Full replace of partner's custom statuses in console_partner_config.

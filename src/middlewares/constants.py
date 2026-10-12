@@ -1,20 +1,4 @@
-from typing import List, Tuple
-
-DEV_ERROR_MAIL_RECIPENTS: List[str] = ["sahil.jha@makunaiglobal.ai"]
-QA_ERROR_MAIL_RECIPENTS: List[str] = ["sahil.jha@makunaiglobal.ai"]
-PROD_ERROR_MAIL_RECIPENTS: List[str] = [
-    "abhinay.singh@makunaiglobal.ai",
-    "aditya.tiwari@makunaiglobal.ai",
-    "aditya@makunaiglobal.ai",
-    "afzal.ahmad@makunaiglobal.ai",
-    "anmol.tanwar@makunaiglobal.ai",
-    "naved.ahemd@makunaiglobal.ai",
-    "roshan.singh@makunaiglobal.ai",
-    "sahil.jha@makunaiglobal.ai",
-    "santosh.mishra@makunaiglobal.ai",
-    "vinayakp.tripathi@makunaiglobal.ai",
-    "shashank@makunaiglobal.ai",
-]
+from typing import Tuple
 
 OPTIONAL_AUTH_PATHS: Tuple[str, ...] = (
     "get-plans",
@@ -24,12 +8,10 @@ OPTIONAL_AUTH_PATHS: Tuple[str, ...] = (
 
 
 class Product:
-    MAGLO = "maglo"
-    BABBLER = "babbler"
     TALKO = "talko"
     CONSOLE = "console"
 
-    VALID_VALUES = frozenset({MAGLO, BABBLER, TALKO, CONSOLE})
+    VALID_VALUES = frozenset({TALKO, CONSOLE})
 
 
 class Platform:

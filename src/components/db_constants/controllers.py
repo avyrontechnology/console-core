@@ -1,7 +1,8 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, Query, Request
 
 from src.components.common.constants import CurrentUserMap
 from src.components.common.response import (
@@ -17,7 +18,6 @@ from src.components.db_constants.enums import ConstantsTypes
 from src.components.db_constants.models import ConstantsBase
 from src.components.db_constants.schema import ConstantResponseSchema
 from src.components.db_constants.services import ConstantsService
-from src.components.digital_assets.constants import DigitalAssetEnum
 from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
@@ -105,13 +105,12 @@ class ConstantsController:
     @inject
     async def update_constant(
         request: Request,
-        id: int,
+        id: UUID,
         constant_type: ConstantsTypes = Query(
             ...,
             description=messages.CONSTANT_TYPE_DESCRIPTION,
         ),
         value: Optional[str] = Form(None),
-        media_file: Optional[UploadFile] = File(None),
         description: Optional[str] = Form(None),
         constants_service: ConstantsService = Depends(
             Provide[Container.constants_service]
@@ -130,7 +129,7 @@ class ConstantsController:
                 )
             )
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
             constant_model: type[ConstantsBase] = ConstantsTypes.get_db_constant_model(
                 constant_type.value
             )
@@ -145,16 +144,8 @@ class ConstantsController:
                 ConstantsTypes.GLOBAL_MEDIA_CONSTANTS,
                 ConstantsTypes.MEDIA_CONSTANTS,
             ]:
-                if not media_file:
-                    return ValidationErrorResponse(
-                        detail=messages.FILE_REQUIRED_FOR_MEDIA
-                    )
-                updated_value: object = media_file
-                is_media_type: bool = True
-                asset_type: str = (
-                    DigitalAssetEnum.GLOBAL_MEDIA_CONSTANT.name
-                    if constant_type == ConstantsTypes.GLOBAL_MEDIA_CONSTANTS
-                    else DigitalAssetEnum.CONSOLE_MEDIA_CONSTANT.name
+                return ValidationErrorResponse(
+                    detail="Media upload retired with storage",
                 )
             else:
                 if not value:
@@ -162,16 +153,12 @@ class ConstantsController:
                         detail=messages.VALUE_REQUIRED_FOR_NON_MEDIA
                     )
                 updated_value: str = value
-                is_media_type: bool = False
-                asset_type: Optional[str] = None
 
             updated_constant: List[ConstantResponseSchema] = (
                 await constants_service.update_constant(
                     id=id,
                     constant_model=constant_model,
                     value=updated_value,
-                    is_media_type=is_media_type,
-                    asset_type=asset_type,
                     user_id=user_id,
                     description=description,
                 )
@@ -203,7 +190,7 @@ class ConstantsController:
     @inject
     async def rollback_constant(
         request: Request,
-        id: int,
+        id: UUID,
         target_version: int,
         constant_type: ConstantsTypes = Query(
             ...,
@@ -226,7 +213,7 @@ class ConstantsController:
                 )
             )
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             updated_constant: List[ConstantResponseSchema] = (
                 await constants_service.rollback_constant(

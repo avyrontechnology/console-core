@@ -1,9 +1,8 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.components.audit_log.schema import AuditLogSchema
 from src.components.audit_log.services import AuditService
-from src.components.cache import Keys as CacheKeys
-from src.components.cache.helper import CacheHelper
 from src.components.common.actions import AuditActions
 from src.components.common.constants import CurrentUserMap
 from src.components.common.resources import Resource
@@ -45,32 +44,22 @@ class TeamService:
         console_service_logger: ConsoleServiceLogger,
         audit_service: AuditService,
         partner_config_service: PartnerConfigService,
-        cache_helper: CacheHelper,
     ) -> None:
         self.__team_repository: TeamRepository = team_repository
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
         self.__audit_service: AuditService = audit_service
         self.__partner_config_service: PartnerConfigService = partner_config_service
-        self.__cache: CacheHelper = cache_helper
 
     async def __invalidate_user_teams_cache(
-        self, partner_id: int, user_id: int
+        self, partner_id: UUID, user_id: UUID
     ) -> None:
-        await self.__cache.delete_cache(
-            key=CacheKeys.GRPC_GET_USER_TEAMS.format(partner_id, user_id),
-            prefix=RedisCache.KeysPrefix.MAGLO,
-        )
-        await self.__cache.delete_cache(
-            key=CacheKeys.GRPC_GET_PARTNER_TEAMS.format(partner_id),
-            prefix=RedisCache.KeysPrefix.MAGLO,
-        )
-        # A membership add/update/remove changes this user's effective role in a
-        # team, so bust maglo's team-scoped role cache for all of their teams.
-        await self.__cache.invalidate_user_team_role_cache(user_id=user_id)
+        # Team-cache invalidation retired with the external cache consumer;
+        # membership changes need no cache busts anymore.
+        return None
 
     # ------------------------------ helpers ------------------------------- #
 
-    async def __ensure_teams_enabled(self, partner_id: int) -> None:
+    async def __ensure_teams_enabled(self, partner_id: UUID) -> None:
         config: Optional[PartnerConfigResponse] = (
             await self.__partner_config_service.get_partner_config_by_key(
                 partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
@@ -83,7 +72,7 @@ class TeamService:
             raise TeamException(TeamExceptionMsg.TEAMS_NOT_ENABLED)
 
     async def __validate_parent(
-        self, partner_id: int, parent_team_id: int, team_id: Optional[int] = None
+        self, partner_id: UUID, parent_team_id: UUID, team_id: Optional[UUID] = None
     ) -> None:
         parent: Optional[Team] = await self.__team_repository.get_team_by_id(parent_team_id)
         if parent is None:
@@ -116,7 +105,7 @@ class TeamService:
                 raise TeamException(TeamExceptionMsg.PARENT_CYCLE)
 
     async def __validate_member_role(
-        self, partner_id: int, role_id: Optional[int]
+        self, partner_id: UUID, role_id: Optional[UUID]
     ) -> None:
         if role_id is None:
             return
@@ -136,15 +125,15 @@ class TeamService:
         return "_".join(name.strip().split())
 
     @staticmethod
-    def __build_slug(normalized_name: str, team_id: int) -> str:
+    def __build_slug(normalized_name: str, team_id: UUID) -> str:
         """Derive a team's slug from its own name and id: ``{normalized_name}_{id}``."""
         suffix: str = "_{}".format(team_id)
         available_length: int = TEAM_SLUG_MAX_LENGTH - len(suffix)
         return normalized_name[:available_length] + suffix
 
     async def create_team(self, data: TeamCreate, current_user: Dict[str, Any]) -> Team:
-        partner_id: int = data.partner_id
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = data.partner_id
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         is_interal: bool = current_user.get("is_internal")
         if not is_interal and partner_id != current_user.get(CurrentUserMap.PARTNER_ID):
@@ -187,11 +176,10 @@ class TeamService:
             values, user_id, lambda t: self.__build_slug(normalized_name, t.id)
         )
 
-        # A newly created team must appear in the partner-teams cache maglo
-        # reads (maglo:gRPC_GET_PARTNER_TEAMS_PARTNER:{partner_id}, TTL one
+        # A newly created team must appear in the partner-teams cache
+        # reads (gRPC_GET_PARTNER_TEAMS_PARTNER:{partner_id}, TTL one
         # week). Without this, that stale list omits the team until a member
         # mutation or the TTL clears it. See map_team_to_board's partner check.
-        await self.__invalidate_user_teams_cache(partner_id, user_id)
 
         await self.__audit_service.log_action(
             AuditLogSchema(
@@ -205,8 +193,8 @@ class TeamService:
         )
         return team
 
-    async def get_team(self, team_id: int, current_user: Dict[str, Any]) -> Team:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+    async def get_team(self, team_id: UUID, current_user: Dict[str, Any]) -> Team:
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
             raise TeamNotFoundError(team_id)
@@ -222,7 +210,7 @@ class TeamService:
         """Pagination is zero-based and optional: pass both ``limit`` and
         ``offset`` to page (row_offset = offset * limit), or neither to get
         everything."""
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         await self.__ensure_teams_enabled(partner_id)
 
         rows, total_count, total_active, total_inactive = (
@@ -244,7 +232,7 @@ class TeamService:
     ) -> List[UserAssociatedTeamsResponse]:
         """Team memberships for every user of the current user's partner (not
         just the caller) — one entry per user, present even with zero teams."""
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         await self.__ensure_teams_enabled(partner_id)
 
         rows: List[Dict[str, Any]] = (
@@ -269,10 +257,10 @@ class TeamService:
         ]
 
     async def update_team(
-        self, team_id: int, data: TeamUpdate, current_user: Dict[str, Any]
+        self, team_id: UUID, data: TeamUpdate, current_user: Dict[str, Any]
     ) -> Team:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
@@ -288,9 +276,8 @@ class TeamService:
             team_id, update_values, user_id
         )
 
-        # name / parent_team_id are cached in the partner-teams list maglo
+        # name / parent_team_id are cached in the partner-teams list
         # reads; drop it so a rename or reparent isn't stale for up to a week.
-        await self.__invalidate_user_teams_cache(partner_id, user_id)
 
         await self.__audit_service.log_action(
             AuditLogSchema(
@@ -304,21 +291,15 @@ class TeamService:
         )
         return updated
 
-    async def delete_team(self, team_id: int, current_user: Dict[str, Any]) -> None:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+    async def delete_team(self, team_id: UUID, current_user: Dict[str, Any]) -> None:
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
             raise TeamNotFoundError(team_id)
 
-        # Capture members before deletion so we can bust each user's cache.
-        members: List[TeamMember] = await self.__team_repository.get_members(team_id)
-
         await self.__team_repository.soft_delete_team(team_id, user_id)
-
-        for m in members:
-            await self.__invalidate_user_teams_cache(partner_id, m.user_id)
 
         await self.__audit_service.log_action(
             AuditLogSchema(
@@ -333,10 +314,10 @@ class TeamService:
     # ---------------------------- membership ------------------------------ #
 
     async def add_member(
-        self, team_id: int, data: TeamMemberCreate, current_user: Dict[str, Any]
+        self, team_id: UUID, data: TeamMemberCreate, current_user: Dict[str, Any]
     ) -> TeamMember:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
@@ -370,7 +351,6 @@ class TeamService:
             role_id=data.role_id,
             created_by=user_id,
         )
-        await self.__invalidate_user_teams_cache(partner_id, data.user_id)
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.create,
@@ -384,10 +364,10 @@ class TeamService:
         return member
 
     async def remove_member(
-        self, team_id: int, member_user_id: int, current_user: Dict[str, Any]
+        self, team_id: UUID, member_user_id: UUID, current_user: Dict[str, Any]
     ) -> None:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
@@ -400,7 +380,6 @@ class TeamService:
             )
             raise TeamException(TeamExceptionMsg.MEMBER_NOT_FOUND)
 
-        await self.__invalidate_user_teams_cache(partner_id, member_user_id)
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.delete,
@@ -415,13 +394,13 @@ class TeamService:
 
     async def update_member(
         self,
-        team_id: int,
-        member_user_id: int,
+        team_id: UUID,
+        member_user_id: UUID,
         data: TeamMemberUpdate,
         current_user: Dict[str, Any],
     ) -> TeamMember:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
@@ -438,7 +417,6 @@ class TeamService:
             )
             raise TeamException(TeamExceptionMsg.MEMBER_NOT_FOUND)
 
-        await self.__invalidate_user_teams_cache(partner_id, member_user_id)
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.update,
@@ -455,7 +433,7 @@ class TeamService:
 
     async def get_members(
         self,
-        team_id: int,
+        team_id: UUID,
         current_user: Dict[str, Any],
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -463,7 +441,7 @@ class TeamService:
         """Team members with user_name/role_name attached. Pagination is
         zero-based and optional: pass both ``limit`` and ``offset`` to page,
         or neither to get everything. Returns ``(rows, total_count)``."""
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         team: Optional[Team] = await self.__team_repository.get_team_by_id(team_id, partner_id)
         if team is None:
             raise TeamNotFoundError(team_id)
@@ -478,14 +456,14 @@ class TeamService:
 
         For PARTIAL mode a ``start_role_id`` must be tagged and must belong to
         the partner's effective role catalog. Enforcement of the resolved policy
-        lives in the maglo scope resolver; this only stores the configuration.
+        lives in the scope resolver; this only stores the configuration.
         """
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         await self.__ensure_teams_enabled(partner_id)
 
-        start_role_id: Optional[int] = None
+        start_role_id: Optional[UUID] = None
         if policy.mode == TeamStrictHierarchyMode.PARTIAL:
             if policy.start_role_id is None:
                 self.__console_service_logger.error(
@@ -529,7 +507,7 @@ class TeamService:
             "start_role_id": start_role_id,
         }
 
-    async def get_user_teams(self, user_id: int) -> List[Team]:
+    async def get_user_teams(self, user_id: UUID) -> List[Team]:
         return await self.__team_repository.get_user_teams(user_id)
 
     async def get_current_user_teams(
@@ -539,7 +517,7 @@ class TeamService:
             """Teams the *currently logged-in* user belongs to, with their role
             in each. Unlike get_user_associated_teams, this is scoped to a single
             user (the caller), not the whole partner."""
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             self.__console_service_logger.info(
                 "Fetching current-user teams for user_id={}".format(user_id)
             )

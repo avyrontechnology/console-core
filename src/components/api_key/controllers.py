@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -33,7 +34,7 @@ class ApiKeysController:
     @inject
     async def generate_api_key(
         request: Request,
-        partner_id:Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -64,7 +65,7 @@ class ApiKeysController:
     async def generate_api_key_with_scopes(
         request: Request,
         payload: Optional[ApiKeyGenerateRequest] = None,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -112,7 +113,7 @@ class ApiKeysController:
     async def update_api_key(
         request: Request,
         payload: ApiKeyUpdateRequest,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -161,7 +162,7 @@ class ApiKeysController:
     @inject
     async def get_api_key(
         request: Request,
-        partner_id:Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -218,7 +219,7 @@ class ApiKeysController:
         """
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info(
                 f"User {current_user.get('id')} attempting to inactivate API key for partner_id={partner_id}"
             )

@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -27,12 +28,12 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             request = UpdateEntitlementStartDateRequest(
-                order_id=123, start_date=future_time_ms
+                order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=future_time_ms
             )
-            assert request.order_id == 123
+            assert request.order_id== UUID("12312312-3123-1231-2312-312312312312")
 
     def test_validate_order_id_max_value(self):
-        """Should accept order_id at max int32 value."""
+        """Should accept a UUID string order_id (parsed to UUID)."""
         current_time_ms = int(datetime.now().timestamp() * 1000)
         future_time_ms = current_time_ms + (7 * 24 * 60 * 60 * 1000)
 
@@ -40,9 +41,9 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             request = UpdateEntitlementStartDateRequest(
-                order_id=MAX_INT_32, start_date=future_time_ms
+                order_id="12312312-3123-1231-2312-312312312312", start_date=future_time_ms
             )
-            assert request.order_id == MAX_INT_32
+            assert request.order_id == UUID("12312312-3123-1231-2312-312312312312")
 
     def test_validate_order_id_none(self):
         """Should raise error when order_id is None."""
@@ -72,7 +73,7 @@ class TestUpdateEntitlementStartDateRequest:
                     order_id="123", start_date=future_time_ms
                 )
 
-            assert "order_id must be an integer" in str(exc_info.value)
+            assert "order_id must be a valid UUID" in str(exc_info.value)
 
     def test_validate_order_id_not_integer_float(self):
         """Should raise error when order_id is a float."""
@@ -87,20 +88,18 @@ class TestUpdateEntitlementStartDateRequest:
                     order_id=123.45, start_date=future_time_ms
                 )
 
-            assert "order_id must be an integer" in str(exc_info.value)
+            assert "order_id must be a valid UUID" in str(exc_info.value)
 
     def test_validate_order_id_zero(self):
-        """Should raise error when order_id is zero."""
+        """Zero UUID is well-formed and passes (UUIDs carry no ordering)."""
         current_time_ms = int(datetime.now().timestamp() * 1000)
         future_time_ms = current_time_ms + (7 * 24 * 60 * 60 * 1000)
 
         with patch.object(
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
-            with pytest.raises(ValidationError) as exc_info:
-                UpdateEntitlementStartDateRequest(order_id=0, start_date=future_time_ms)
-
-            assert "order_id must be a positive integer" in str(exc_info.value)
+            request = UpdateEntitlementStartDateRequest(order_id=UUID("00000000-0000-0000-0000-000000000000"), start_date=future_time_ms)
+            assert request.order_id == UUID("00000000-0000-0000-0000-000000000000")
 
     def test_validate_order_id_negative(self):
         """Should raise error when order_id is negative."""
@@ -115,7 +114,7 @@ class TestUpdateEntitlementStartDateRequest:
                     order_id=-1, start_date=future_time_ms
                 )
 
-            assert "order_id must be a positive integer" in str(exc_info.value)
+            assert "order_id must be a valid UUID" in str(exc_info.value)
 
     def test_validate_order_id_exceeds_max(self):
         """Should raise error when order_id exceeds MAX_INT_32."""
@@ -130,7 +129,7 @@ class TestUpdateEntitlementStartDateRequest:
                     order_id=MAX_INT_32 + 1, start_date=future_time_ms
                 )
 
-            assert "order_id exceeds maximum allowed value" in str(exc_info.value)
+            assert "order_id must be a valid UUID" in str(exc_info.value)
 
     def test_validate_start_date_valid(self):
         """Should accept valid future start_date."""
@@ -141,7 +140,7 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             request = UpdateEntitlementStartDateRequest(
-                order_id=123, start_date=future_time_ms
+                order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=future_time_ms
             )
             assert request.start_date == future_time_ms
 
@@ -154,14 +153,14 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             request = UpdateEntitlementStartDateRequest(
-                order_id=123, start_date=future_time_ms
+                order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=future_time_ms
             )
             assert request.start_date == future_time_ms
 
     def test_validate_start_date_none(self):
         """Should raise error when start_date is None."""
         with pytest.raises(ValidationError) as exc_info:
-            UpdateEntitlementStartDateRequest(order_id=123, start_date=None)
+            UpdateEntitlementStartDateRequest(order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=None)
 
         assert "start_date is required and cannot be null" in str(exc_info.value)
 
@@ -173,7 +172,7 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             with pytest.raises(ValidationError) as exc_info:
-                UpdateEntitlementStartDateRequest(order_id=123, start_date="1234567890")
+                UpdateEntitlementStartDateRequest(order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date="1234567890")
 
             assert "start_date must be an integer timestamp in milliseconds" in str(
                 exc_info.value
@@ -187,7 +186,7 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             with pytest.raises(ValidationError) as exc_info:
-                UpdateEntitlementStartDateRequest(order_id=123, start_date=1234567890.5)
+                UpdateEntitlementStartDateRequest(order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=1234567890.5)
 
             assert "start_date must be an integer timestamp in milliseconds" in str(
                 exc_info.value
@@ -196,14 +195,14 @@ class TestUpdateEntitlementStartDateRequest:
     def test_validate_start_date_zero(self):
         """Should raise error when start_date is zero."""
         with pytest.raises(ValidationError) as exc_info:
-            UpdateEntitlementStartDateRequest(order_id=123, start_date=0)
+            UpdateEntitlementStartDateRequest(order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=0)
 
         assert "start_date must be a positive integer timestamp" in str(exc_info.value)
 
     def test_validate_start_date_negative(self):
         """Should raise error when start_date is negative."""
         with pytest.raises(ValidationError) as exc_info:
-            UpdateEntitlementStartDateRequest(order_id=123, start_date=-1000)
+            UpdateEntitlementStartDateRequest(order_id= UUID("12312312-3123-1231-2312-312312312312"), start_date=-1000)
 
         assert "start_date must be a positive integer timestamp" in str(exc_info.value)
 
@@ -216,9 +215,9 @@ class TestUpdateEntitlementStartDateRequest:
             DateTimeUtil, "get_current_time", return_value=current_time_ms
         ):
             request = UpdateEntitlementStartDateRequest(
-                order_id=999, start_date=future_time_ms
+                order_id= UUID("99999999-9999-9999-9999-999999999999"), start_date=future_time_ms
             )
-            assert request.order_id == 999
+            assert request.order_id== UUID("99999999-9999-9999-9999-999999999999")
             assert request.start_date == future_time_ms
 
     def test_both_fields_invalid(self):
@@ -236,16 +235,16 @@ class TestEntitlementCreate:
     def test_create_valid_minimal(self):
         """Should create with minimal required fields."""
         entitlement = EntitlementCreate(
-            order_id=100,
-            partner_id=200,
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=["module1", "module2"],
             limits={"limit1": 10},
             end_date=1234567890000,
         )
 
-        assert entitlement.order_id == 100
-        assert entitlement.partner_id == 200
+        assert entitlement.order_id== UUID("10010010-0100-1001-0010-010010010010")
+        assert entitlement.partner_id== UUID("20020020-0200-2002-0020-020020020020")
         assert entitlement.service_name == "console"
         assert entitlement.modules == ["module1", "module2"]
         assert entitlement.limits == {"limit1": 10}
@@ -255,22 +254,22 @@ class TestEntitlementCreate:
     def test_create_valid_with_created_by(self):
         """Should create with created_by field."""
         entitlement = EntitlementCreate(
-            order_id=100,
-            partner_id=200,
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=["module1"],
             limits={},
-            created_by=50,
+            created_by= UUID("50505050-5050-5050-5050-505050505050"),
             end_date=1234567890000,
         )
 
-        assert entitlement.created_by == 50
+        assert entitlement.created_by== UUID("50505050-5050-5050-5050-505050505050")
 
     def test_create_empty_modules(self):
         """Should accept empty modules list."""
         entitlement = EntitlementCreate(
-            order_id=100,
-            partner_id=200,
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=[],
             limits={"limit1": 10},
@@ -282,8 +281,8 @@ class TestEntitlementCreate:
     def test_create_empty_limits(self):
         """Should accept empty limits dict."""
         entitlement = EntitlementCreate(
-            order_id=100,
-            partner_id=200,
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=["module1"],
             limits={},
@@ -295,8 +294,8 @@ class TestEntitlementCreate:
     def test_create_complex_limits(self):
         """Should accept complex limits structure."""
         entitlement = EntitlementCreate(
-            order_id=100,
-            partner_id=200,
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=["module1"],
             limits={"limit1": 10, "limit2": "unlimited", "limit3": {"nested": True}},
@@ -356,9 +355,9 @@ class TestEntitlementUpdate:
 
     def test_update_only_updated_by(self):
         """Should update only updated_by field."""
-        update = EntitlementUpdate(updated_by=42)
+        update = EntitlementUpdate(updated_by= UUID("42424242-4242-4242-4242-424242424242"))
 
-        assert update.updated_by == 42
+        assert update.updated_by== UUID("42424242-4242-4242-4242-424242424242")
 
     def test_update_all_fields(self):
         """Should update all fields together."""
@@ -368,7 +367,7 @@ class TestEntitlementUpdate:
             start_date=1111111111111,
             end_date=2222222222222,
             is_active=True,
-            updated_by=99,
+            updated_by= UUID("99999999-9999-9999-9999-999999999999"),
         )
 
         assert update.modules == ["module1"]
@@ -376,7 +375,7 @@ class TestEntitlementUpdate:
         assert update.start_date == 1111111111111
         assert update.end_date == 2222222222222
         assert update.is_active is True
-        assert update.updated_by == 99
+        assert update.updated_by== UUID("99999999-9999-9999-9999-999999999999")
 
     def test_update_empty_modules(self):
         """Should accept empty modules list."""
@@ -397,9 +396,9 @@ class TestEntitlementResponse:
     def test_response_all_fields(self):
         """Should create response with all required fields."""
         response = EntitlementResponse(
-            id=1,
-            order_id=100,
-            partner_id=200,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=["module1", "module2"],
             limits={"limit1": 10, "limit2": 20},
@@ -408,9 +407,9 @@ class TestEntitlementResponse:
             is_active=True,
         )
 
-        assert response.id == 1
-        assert response.order_id == 100
-        assert response.partner_id == 200
+        assert response.id == UUID("11111111-1111-1111-1111-111111111111")
+        assert response.order_id== UUID("10010010-0100-1001-0010-010010010010")
+        assert response.partner_id== UUID("20020020-0200-2002-0020-020020020020")
         assert response.service_name == "console"
         assert response.modules == ["module1", "module2"]
         assert response.limits == {"limit1": 10, "limit2": 20}
@@ -421,9 +420,9 @@ class TestEntitlementResponse:
     def test_response_is_active_false(self):
         """Should handle is_active=False."""
         response = EntitlementResponse(
-            id=1,
-            order_id=100,
-            partner_id=200,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             modules=[],
             limits={},
@@ -445,9 +444,9 @@ class TestUpdateEntitlementStartDateResponse:
     def test_response_all_fields(self):
         """Should create response with all required fields."""
         response = UpdateEntitlementStartDateResponse(
-            id=1,
-            order_id=100,
-            partner_id=200,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             start_date=1234567890000,
             end_date=9876543210000,
@@ -455,9 +454,9 @@ class TestUpdateEntitlementStartDateResponse:
             start_date_update_count=2,
         )
 
-        assert response.id == 1
-        assert response.order_id == 100
-        assert response.partner_id == 200
+        assert response.id == UUID("11111111-1111-1111-1111-111111111111")
+        assert response.order_id== UUID("10010010-0100-1001-0010-010010010010")
+        assert response.partner_id== UUID("20020020-0200-2002-0020-020020020020")
         assert response.service_name == "console"
         assert response.start_date == 1234567890000
         assert response.end_date == 9876543210000
@@ -467,9 +466,9 @@ class TestUpdateEntitlementStartDateResponse:
     def test_response_update_count_zero(self):
         """Should handle update_count of zero."""
         response = UpdateEntitlementStartDateResponse(
-            id=1,
-            order_id=100,
-            partner_id=200,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             start_date=1234567890000,
             end_date=9876543210000,
@@ -482,9 +481,9 @@ class TestUpdateEntitlementStartDateResponse:
     def test_response_is_active_false(self):
         """Should handle is_active=False."""
         response = UpdateEntitlementStartDateResponse(
-            id=1,
-            order_id=100,
-            partner_id=200,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("20020020-0200-2002-0020-020020020020"),
             service_name="console",
             start_date=1234567890000,
             end_date=9876543210000,

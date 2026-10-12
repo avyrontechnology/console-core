@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -123,7 +124,7 @@ class UserConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             console_service_logger.info(
                 "Attempting to fetch user config for user id: {}".format(user_id)
             )
@@ -159,7 +160,7 @@ class UserConfigController:
     @inject
     async def upsert_user_config(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         user_ids: List[int] = Query(
             ..., description="List of user IDs whose configurations need to be updated."
         ),
@@ -205,7 +206,7 @@ class UserConfigController:
     @inject
     async def get_user_configs_by_user_id(
         request: Request,
-        user_id: Optional[int] = None,
+        user_id: Optional[UUID] = None,
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
         ),

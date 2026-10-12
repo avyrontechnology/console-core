@@ -17,7 +17,6 @@ from src.components.partner.schema import (
     PartnerResponse,
 )
 from src.components.partner_config.models import PartnerConfig
-from src.components.partner_config.services import PartnerConfigService
 from src.components.partner_meta_data.services import PartnerMetaDataServices
 from src.components.user.services import UserService
 from src.exceptions import PartnerException
@@ -40,9 +39,6 @@ class PartnerFilterService:
         self,
         filter_request: "PartnerFilterRequest",
         user_service: UserService = Depends(Provide["console_service"]),
-        partner_config_service: PartnerConfigService = Depends(
-            Provide["partner_config_service"]
-        ),
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide["partner_meta_data_service"]
         ),
@@ -85,8 +81,6 @@ class PartnerFilterService:
                 )
 
             feature_flag_filters: dict = {
-                DashboardFilters.PARTNERS_USING_MAGLO.value: "is_maglo_enabled",
-                DashboardFilters.PARTNERS_USING_BABBLER.value: "is_babbler_enabled",
                 DashboardFilters.PARTNERS_USING_TALKO.value: "is_talko_enabled",
             }
 
@@ -125,14 +119,6 @@ class PartnerFilterService:
             )
 
             partner_ids = [partner.id for (partner,) in result]
-            configs = await partner_config_service.get_partner_config_by_key(
-                partner_ids, "is_maglo_enabled"
-            )
-
-            is_maglo_map = dict.fromkeys(partner_ids, False)
-
-            for config in configs:
-                is_maglo_map[config.partner_id] = bool(config.value)
 
             meta_map = (
                 await partner_meta_data_service.get_partner_meta_data_by_partner_ids(
@@ -152,7 +138,7 @@ class PartnerFilterService:
             partners_data: list = []
             for (partner,) in result:
                 is_trial = meta_map.get(partner.id, {}).get(
-                    "is_maglo_free_trial_enabled", False
+                    "is_talko_free_trial__enabled", False
                 )
                 admin_credentials = admin_map.get(partner.id)
                 partner_response: PartnerResponse = PartnerResponse(
@@ -168,10 +154,8 @@ class PartnerFilterService:
                         admin_credentials.phone_number if admin_credentials else None
                     ),
                     is_active=partner.is_active,
-                    is_partner_paid=is_maglo_map.get(partner.id, False),
+                    is_partner_paid=None,
                     is_free_trial_enabled=is_trial,
-                    active_maglo_users=partner_user_counts.get(partner.id, {}).get("is_maglo_enabled", 0),
-                    active_babbler_users=partner_user_counts.get(partner.id, {}).get("is_babbler_enabled", 0),
                     active_talko_users=partner_user_counts.get(partner.id, {}).get("is_talko_enabled", 0),
                 )
                 partners_data.append(partner_response)
@@ -204,7 +188,7 @@ class PartnerFilterService:
         
     async def _get_active_user_counts_for_partners(self, partner_ids: list[int]):
         try: 
-            active_keys: list[str] = ["is_maglo_enabled", "is_babbler_enabled", "is_talko_enabled"]
+            active_keys: list[str] = ["is_talko_enabled"]
             partner_user_counts: dict = {
                 pid: dict.fromkeys(active_keys, 0) for pid in partner_ids
             } if partner_ids else {}

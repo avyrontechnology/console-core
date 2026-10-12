@@ -1,5 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, JSON
+import uuid
+from sqlalchemy import Boolean, Column, ForeignKey, String, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 from src.core.db import Base
@@ -19,7 +21,7 @@ class ApiKey(MetaData):
     user_context = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

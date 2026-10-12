@@ -13,6 +13,7 @@ from src.components.user.constants import FileContent
 from typing import List, Optional, Dict, Any
 import base64
 import uuid
+from uuid import UUID
 from src.components.user.helpers import validate_csv_content
 from src.components.user.constants import ValidationMsg
 from src.components.user.helpers import validate_bulk_upload_data_rows
@@ -31,7 +32,6 @@ from src.components.user.tasks import create_bulk_users
 from src.components.user.constants import FileContent, TextPrompt
 from src.components.user.schema import TaskStartResponse
 from src.components.user.repositories import UserRepository
-from src.components.digital_assets.storage.helper import StorageHelper
 
 from src.components.auth.constant import TokenKeys
 from src.components.auth.error import RoleNotFoundError
@@ -195,7 +195,7 @@ class UserController:
     @inject
     async def get_users_by_partner_id(
         request: Request,
-        partner_id: int = Query(..., description="ID of the Partner"),
+        partner_id: UUID = Query(..., description="ID of the Partner"),
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -224,7 +224,7 @@ class UserController:
     @inject
     async def delete_user(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -258,7 +258,7 @@ class UserController:
     @inject
     async def update_user(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         user_data: Contrasts.UpdateUserData = Body(...),
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
@@ -337,7 +337,7 @@ class UserController:
     @inject
     async def get_user_by_user_id(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -345,7 +345,7 @@ class UserController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info(
                 "Attempting to fetch the user by id: {}".format(user_id)
             )
@@ -374,7 +374,7 @@ class UserController:
     @inject
     async def get_admin_details_by_partner_id(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -447,133 +447,12 @@ class UserController:
             )
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
-    @user_router.get(
-        "/get-otp-for-delete-account",
-    )
-    @inject
-    async def get_otp_for_delete_user(
-        email: EmailStr = Query(..., description="email address"),
-        console_service: UserService = Depends(Provide[Container.console_service]),
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-    ):
-        try:
-            console_service_logger.info(
-                "Attempting to get otp for delete user: {}".format(email)
-            )
-            result = await console_service.get_otp_for_delete_user(email)
-            return SuccessResponse(data=result)
-        except UserNotFoundError as exec:
-            console_service_logger.error(
-                "User not found for user with id: {}, while getting OTP for delete account".format(
-                    email
-                )
-            )
-            return NotFoundResponse(detail=UserResponseMsg.USER_NOT_FOUND)
-        except UserException as exec:
-            console_service_logger.error(
-                "Error occrred for user with id: {}, while getting OTP for delete account".format(
-                    email
-                )
-            )
-            return BadRequestResponse(str(exec))
-        except Exception as exec:
-            console_service_logger.error(
-                "An unexpected error occured while getting otp for delete account: {}".format(
-                    exec
-                )
-            )
-            return InternalServerErrorResponse()
-
-    @user_router.delete(
-        "/delete-account",
-    )
-    @inject
-    async def delete_account(
-        email: str,
-        otp: str,
-        console_service: UserService = Depends(Provide[Container.console_service]),
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-    ):
-        try:
-            console_service_logger.info(
-                "Attempting to get otp for delete user: {}".format(email)
-            )
-            result = await console_service.inactive_app_with_otp(email, otp)
-            return SuccessResponse(data=result)
-
-        except UserNotFoundError as exec:
-            console_service_logger.error(
-                "User not found for user with id: {}".format(email)
-            )
-            return NotFoundResponse(detail=UserResponseMsg.USER_NOT_FOUND)
-        except UserException as exec:
-            console_service_logger.error(
-                "User not found for user with id: {}".format(email)
-            )
-            return BadRequestResponse(detail=str(exec))
-        except Exception as exec:
-            console_service_logger.error(
-                "An unexpected error occured while getting otp for delete the user: {}".format(
-                    exec
-                )
-            )
-            return InternalServerErrorResponse()
-
-    @user_router.delete(
-        "/delete-maglo-app-account",
-    )
-    @permission_check(PermissionDependency)
-    @inject
-    async def delete_maglo_app_account(
-        request: Request,
-        console_service: UserService = Depends(Provide[Container.console_service]),
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-    ):
-        try:
-            current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            console_service_logger.info(
-                "Attempting to delete Maglo app account for user_id: {}".format(user_id)
-            )
-
-            result = await console_service.inactive_app_by_id(current_user)
-
-            return SuccessResponse(data=result)
-
-        except UserNotFoundError as exc:
-            console_service_logger.error(
-                "User not found while deleting Maglo app account for user_id: {}".format(
-                    user_id
-                )
-            )
-            return NotFoundResponse(detail=UserResponseMsg.USER_NOT_FOUND)
-
-        except UserException as exc:
-            console_service_logger.error(
-                "User exception occurred for user_id: {}".format(user_id)
-            )
-            return BadRequestResponse(detail=str(exc))
-
-        except Exception as exc:
-            console_service_logger.error(
-                "Unexpected error while deleting Maglo app account for user_id: {}: {}".format(
-                    user_id, exc
-                )
-            )
-            return InternalServerErrorResponse()
-
     @user_router.get("/{partner_id}/user/{ivr_phone}/get_user_details_by_ivr")
     @inject
     async def get_user_details_by_ivr(
         request: Request,
         ivr_phone: str,
-        partner_id: int,
+        partner_id: UUID,
         console_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -640,8 +519,8 @@ class UserController:
                 )
                 return UnauthorizedResponse("User not authenticated")
 
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             if not partner_id:
                 return InvalidPartnerResponse("Partner is not found")
@@ -857,7 +736,6 @@ class UserController:
         - total_success_count
         - total_failed_count
         - failed_reasons: list of failed rows with row_number, email, name, reason
-        - download_url: presigned S3 URL to download full result CSV directly in browser
         """
         try:
             # =========================
@@ -902,14 +780,6 @@ class UserController:
             if task.state == "SUCCESS":
                 result: Any = task.result
 
-                da_file_name: Optional[str] = result.get("da_file_name")
- 
-                # Get presigned URL from Digital Asset — same as release notes
-                download_url: Optional[str] = (
-                    StorageHelper.get_presigned_url(da_file_name)
-                    if da_file_name else None
-                )
-
                 console_service_logger.info(
                     "Bulk upload result fetched task_id=%s success=%s failed=%s",
                     task_id,
@@ -922,7 +792,6 @@ class UserController:
                     "status": "completed",
                     "total_success_count": result.get("total_success_count", 0),
                     "total_failed_count": result.get("total_failed_count", 0),
-                    "download_url": download_url,
                 })
  
             return SuccessResponse({

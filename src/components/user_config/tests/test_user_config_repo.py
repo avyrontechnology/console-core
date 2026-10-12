@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, Mock
 from sqlalchemy.exc import IntegrityError
@@ -23,7 +24,7 @@ class TestUserConfigRepository:
         self.logger.reset_mock()
 
     async def test_create_user_config_success(self):
-        user_config_data = UserConfigBase(user_id=1, key="theme", value="dark")
+        user_config_data = UserConfigBase(user_id= UUID("11111111-1111-1111-1111-111111111111"), key="theme", value="dark")
 
         self.session.add = MagicMock()
         self.session.commit = AsyncMock()
@@ -39,7 +40,7 @@ class TestUserConfigRepository:
         self.session.refresh.assert_awaited_once()
 
     async def test_create_user_config_integrity_error(self):
-        user_config_data = UserConfigBase(user_id = 1, key="theme", value="dark")
+        user_config_data = UserConfigBase(user_id= UUID("11111111-1111-1111-1111-111111111111"), key="theme", value="dark")
         
         with patch("src.components.user_config.repositories.UserConfigRepository", MagicMock()):
             self.session.add = MagicMock(side_effect=IntegrityError("Integrity error", None, None))
@@ -55,7 +56,7 @@ class TestUserConfigRepository:
             )
 
     async def test_create_user_config_generic_exception(self):
-        user_config_data = UserConfigBase(user_id = 2, key="lang", value="en")
+        user_config_data = UserConfigBase(user_id= UUID("22222222-2222-2222-2222-222222222222"), key="lang", value="en")
 
         with patch("src.components.user_config.repositories.UserConfigRepository", MagicMock()):
             self.session.add = MagicMock(side_effect=Exception("Some Error"))
@@ -68,7 +69,7 @@ class TestUserConfigRepository:
             )
 
     async def test_get_user_config_by_key_found(self):
-        user_id = 3
+        user_id= UUID("33333333-3333-3333-3333-333333333333")
         key = "theme"
         expected_config = MagicMock()
 
@@ -83,7 +84,7 @@ class TestUserConfigRepository:
         self.logger.info.assert_any_call(f"getting user config for user id: {user_id}")
 
     async def test_get_user_config_by_key_exception(self):
-        user_id = 3
+        user_id= UUID("33333333-3333-3333-3333-333333333333")
         key = "theme"
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
@@ -95,7 +96,7 @@ class TestUserConfigRepository:
     
 
     async def test_get_user_configs_by_user_id_success(self):
-        user_id = 7
+        user_id= UUID("77777777-7777-7777-7777-777777777777")
         config_mock = MagicMock()
         scalars_mock = MagicMock()
         scalars_mock.all.return_value = [config_mock]
@@ -110,7 +111,7 @@ class TestUserConfigRepository:
         self.logger.info.assert_any_call(f"getting all user configs for user id: {user_id}")
 
     async def test_get_user_configs_by_user_id_exception(self):
-        user_id = 7
+        user_id= UUID("77777777-7777-7777-7777-777777777777")
         self.session.execute = AsyncMock(side_effect=Exception("DB Error"))
 
         with pytest.raises(Exception):
@@ -121,8 +122,8 @@ class TestUserConfigRepository:
         )
 
     async def test_update_user_config_exception(self):
-        user_id = 50
-        current_user_id = 5
+        user_id= UUID("50505050-5050-5050-5050-505050505050")
+        current_user_id= UUID("55555555-5555-5555-5555-555555555555")
         data = UserConfigData(theme="dark")
 
         self.session.execute = AsyncMock(side_effect=Exception("Update error"))

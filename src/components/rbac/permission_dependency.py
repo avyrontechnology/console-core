@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 
 from dependency_injector.wiring import Provide, inject
@@ -50,7 +51,7 @@ class PermissionDependency:
         try:
             # current_user is available in request's state (Extracted from the token)
             current_user: dict = await AuthUtility.get_current_user(request)
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             permission_list: list[str] = (
                 await partner_config_service.custom_role_permission_check(
                     current_user_id

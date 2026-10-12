@@ -9,9 +9,7 @@ class RedisCache:
 
     class KeysPrefix(enum.Enum):
         CONSOLE = "console:"
-        MAGLO = "maglo:"
         TALKO = "talko:"
-        BABBLER = "babbler:"
 
     @staticmethod
     async def init_redis_pool():

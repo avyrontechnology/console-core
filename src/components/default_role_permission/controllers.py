@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
@@ -109,7 +110,7 @@ class DefaultRolePermissionController:
     @inject
     async def get_default_role_permission_by_role_id(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         default_role_permission_service: DefaultRolePermissionService = Depends(
             Provide[Container.default_role_permission_service]
         ),
@@ -142,7 +143,7 @@ class DefaultRolePermissionController:
     @inject
     async def set_role_action_permissions(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         set_data: SetRoleActionPermissionsData,
         default_role_permission_service: DefaultRolePermissionService = Depends(
             Provide[Container.default_role_permission_service]
@@ -186,7 +187,7 @@ class DefaultRolePermissionController:
     @inject
     async def delete_default_role_permission_by_id(
         request: Request,
-        default_role_permission_id: int,
+        default_role_permission_id: UUID,
         default_role_permission_service: DefaultRolePermissionService = Depends(
             Provide[Container.default_role_permission_service]
         ),

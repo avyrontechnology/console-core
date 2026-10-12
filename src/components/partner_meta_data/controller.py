@@ -1,3 +1,4 @@
+from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 from fastapi.encoders import jsonable_encoder
@@ -42,7 +43,7 @@ class PartnerMetaDataController:
     @inject
     async def create_partner_metadata(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_meta_data: PartnerMetadata = Body(...),
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
@@ -92,7 +93,7 @@ class PartnerMetaDataController:
     @inject
     async def update_partner_meta_data(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         update_data: UpdatePartnerMetaData = Body(...),
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
@@ -156,7 +157,7 @@ class PartnerMetaDataController:
     @inject
     async def get_partner_meta_data(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
         ),
@@ -188,9 +189,7 @@ class PartnerMetaDataController:
                         type_of_business="  ",
                         years_in_business=0,
                         annual_revenue=0,
-                        is_maglo_enabled=False,
                         is_talko_enabled=False,
-                        is_babbler_enabled=False,
                     ),
                 )
 

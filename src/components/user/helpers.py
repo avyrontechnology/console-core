@@ -71,10 +71,6 @@ def validate_bulk_upload_headers(
 
     df = _read_dataframe(file_bytes, filename, nrows=0)
 
-    # Reject restricted column
-    if "is_maglo_publisher" in df.columns:
-        raise ValueError(ValidationMsg.USER_PUBLISHER_NOT_SUPPORTED)
-
     # Validate mandatory columns
     for column in required_columns:
         if column not in df.columns:

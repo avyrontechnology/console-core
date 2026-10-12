@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -42,10 +43,10 @@ class TestNotificationRepository:
         mock_time.return_value = "now"
 
         await self.repo.upsert_subscription(
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             channel_type="FCM",
             identifier="token123",
-            service_type=NotificationServiceType.MAGLO,
+            service_type=NotificationServiceType.TALKO,
             meta_data={"device": "android"}
         )
 
@@ -64,7 +65,7 @@ class TestNotificationRepository:
 
         self.session.execute.return_value = mock_result
 
-        result = await self.repo.get_active_subscriptions(user_id=1)
+        result = await self.repo.get_active_subscriptions(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert len(result) == 2
         assert result[0] == mock_sub1
@@ -81,7 +82,7 @@ class TestNotificationRepository:
         self.session.execute.return_value = mock_result
 
         result = await self.repo.get_active_subscriptions(
-            user_id=1, service_type=NotificationServiceType.MAGLO
+            user_id= UUID("11111111-1111-1111-1111-111111111111"), service_type=NotificationServiceType.TALKO
         )
 
         assert result == [mock_sub1]
@@ -94,7 +95,7 @@ class TestNotificationRepository:
     async def test_deactivate_subscription(self, mock_time):
         mock_time.return_value = "now"
 
-        await self.repo.deactivate_subscription(user_id=1, identifier="token123", service_type=NotificationServiceType.MAGLO)
+        await self.repo.deactivate_subscription(user_id= UUID("11111111-1111-1111-1111-111111111111"), identifier="token123", service_type=NotificationServiceType.TALKO)
 
         assert self.session.execute.called
         self.session.commit.assert_awaited_once()
@@ -106,18 +107,18 @@ class TestNotificationRepository:
     @pytest.mark.asyncio
     async def test_insert_history(self):
         history = await self.repo.insert_history(
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             title="Hello",
             body="World",
             data={"key": "value"},
-            service_type=NotificationServiceType.MAGLO,
+            service_type=NotificationServiceType.TALKO,
         )
     
         self.session.add.assert_called_once()
         self.session.commit.assert_awaited_once()
         self.session.refresh.assert_awaited_once_with(history)
     
-        assert history.user_id == 1
+        assert history.user_id== UUID("11111111-1111-1111-1111-111111111111")
         assert history.title == "Hello"
         assert history.body == "World"
         assert history.data_payload == {"key": "value"}
@@ -125,7 +126,7 @@ class TestNotificationRepository:
         added_history = self.session.add.call_args.args[0]
     
         assert isinstance(added_history, NotificationHistory)
-        assert added_history.user_id == 1
+        assert added_history.user_id== UUID("11111111-1111-1111-1111-111111111111")
         assert added_history.title == "Hello"
         assert added_history.body == "World"
         assert added_history.data_payload == {"key": "value"}
@@ -148,7 +149,7 @@ class TestNotificationRepository:
         # Execute is called twice → return different mocks
         self.session.execute.side_effect = [mock_result_data, mock_result_count]
 
-        result = await self.repo.get_user_history(user_id=1)
+        result = await self.repo.get_user_history(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result == (mock_history, 2)
 
@@ -161,7 +162,7 @@ class TestNotificationRepository:
 
         self.session.execute.return_value = mock_result
 
-        count = await self.repo.get_unread_count(user_id=1, service_type=NotificationServiceType.MAGLO)
+        count = await self.repo.get_unread_count(user_id= UUID("11111111-1111-1111-1111-111111111111"), service_type=NotificationServiceType.TALKO)
 
         assert count == 5
 
@@ -174,7 +175,7 @@ class TestNotificationRepository:
 
         self.session.execute.return_value = mock_result
 
-        count = await self.repo.get_unread_count(user_id=1, service_type=NotificationServiceType.MAGLO)
+        count = await self.repo.get_unread_count(user_id= UUID("11111111-1111-1111-1111-111111111111"), service_type=NotificationServiceType.TALKO)
 
         assert count == 0
 
@@ -185,7 +186,7 @@ class TestNotificationRepository:
     async def test_mark_as_read_with_ids(self, mock_time):
         mock_time.return_value = "now"
 
-        await self.repo.mark_as_read(user_id=1, notification_ids=[1, 2, 3])
+        await self.repo.mark_as_read(user_id= UUID("11111111-1111-1111-1111-111111111111"), notification_ids=[UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222"), UUID("33333333-3333-3333-3333-333333333333")])
 
         assert self.session.execute.called
         self.session.commit.assert_awaited_once()
@@ -197,7 +198,7 @@ class TestNotificationRepository:
     async def test_mark_as_read_all(self, mock_time):
         mock_time.return_value = "now"
 
-        await self.repo.mark_as_read(user_id=1, notification_ids=[])
+        await self.repo.mark_as_read(user_id= UUID("11111111-1111-1111-1111-111111111111"), notification_ids=[])
 
         assert self.session.execute.called
         self.session.commit.assert_awaited_once()
@@ -213,7 +214,7 @@ class TestNotificationRepository:
 
         self.session.execute.side_effect = [mock_result_data, mock_result_count]
 
-        result = await self.repo.get_user_history(user_id=1, state="unread")
+        result = await self.repo.get_user_history(user_id= UUID("11111111-1111-1111-1111-111111111111"), state="unread")
 
         assert result == (mock_history, 1)
         assert self.session.execute.call_count == 2
@@ -229,7 +230,7 @@ class TestNotificationRepository:
 
         self.session.execute.side_effect = [mock_result_data, mock_result_count]
 
-        result = await self.repo.get_user_history(user_id=1, state="read")
+        result = await self.repo.get_user_history(user_id= UUID("11111111-1111-1111-1111-111111111111"), state="read")
 
         assert result == (mock_history, 1)
 
@@ -244,7 +245,7 @@ class TestNotificationRepository:
 
         self.session.execute.side_effect = [mock_result_data, mock_result_count]
 
-        result = await self.repo.get_user_history(user_id=1, limit=0, offset=100)
+        result = await self.repo.get_user_history(user_id= UUID("11111111-1111-1111-1111-111111111111"), limit=0, offset=100)
 
         assert result == ([], 0)
 
@@ -257,7 +258,7 @@ class TestNotificationRepository:
 
         self.session.execute.side_effect = [mock_result_data, mock_result_count]
 
-        result = await self.repo.get_user_history(user_id=1)
+        result = await self.repo.get_user_history(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result == ([], 0)
 
@@ -267,7 +268,7 @@ class TestNotificationRepository:
 
         self.session.execute.return_value = mock_result
 
-        count = await self.repo.get_unread_count(user_id=1, service_type=NotificationServiceType.MAGLO)
+        count = await self.repo.get_unread_count(user_id= UUID("11111111-1111-1111-1111-111111111111"), service_type=NotificationServiceType.TALKO)
 
         assert count == 0
 
@@ -275,138 +276,58 @@ class TestNotificationRepository:
         self.session.execute.return_value = MagicMock()
         self.session.execute.return_value.scalars.return_value.all.return_value = []
 
-        result = await self.repo.get_notification_preferences(user_id=1)
+        result = await self.repo.get_notification_preferences(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         expected_preferences = {
-            (NotificationSourceEnum.MAGLO, None, NotificationPreferenceStateEnum.ENABLED),
-            (NotificationSourceEnum.MAGLO_APP, None, NotificationPreferenceStateEnum.ENABLED),
-            (NotificationSourceEnum.BABBLER, None, NotificationPreferenceStateEnum.ENABLED),
-            (NotificationSourceEnum.BABBLER_APP, None, NotificationPreferenceStateEnum.ENABLED),
             (NotificationSourceEnum.TALKO, None, NotificationPreferenceStateEnum.ENABLED),
             (NotificationSourceEnum.OBOTAAI, None, NotificationPreferenceStateEnum.ENABLED),
-            (
-                NotificationSourceEnum.BABBLER,
-                NotificationScopeEnum.WHATSAPP,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.BABBLER_APP,
-                NotificationScopeEnum.WHATSAPP,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO,
-                NotificationScopeEnum.LEAD_ASSIGNED,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO,
-                NotificationScopeEnum.BULK_LEAD_ASSIGNED,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO,
-                NotificationScopeEnum.FOLLOWUP,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO_APP,
-                NotificationScopeEnum.LEAD_ASSIGNED,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO_APP,
-                NotificationScopeEnum.BULK_LEAD_ASSIGNED,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
-            (
-                NotificationSourceEnum.MAGLO_APP,
-                NotificationScopeEnum.FOLLOWUP,
-                NotificationPreferenceStateEnum.ENABLED,
-            ),
         }
 
-        assert len(result) == 14
+        assert len(result) == 2
         assert {
             (item.source, item.scope, item.state) for item in result
         } == expected_preferences
 
-    async def test_get_notification_preferences_returns_shared_scoped_entries_for_maglo_and_maglo_app(self):
+    async def test_get_notification_preferences_talko_disabled(self):
         mock_row = MagicMock()
-        mock_row.key = UserConfigEnum.NOTIFICATION_MAGLO_LEAD_ASSIGNED.value
+        mock_row.key = UserConfigEnum.NOTIFICATION_TALKO.value
         mock_row.value = False
 
         self.session.execute.return_value = MagicMock()
         self.session.execute.return_value.scalars.return_value.all.return_value = [mock_row]
 
-        result = await self.repo.get_notification_preferences(user_id=1)
+        result = await self.repo.get_notification_preferences(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
-        maglo_entries = [
+        talko_entries = [
             item
             for item in result
-            if item.source == NotificationSourceEnum.MAGLO
-            and item.scope == NotificationScopeEnum.LEAD_ASSIGNED
-        ]
-        maglo_app_entries = [
-            item
-            for item in result
-            if item.source == NotificationSourceEnum.MAGLO_APP
-            and item.scope == NotificationScopeEnum.LEAD_ASSIGNED
+            if item.source == NotificationSourceEnum.TALKO
         ]
 
-        assert len(maglo_entries) == 1
-        assert len(maglo_app_entries) == 1
-        assert maglo_entries[0].state == NotificationPreferenceStateEnum.DISABLED
-        assert maglo_app_entries[0].state == NotificationPreferenceStateEnum.DISABLED
-        assert len(result) == 14
-        assert len({(item.source, item.scope) for item in result}) == 14
-
-    async def test_get_notification_preferences_keeps_shared_entries_for_maglo_and_maglo_app(self):
-        mock_row = MagicMock()
-        mock_row.key = UserConfigEnum.NOTIFICATION_MAGLO_LEAD_ASSIGNED.value
-        mock_row.value = False
-
-        self.session.execute.return_value = MagicMock()
-        self.session.execute.return_value.scalars.return_value.all.return_value = [mock_row]
-
-        result = await self.repo.get_notification_preferences(user_id=1)
-
-        matching_entries = [
-            item
-            for item in result
-            if item.scope == NotificationScopeEnum.LEAD_ASSIGNED
-            and item.source in {NotificationSourceEnum.MAGLO, NotificationSourceEnum.MAGLO_APP}
-        ]
-
-        assert len(matching_entries) == 2
-        assert all(item.state == NotificationPreferenceStateEnum.DISABLED for item in matching_entries)
-        assert {item.source for item in matching_entries} == {
-            NotificationSourceEnum.MAGLO,
-            NotificationSourceEnum.MAGLO_APP,
-        }
+        assert len(talko_entries) == 1
+        assert talko_entries[0].state == NotificationPreferenceStateEnum.DISABLED
+        assert len(result) == 2
 
     async def test_is_notification_enabled_defaults_to_true(self):
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         self.session.execute.return_value = mock_result
 
-        result = await self.repo.is_notification_enabled(user_id=1, source="maglo")
+        result = await self.repo.is_notification_enabled(user_id= UUID("11111111-1111-1111-1111-111111111111"), source="talko")
 
         assert result is True
 
-    async def test_is_notification_enabled_maglo_scoped_event(self):
+    async def test_is_notification_enabled_talko_disabled(self):
         mock_result = MagicMock()
         mock_result.all.return_value = [
-            (UserConfigEnum.NOTIFICATION_MAGLO.value, True),
-            (UserConfigEnum.NOTIFICATION_MAGLO_LEAD_ASSIGNED.value, False),
+            (UserConfigEnum.NOTIFICATION_TALKO.value, False),
         ]
 
         self.session.execute.return_value = mock_result
 
         result = await self.repo.is_notification_enabled(
-            user_id=1,
-            source="maglo",
-            event_name="LEAD_ASSIGNED",
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            source="talko",
         )
 
         assert result is False
@@ -418,14 +339,14 @@ class TestNotificationRepository:
 
         prefs = [
             NotificationPreferenceItem(
-                source=NotificationSourceEnum.MAGLO,
-                scope=NotificationScopeEnum.LEAD_ASSIGNED,
+                source=NotificationSourceEnum.TALKO,
+                scope=None,
                 state=NotificationPreferenceStateEnum.DISABLED,
             )
         ]
 
         self.repo.get_notification_preferences = AsyncMock(return_value=prefs)
-        result = await self.repo.upsert_notification_preferences(user_id=1, preferences=prefs)
+        result = await self.repo.upsert_notification_preferences(user_id= UUID("11111111-1111-1111-1111-111111111111"), preferences=prefs)
 
         assert result == prefs
         self.session.execute.assert_awaited()
@@ -435,7 +356,7 @@ class TestNotificationRepository:
     async def test_mark_as_read_all_unread_only(self, mock_time):
         mock_time.return_value = "now"
 
-        await self.repo.mark_as_read(user_id=1, notification_ids=None)
+        await self.repo.mark_as_read(user_id= UUID("11111111-1111-1111-1111-111111111111"), notification_ids=None)
 
         assert self.session.execute.called
         self.session.commit.assert_awaited_once()
@@ -444,7 +365,7 @@ class TestNotificationRepository:
     async def test_mark_as_read_with_ids_non_empty(self, mock_time):
         mock_time.return_value = "now"
 
-        await self.repo.mark_as_read(user_id=1, notification_ids=[10])
+        await self.repo.mark_as_read(user_id= UUID("11111111-1111-1111-1111-111111111111"), notification_ids=[UUID("10101010-1010-1010-1010-101010101010")])
 
         assert self.session.execute.called
         self.session.commit.assert_awaited_once()

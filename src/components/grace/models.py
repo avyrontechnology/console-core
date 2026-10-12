@@ -1,7 +1,9 @@
 """SQLAlchemy model for Grace Period."""
 
+import uuid
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 from src.components.database.model_config import TABLES
@@ -26,7 +28,7 @@ class GracePeriod(MetaData):
     __tablename__ = TABLES.GRACE_PERIODS
 
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id"),
         nullable=False,
         index=True,
@@ -79,7 +81,7 @@ class GracePeriod(MetaData):
         comment="Epoch ms — when grace was auto-settled on payment",
     )
     settled_by_order_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_orders.id"),
         nullable=True,
         index=True,

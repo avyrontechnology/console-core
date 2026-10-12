@@ -14,7 +14,3 @@ class PartnerConfigKeyError(NotFoundError):
 class PartnerConfigValidationError(ValidationError):
     """Raised when payload validation fails for create/update email config."""
     pass
-
-class PartnerConfigMailMGError(Exception):
-    """Raised when MailMG API fails during create/update/fetch."""
-    pass

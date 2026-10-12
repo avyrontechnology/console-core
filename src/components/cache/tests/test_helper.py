@@ -261,8 +261,8 @@ class TestCacheHelper(unittest.IsolatedAsyncioTestCase):
         pattern = "ENLIST_AGENTS_PARTNER:12"
         match_pattern = f"{self.prefix.value}{pattern}*"
         keys = [
-            b"maglo:ENLIST_AGENTS_PARTNER:12_USER:33",
-            b"maglo:ENLIST_AGENTS_PARTNER:12_OTHER",
+            b"console:ENLIST_AGENTS_PARTNER:12_USER:33",
+            b"console:ENLIST_AGENTS_PARTNER:12_OTHER",
         ]
         self.redis_pool.keys = AsyncMock(return_value=keys)
         self.redis_pool.delete = AsyncMock(return_value=len(keys))
@@ -311,7 +311,7 @@ class TestCacheHelper(unittest.IsolatedAsyncioTestCase):
     async def test_clear_pattern_no_pattern(self):
         # Arrange
         match_pattern = f"{self.prefix.value}*"
-        keys = [b"maglo:KEY1", b"maglo:KEY2"]
+        keys = [b"console:KEY1", b"console:KEY2"]
         self.redis_pool.keys = AsyncMock(return_value=keys)
         self.redis_pool.delete = AsyncMock(return_value=len(keys))
 
@@ -333,38 +333,9 @@ class TestCacheHelper(unittest.IsolatedAsyncioTestCase):
             "Expected log message not found in logger.info calls",
         )
 
-    # ---------- maglo cross-service invalidation helpers ------------------ #
-    # These lock in the exact MAGLO-prefixed Redis match patterns maglo-service
-    # writes under; a drift here silently stops the corresponding keys from
-    # being cleared.
+    # ---------- cross-service invalidation helpers ------------------ #
+    # These lock in the exact prefixed Redis match patterns; a drift here
+    # silently stops the corresponding keys from being cleared.
 
-    async def test_invalidate_role_derived_user_caches(self):
-        self.redis_pool.keys = AsyncMock(return_value=[])
 
-        await self.cache_helper.invalidate_role_derived_user_caches()
 
-        self.redis_pool.keys.assert_any_call(
-            "maglo:gRPC_GET_USER_DETAILS_PARTNER:*_USER:*"
-        )
-        self.redis_pool.keys.assert_any_call("maglo:gRPC_GET_USER_ROLE:*")
-        self.assertEqual(self.redis_pool.keys.call_count, 3)
-
-    async def test_invalidate_user_permissions_cache(self):
-        self.redis_pool.keys = AsyncMock(return_value=[])
-
-        await self.cache_helper.invalidate_user_permissions_cache()
-
-    async def test_invalidate_partner_teams_cache(self):
-        self.redis_pool.keys = AsyncMock(return_value=[])
-        self.redis_pool.delete = AsyncMock(return_value=1)
-
-        await self.cache_helper.invalidate_partner_teams_cache(12)
-
-        # User-teams for the partner are pattern-cleared...
-        self.redis_pool.keys.assert_called_once_with(
-            "maglo:gRPC_GET_USER_TEAMS_PARTNER:12_USER:*"
-        )
-        # ...and the single partner-teams key is deleted exactly.
-        self.redis_pool.delete.assert_called_once_with(
-            "maglo:gRPC_GET_PARTNER_TEAMS_PARTNER:12"
-        )

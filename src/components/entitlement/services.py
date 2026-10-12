@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
@@ -46,7 +47,7 @@ class EntitlementService:
     async def upsert_entitlement(
         self,
         order: Order,
-        user_id: Optional[int] = None,
+        user_id: Optional[UUID] = None,
     ) -> List[Entitlement]:
         """
         Create or update entitlements for an order.
@@ -144,8 +145,8 @@ class EntitlementService:
         """
         Update the start date of ALL entitlements linked to an order.
 
-        An order can provision one entitlement per service (e.g. console, maglo,
-        babbler). All of them share the same order duration so they must all be
+        An order can provision one entitlement per service (e.g. console,
+        talko). All of them share the same order duration so they must all be
         updated together when the partner reschedules the start date.
 
         Validations (applied once using the first entitlement as the reference):
@@ -156,10 +157,10 @@ class EntitlementService:
         5. New start date must differ from the current one.
         """
         try:
-            order_id: int = payload_data.order_id
+            order_id: UUID = payload_data.order_id
             new_start_date: int = payload_data.start_date
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             self.logger.info(
                 "Updating entitlement start date for order_id={}, new_start_date={}, user_id={}".format(
@@ -329,8 +330,8 @@ class EntitlementService:
         existing: Entitlement,
         service_modules: List[str],
         service_limits: Dict[str, Any],
-        user_id: Optional[int],
-        partner_id: int,
+        user_id: Optional[UUID],
+        partner_id: UUID,
     ) -> Entitlement:
 
         merged_modules: List[str] = self._merge_modules(
@@ -371,7 +372,7 @@ class EntitlementService:
         service_name: str,
         service_modules: List[str],
         service_limits: Dict[str, Any],
-        user_id: Optional[int],
+        user_id: Optional[UUID],
     ) -> Entitlement:
 
         end_datetime: datetime = datetime.now(timezone.utc) + relativedelta(
@@ -431,7 +432,7 @@ class EntitlementService:
 
     async def get_subscription_status(
         self,
-        partner_id: int,
+        partner_id: UUID,
         grace_repo: GraceRepository,
     ) -> Dict[str, Any]:
         all_entitlements: List[Entitlement] = (
@@ -452,8 +453,6 @@ class EntitlementService:
         }
         result: Dict[str, Any] = {
             Platform.CONSOLE: DEFAULT_SUSPENDED.copy(),
-            Platform.MAGLO: DEFAULT_SUSPENDED.copy(),
-            Platform.BABBLER: DEFAULT_SUSPENDED.copy(),
             Platform.OBOTAAI: DEFAULT_SUSPENDED.copy(),
         }
 
@@ -484,7 +483,7 @@ class EntitlementService:
 
     async def _resolve_service_status(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
         all_entitlements: List[Entitlement],
         scheduled_entitlements: List[Entitlement],
@@ -584,7 +583,7 @@ class EntitlementService:
     @staticmethod
     async def _find_active_grace(
         grace_repo: GraceRepository,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
         now_ms: int,
     ) -> Optional[GracePeriod]:
@@ -654,7 +653,7 @@ class EntitlementService:
 
     async def dismiss_popup(
         self,
-        user_id: int,
+        user_id: UUID,
         service_name: str,
         user_repo: UserRepository = Depends(Provide["user_repository"]),
     ) -> None:

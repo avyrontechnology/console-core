@@ -4,6 +4,7 @@ from grpc import StatusCode
 from grpc_interceptor.exceptions import GrpcException
 
 from src.components.partner_meta_data.schema import PartnerPlanDetailsResponse
+from src.components.common.rpc_uuid import parse_uuid
 from src.components.partner_meta_data.services import PartnerMetaDataServices
 from src.core.container import Container
 from src.pub.auth_pb2 import GetPartnerServiceDetailsResponse
@@ -25,7 +26,7 @@ class PartnerMetaDataServiceGrpc(PartnerMetaDataService):
         ),
     ):
 
-        partner_id = request.partner_id
+        partner_id = parse_uuid(request.partner_id, "partner_id")
 
         self.__logger.info(
             f"Attempting to get partner enabled services details for partner: {partner_id}"
@@ -36,17 +37,11 @@ class PartnerMetaDataServiceGrpc(PartnerMetaDataService):
                 await partner_meta_data_service.get_partner_plan_details(partner_id)
             )           
             response = GetPartnerServiceDetailsResponse(
-                is_maglo_service_enabled=plan_details.is_maglo_service_enabled,
-                is_maglo_service_free_trial_enabled=plan_details.is_maglo_service_free_trial_enabled,
                 is_talko_service_enabled=plan_details.is_talko_service_enabled,
                 is_talko_service_free_trial_enabled=plan_details.is_talko_service_free_trial_enabled,
-                is_babbler_service_enabled=plan_details.is_babbler_service_enabled,
-                is_babbler_service_free_trial_enabled=plan_details.is_babbler_service_free_trial_enabled,
                 can_create_deals=plan_details.can_create_deals,
                 can_add_workflow=plan_details.can_add_workflow,
                 can_view_workflow=plan_details.can_view_workflow,
-                is_maglo_app_free_trial_enabled=plan_details.is_maglo_app_free_trial_enabled,
-                is_maglo_app_enabled=plan_details.is_maglo_app_enabled,
                 is_mailer_enabled=plan_details.is_mailer_enabled,
                 is_gsm_calling_enabled=plan_details.is_gsm_calling_enabled,
                 can_view_task_management=plan_details.can_view_task_management,
@@ -54,7 +49,6 @@ class PartnerMetaDataServiceGrpc(PartnerMetaDataService):
                 subscription_mode=plan_details.subscription_mode,
                 is_rule_based_assignment_enabled=plan_details.is_rule_based_assignment_enabled,
                 can_view_pipeline_management = plan_details.can_view_pipeline_management,
-                is_complementary_babbler_enabled=plan_details.is_complementary_babbler_enabled,
                 can_view_contact=plan_details.can_view_contact,
                 can_view_organization=plan_details.can_view_organization,
                 enable_dialer=plan_details.enable_dialer,

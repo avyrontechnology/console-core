@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -5,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConstantResponseSchema(BaseModel):
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: Optional[UUID] = Field(None, description="Unique identifier")
     name: str = Field(
         ..., max_length=100, description="Name of the constant or variable"
     )
@@ -16,7 +17,7 @@ class ConstantResponseSchema(BaseModel):
         None, description="Description of the constant or variable"
     )
     version: int = Field(..., description="Version number")
-    updated_by: Optional[int] = Field(None, description="User ID of the last updater")
+    updated_by: Optional[UUID] = Field(None, description="User ID of the last updater")
     updated_at: Optional[datetime] = Field(
         None, description="Timestamp of the last update"
     )

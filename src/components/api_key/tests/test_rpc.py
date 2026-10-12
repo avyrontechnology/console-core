@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from grpc import StatusCode
@@ -28,11 +29,11 @@ class TestApiKeyServiceGRPC:
 
         # Mock valid key details returned by service
         mock_key_details = MagicMock(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             key="abc123456789xyz",
-            partner_id=101,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             is_active=True,
-            scopes=["maglo:get_leads"],
+            scopes=["talko:get_leads"],
             user_context={"name": "Api Key User", "user_id": 7},
         )
         self.api_key_service_mock.validate_api_key.return_value = mock_key_details
@@ -46,15 +47,15 @@ class TestApiKeyServiceGRPC:
 
         # Assert
         assert isinstance(response, ValidateApiKeyResponse)
-        assert response.id == 1
-        assert response.partner_id == 101
+        assert response.id == "11111111-1111-1111-1111-111111111111"
+        assert response.partner_id == "10101010-1010-1010-1010-101010101010"
         assert response.is_active is True
-        assert list(response.scopes) == ["maglo:get_leads"]
+        assert list(response.scopes) == ["talko:get_leads"]
         assert response.user_context == '{"name": "Api Key User", "user_id": 7}'
 
         self.logger_mock.info.assert_any_call("[gRPC]: Validating API key: abc1234567")
         self.logger_mock.info.assert_any_call(
-            "[gRPC]: Successfully validated API key for partner_id: 101"
+            "[gRPC]: Successfully validated API key for partner_id: 10101010-1010-1010-1010-101010101010"
         )
 
     async def test_validate_api_key_invalid_key(self):
@@ -110,13 +111,13 @@ class TestApiKeyServiceGRPC:
         """Test successful API key lookup by partner ID."""
         # Arrange
         request = MagicMock()
-        request.partner_id = 101
+        request.partner_id = "10101010-1010-1010-1010-101010101010"
 
         mock_key_details = MagicMock(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             key="abc123456789xyz",
             description="Primary API key",
-            partner_id=101,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             is_active=True,
         )
         self.api_key_service_mock.get_api_key.return_value = mock_key_details
@@ -130,29 +131,29 @@ class TestApiKeyServiceGRPC:
 
         # Assert
         assert isinstance(response, PartnerApiKeyResponse)
-        assert response.id == 1
+        assert response.id == "11111111-1111-1111-1111-111111111111"
         assert response.key == "abc123456789xyz"
         assert response.description == "Primary API key"
-        assert response.partner_id == 101
+        assert response.partner_id == "10101010-1010-1010-1010-101010101010"
         assert response.is_active is True
 
         self.api_key_service_mock.get_api_key.assert_awaited_once_with(
-            partner_id=101
+            partner_id= UUID("10101010-1010-1010-1010-101010101010")
         )
         self.logger_mock.info.assert_any_call(
-            "[gRPC]: Fetching API key details for partner_id: 101"
+            "[gRPC]: Fetching API key details for partner_id: 10101010-1010-1010-1010-101010101010"
         )
         self.logger_mock.info.assert_any_call(
-            "[gRPC]: Retrieved API key for partner_id: 101"
+            "[gRPC]: Retrieved API key for partner_id: 10101010-1010-1010-1010-101010101010"
         )
 
     async def test_get_api_by_partner_id_not_found(self):
         """Test API key lookup maps not found errors to gRPC NOT_FOUND."""
         # Arrange
         request = MagicMock()
-        request.partner_id = 999
+        request.partner_id = "99999999-9999-9999-9999-999999999999"
         self.api_key_service_mock.get_api_key.side_effect = ApiKeyNotFoundError(
-            999
+            UUID("99999999-9999-9999-9999-999999999999")
         )
 
         # Act & Assert
@@ -166,14 +167,14 @@ class TestApiKeyServiceGRPC:
         assert exc_info.value.status_code == StatusCode.NOT_FOUND
         assert exc_info.value.details == "API key not found."
         self.api_key_service_mock.get_api_key.assert_awaited_once_with(
-            partner_id=999
+            partner_id= UUID("99999999-9999-9999-9999-999999999999")
         )
 
     async def test_get_api_by_partner_id_internal_error(self):
         """Test internal server error during API key lookup by partner ID."""
         # Arrange
         request = MagicMock()
-        request.partner_id = 101
+        request.partner_id = "10101010-1010-1010-1010-101010101010"
         self.api_key_service_mock.get_api_key.side_effect = Exception(
             "Database failure"
         )
@@ -192,7 +193,7 @@ class TestApiKeyServiceGRPC:
             == "Internal server error while fetching API key."
         )
         self.api_key_service_mock.get_api_key.assert_awaited_once_with(
-            partner_id=101
+            partner_id= UUID("10101010-1010-1010-1010-101010101010")
         )
         self.logger_mock.error.assert_called_once_with(
             "[gRPC]: Error fetching API key: Database failure"

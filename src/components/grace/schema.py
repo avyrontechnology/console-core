@@ -1,5 +1,6 @@
 """Pydantic schemas for the Grace Period feature."""
 
+from uuid import UUID
 from typing import Any, Dict, Optional, Tuple
 
 from pydantic import BaseModel
@@ -38,9 +39,7 @@ class GrantGraceRequest(ValidatableSchema):
     __validation_rules__ = {
         "partner_id": {
             "required": True,
-            "type": FieldType.INTEGER,
-            "min": 1,
-            "max": Limits.MAX_INT,
+            "type": FieldType.UUID,
         },
         "granted_days": {
             "required": True,
@@ -64,8 +63,8 @@ class GrantGraceRequest(ValidatableSchema):
 
 
 class GraceResponse(BaseModel):
-    grace_id: int
-    partner_id: int
+    grace_id: UUID
+    partner_id: UUID
     service_name: str
     granted_days: int
     attempt_number: int
@@ -75,8 +74,8 @@ class GraceResponse(BaseModel):
     remark: Optional[str] = None
     consumed_days: Optional[int] = None
     settled_at: Optional[int] = None
-    settled_by_order_id: Optional[int] = None
-    created_by: Optional[int] = None
+    settled_by_order_id: Optional[UUID] = None
+    created_by: Optional[UUID] = None
     created_at: Optional[int] = None
     granted_by_name: Optional[str] = None
 
@@ -85,13 +84,13 @@ class GraceResponse(BaseModel):
 
 
 class GraceStatusResponse(BaseModel):
-    partner_id: int
+    partner_id: UUID
     service_name: str
     has_active_grace: bool
     current_grace: Optional[GraceResponse] = None
     total_attempts_used: int
     attempts_remaining: int
     total_consumed_days: int
-    created_by: Optional[int] = None
+    created_by: Optional[UUID] = None
     created_at: Optional[int] = None
     granted_by_name: Optional[str] = None

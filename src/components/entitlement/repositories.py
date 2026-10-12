@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, List, Optional
 
@@ -40,7 +41,7 @@ class EntitlementRepository:
 
     async def get_active_entitlement(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
     ) -> Optional[Entitlement]:
         """Fetch the most recent active, non-expired entitlement for a service."""
@@ -62,7 +63,7 @@ class EntitlementRepository:
             result = await session.execute(stmt)
             return result.scalars().first()
 
-    async def get_all_active_entitlements(self, partner_id: int) -> List[Entitlement]:
+    async def get_all_active_entitlements(self, partner_id: UUID) -> List[Entitlement]:
         """Fetch all currently active entitlements for a partner."""
         async with self.session_factory() as session:
             stmt = (
@@ -81,7 +82,7 @@ class EntitlementRepository:
             result = await session.execute(stmt)
             return result.scalars().all()
 
-    async def get_scheduled_entitlements(self, partner_id: int) -> List[Entitlement]:
+    async def get_scheduled_entitlements(self, partner_id: UUID) -> List[Entitlement]:
         """
         Fetch entitlements that are scheduled to activate in the future.
 
@@ -123,7 +124,7 @@ class EntitlementRepository:
             )
             return scheduled
 
-    async def get_entitlement_by_order_id(self, order_id: int) -> Optional[Entitlement]:
+    async def get_entitlement_by_order_id(self, order_id: UUID) -> Optional[Entitlement]:
         """Fetch a single entitlement by order_id with order relationship loaded."""
         async with self.session_factory() as session:
             stmt = (
@@ -134,7 +135,7 @@ class EntitlementRepository:
             result = await session.execute(stmt)
             return result.scalars().first()
 
-    async def get_entitlements_by_order_id(self, order_id: int) -> List[Entitlement]:
+    async def get_entitlements_by_order_id(self, order_id: UUID) -> List[Entitlement]:
         """
         Fetch ALL entitlements for an order (one per service).
         Use this instead of get_entitlement_by_order_id when all services
@@ -150,7 +151,7 @@ class EntitlementRepository:
             return result.scalars().all()
 
     async def get_entitlement_by_order_id_and_service(
-        self, order_id: int, service_name: str
+        self, order_id: UUID, service_name: str
     ) -> Optional[Entitlement]:
         """
         Fetch the entitlement for a specific order + service combination.
@@ -166,7 +167,7 @@ class EntitlementRepository:
             return result.scalars().first()
 
     async def get_all_entitlements_for_partner(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> List[Entitlement]:
         """
         Fetch ALL entitlements for a partner regardless of is_active or end_date.
@@ -189,7 +190,7 @@ class EntitlementRepository:
     # =========================================================================
 
     async def update_entitlement(
-        self, entitlement_id: int, data: EntitlementUpdate
+        self, entitlement_id: UUID, data: EntitlementUpdate
     ) -> Entitlement:
         async with self.session_factory() as session:
             update_fields = {
@@ -216,10 +217,10 @@ class EntitlementRepository:
 
     async def update_entitlement_dates(
         self,
-        entitlement_id: int,
+        entitlement_id: UUID,
         new_start_date: int,
         new_end_date: int,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[UUID] = None,
     ) -> Entitlement:
         """
         Update start_date and end_date on a freshly-created entitlement.
@@ -252,10 +253,10 @@ class EntitlementRepository:
 
     async def update_entitlement_start_date(
         self,
-        entitlement_id: int,
+        entitlement_id: UUID,
         new_start_date: int,
         new_end_date: int,
-        user_id: int,
+        user_id: UUID,
     ) -> Entitlement:
         """Update start/end date, deactivate, and increment modification counter."""
         async with self.session_factory() as session:

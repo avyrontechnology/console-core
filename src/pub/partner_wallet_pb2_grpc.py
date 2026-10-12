@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import src.pub.partner_wallet_pb2 as partner__wallet__pb2
+from . import partner_wallet_pb2 as partner__wallet__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__

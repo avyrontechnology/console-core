@@ -2,6 +2,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette_context import context
+from uuid import UUID
 
 from src.components.api_key.services import ApiKeyService
 from src.components.auth.constant import AuthExceptionMsg
@@ -44,35 +45,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "create_partner",
             "create_partner_address",
             "onboard_partner",
-            "get-otp-for-delete-account",
-            "delete-account",
             "docs",
             "openapi.json",
             "robots.txt",
             "webhook",
             "get_user_details_by_ivr",
             "/users/bulk_create",
-            # ── OAuth 2.1 public endpoints (spec-mandated to be unauthed) ──
-            # See src/components/oauth_server/controllers.py. Match by suffix
-            # because the parent /console-service/v1 prefix is invariant.
-            ".well-known/oauth-authorization-server",
-            ".well-known/oauth-protected-resource",
-            # RFC-8414 / RFC-9728 spec-correct discovery (root-mounted).
-            # Path inserts ``/.well-known/<name>`` BEFORE the issuer path
-            # segments, so the suffix here ends in ``console-service/v1``.
-            # See src/main.py + OAuthController.well_known_root_router.
-            "/.well-known/oauth-authorization-server/console-service/v1",
-            "/.well-known/oauth-protected-resource/console-service/v1",
-            "/oauth/jwks.json",
-            "/oauth/register",
-            "/oauth/token",
-            "/oauth/revoke",
-            "/oauth/introspect",
-            "/oauth/authorize",
-            # Stop-gap bridge HTML page (server-rendered login + consent).
-            # The page loads unauthenticated, then calls the existing
-            # /do_login API from inside the browser to obtain a JWT.
-            "/oauth/bridge",
             "/calculate-amount",
         )
 
@@ -140,6 +118,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return UnauthorizedResponse(
                     detail=AuthExceptionMsg.TOKEN_EXPIRED_OR_INVALID
                 )
+            # UUID boundary: JWT carries IDs as strings; downstream code
+            # compares them against UUID columns. Parse once here
+            # (tolerate-both: leave value untouched if not a valid UUID).
+            for _claim in ("user_id", "partner_id"):
+                _val = payload.get(_claim)
+                if isinstance(_val, str):
+                    try:
+                        payload[_claim] = UUID(_val)
+                    except ValueError:
+                        pass
 
             console_service_logger.info(
                 "Retrieving session id from token payload at Middleware..."

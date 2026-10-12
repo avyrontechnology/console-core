@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, field_validator
@@ -22,16 +23,15 @@ class UpdateEntitlementStartDateRequest(BaseModel):
         if v is None:
             raise ValueError("order_id is required")
 
-        if not isinstance(v, int):
-            raise ValueError("order_id must be an integer")
+        if isinstance(v, UUID):
+            return v
+        if isinstance(v, str):
+            try:
+                return UUID(v)
+            except (ValueError, AttributeError, TypeError):
+                pass
 
-        if v <= 0:
-            raise ValueError("order_id must be a positive integer")
-
-        if v > MAX_INT_32:
-            raise ValueError("order_id exceeds maximum allowed value")
-
-        return v
+        raise ValueError("order_id must be a valid UUID")
 
     @field_validator("start_date")
     @classmethod
@@ -54,12 +54,12 @@ class UpdateEntitlementStartDateRequest(BaseModel):
 
 
 class EntitlementCreate(BaseModel):
-    order_id: int
-    partner_id: int
-    service_name: str  # console / babbler / maglo etc.
+    order_id: UUID
+    partner_id: UUID
+    service_name: str  # console / talko / obotaai etc.
     modules: List[str]
     limits: Dict
-    created_by: Optional[int] = None
+    created_by: Optional[UUID] = None
     end_date: int
 
 
@@ -69,13 +69,13 @@ class EntitlementUpdate(BaseModel):
     start_date: Optional[int] = None
     end_date: Optional[int] = None
     is_active: Optional[bool] = None
-    updated_by: Optional[int] = None
+    updated_by: Optional[UUID] = None
 
 
 class EntitlementResponse(BaseModel):
-    id: int
-    order_id: int
-    partner_id: int
+    id: UUID
+    order_id: UUID
+    partner_id: UUID
     service_name: str
     modules: List[str]
     limits: Dict
@@ -88,9 +88,9 @@ class EntitlementResponse(BaseModel):
 
 
 class UpdateEntitlementStartDateResponse(BaseModel):
-    id: int
-    order_id: int
-    partner_id: int
+    id: UUID
+    order_id: UUID
+    partner_id: UUID
     service_name: str
     start_date: int
     end_date: int

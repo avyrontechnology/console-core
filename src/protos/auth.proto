@@ -35,12 +35,6 @@ service AuthService {
     // RPC to get partner details.
     rpc GetPartnerDetails (GetPartnerDetailsRequest) returns (GetPartnerDetailsResponse);
 
-    // RPC to get publisher data.
-    rpc GetPublisherData (GetPublisherDataRequest) returns (GetPublisherDataResponse);
-
-    // RPC to get all publishers
-    rpc GetAllPublishers (GetAllPublishersRequest) returns (GetAllPublishersResponse);
-
     //RPC to get all active users on basis of partner ID
     rpc GetActiveUsersByPartnerId (GetUserDetailsByPartnerIdRequest) returns (GetUserDetailsByPartnerIdResponse);
 
@@ -104,12 +98,10 @@ message ValidateTokenResponse {
     string message = 1;              
     string correlation_id = 2;     
     bool is_active = 3;                
-    int64 user_id = 4;            
+    string user_id = 4;            
     string session_id = 6;           
     int64 expires_in = 7;            
-    int64 partner_id = 8;
-    optional bool is_maglo_enabled = 9;
-    optional bool is_babbler_enabled = 10;
+    string partner_id = 8;
     optional bool is_talko_enabled = 11;
     optional bool is_internal = 12;
     optional bool is_wallet_enabled = 13;
@@ -119,7 +111,7 @@ message ValidateTokenResponse {
 
 // UserDetail message representing a user's directory information.
 message UserDetail {
-    int64 user_id = 1;        // User's ID.
+    string user_id = 1;        // User's ID.
     string email = 2;         // Email of the child user.
     bool is_active = 3;       // Indicates whether the user is active (true) or inactive (false).
     bool is_suspended = 4;    // Indicates whether the user is suspended or not.
@@ -132,7 +124,7 @@ message UserDetail {
 // The request message for retrieving the child user list.
 message GetUserChildDetailsRequest {
     MContext mcontext = 1; // Metadata context.
-    int64 user_id = 2;     // The current user's ID.
+    string user_id = 2;     // The current user's ID.
 }
 
 // The response message for the child user list.
@@ -144,7 +136,7 @@ message GetUserChildDetailsResponse {
 // The request message for retrieving child user hierarchies.
 message GetUserChildHierarchyRequest {
     MContext mcontext = 1; // Metadata context.
-    repeated int64 user_ids = 2; // List of user IDs.
+    repeated string user_ids = 2; // List of user IDs.
 }
 
 // The response message for child user hierarchies.
@@ -155,21 +147,18 @@ message GetUserChildHierarchyResponse {
 
 // Message for a single user’s child hierarchy.
 message ChildHierarchy {
-    int64 user_id = 1; // The input user ID.
-    repeated int64 child_ids = 2; // List of child user IDs.
+    string user_id = 1; // The input user ID.
+    repeated string child_ids = 2; // List of child user IDs.
 }
 
 message UserProfile {
-    int64 user_id = 1;        // User's ID.
+    string user_id = 1;        // User's ID.
     string name = 2;          // name of the user
     string email = 3;         // Email of the user.
-    int64 partner_id = 4;     // Partner id of the user.
+    string partner_id = 4;     // Partner id of the user.
     int64 role_hierarchy_level=5; // role_hierarchy of the user.
     string partner_name = 6;  // Partner name of the user.
-    bool is_maglo_publisher = 7; // Indicates whether the user is a Maglo publisher.
-    bool is_maglo_enabled = 8; // Indicates maglo service is enabled
     bool is_talko_enabled = 9; // Indicates talko service is enabled
-    bool is_babbler_enabled = 10; // Indicates babbler service is enabled
     string phone_number = 11; // user registered phone_number
     bool is_active = 12; // user is active
     bool is_email_verified = 13; // user is email verified
@@ -194,7 +183,7 @@ message UserProfile {
 // The request for retrieving current user details
 message GetUserDetailsRequest {
     MContext mcontext = 1; // Metadata context.
-    int64 user_id=2;       // The current user's ID.
+    string user_id =2;       // The current user's ID.
 }
 
 message GetUserDetailsResponse {
@@ -203,7 +192,7 @@ message GetUserDetailsResponse {
 }
 
 message GetUserPermissionsRequest {
-    int64 user_id = 1;  // user Id 
+    string user_id = 1;  // user Id 
 }
 
 message GetUserPermissionsResponse {
@@ -212,7 +201,7 @@ message GetUserPermissionsResponse {
 }
 
 message GetUserRoleRequest {
-    int64 user_id = 1; // user_id
+    string user_id = 1; // user_id
 }
 
 message GetUserRoleResponse {
@@ -222,8 +211,8 @@ message GetUserRoleResponse {
 }
 
 message GetUserTeamRoleRequest {
-    int64 user_id = 1; // user_id
-    int64 team_id = 2; // team the user is acting within
+    string user_id = 1; // user_id
+    string team_id = 2; // team the user is acting within
 }
 
 message GetUserTeamRoleResponse {
@@ -236,7 +225,7 @@ message GetUserTeamRoleResponse {
 }
 
 message GetRolePermissionsRequest {
-    int64 role_id = 1; // role to fetch configured permissions for
+    string role_id = 1; // role to fetch configured permissions for
 }
 
 message GetRolePermissionsResponse {
@@ -247,7 +236,7 @@ message GetRolePermissionsResponse {
 // The request message for retrieving user list ids.
 message GetUsersDetailsRequest {
     MContext mcontext = 1; // Metadata context.
-    repeated int64 user_ids = 2;     // List of user's ID.
+    repeated string user_ids = 2;     // List of user's ID.
     bool show_inactive_users =3;     //active and inactive filter.
 }
 
@@ -260,7 +249,7 @@ message GetServiceBoardUserDetailsResponse {
 // The request message for retrieving partner details.
 message GetPartnerDetailsRequest {
     MContext mcontext = 1; // Metadata context.
-    int64 partner_id = 2;  // The partner's ID.
+    string partner_id = 2;  // The partner's ID.
 }
 
 // The response message for partner details.
@@ -279,15 +268,12 @@ message ServiceSubscriptionStatus {
 
 // PartnerDetail message representing a partner's information.
 message PartnerDetail {
-    int64 partner_id = 1;           // Partner's ID.
+    string partner_id = 1;           // Partner's ID.
     string name = 2;                // Name of the partner.
     bool is_active = 3;             // Indicates whether the partner is active.
-    bool is_maglo_publisher = 4;    // Indicates whether the partner is a Maglo publisher.
     string partner_status = 5;      // Status of the partner (enum value as string).
     string partner_logo = 6;        // URL of the partner's logo.
     int64 created_at = 7;           // Creation date of the partner.
-    string publisher_username = 8;   // Username of the publisher.
-    string publisher_email = 9;     // Email of the publisher.
     bool is_feedback_enabled = 10;  // Indicates whether feedback is enabled for the partner.
     bool is_publisher_onboarding_completed = 11;  // Indicates whether publisher onboarding is completed or not.
     map<string, ServiceSubscriptionStatus> subscription_status = 12;
@@ -297,71 +283,9 @@ message PartnerDetail {
     string gst_no = 16;             // GST number
 }
 
-// Request message for GetPublisherData
-message GetPublisherDataRequest {
-    message MContext {
-        string request_id = 1;
-        string user_id = 2;
-    }
-    MContext mcontext = 1;
-    int32 partner_id = 2;
-}
-
-// Response message for GetPublisherData
-message GetPublisherDataResponse {
-    string message = 1;
-    PublisherDetails partner_detail = 2;
-    repeated PublisherAddressDetail address_details = 3;
-    repeated PublisherUserDetail user_details = 4;
-}
-
-// PublisherDetails message representing a partner's information for publisher data.
-message PublisherDetails {
-    int32 partner_id = 1;
-    string name = 2;
-}
-
-// PublisherAddressDetail message representing an address's information.
-message PublisherAddressDetail {
-    int32 id = 1;
-    string address_1 = 2;
-    string address_2 = 3;
-    string address_type = 4;
-    string city = 5;
-    string state = 6;
-    string country = 7;
-    string pincode = 8;
-}
-
-// PublisherUserDetail message representing a user's information for publisher data.
-message PublisherUserDetail {
-    int32 id = 1;
-    string name = 2;
-    string email = 3;
-    string phone_number = 4;
-    optional string alternate_phone_number = 5;
-}
-
-// Request to fetch all Maglo publishers
-message GetAllPublishersRequest {
-    MContext mcontext = 1; // Optional metadata context
-}
-
-// Publisher object with only id and name
-message PublisherSummary {
-    int64 id = 1;
-    string name = 2;
-}
-
-// Response with list of publisher summaries
-message GetAllPublishersResponse {
-    string message = 1;
-    repeated PublisherSummary publishers = 2;
-}
-
 //Active User details
 message ActiveUserDetails {
-    int64 id = 1;
+    string id = 1;
     string name = 2;
     string email = 3;
     string phone_number = 4;
@@ -372,7 +296,7 @@ message ActiveUserDetails {
 
 //Get user details by partner id request
 message GetUserDetailsByPartnerIdRequest {
-    int64 partner_id = 1;
+    string partner_id = 1;
 }
 
 //Get user details by partner id request
@@ -383,7 +307,7 @@ message GetUserDetailsByPartnerIdResponse {
 
 // The request message for retrieving parent user details.
 message GetUserParentDetailsRequest {
-    repeated int64 user_ids = 1; // List of user IDs.
+    repeated string user_ids = 1; // List of user IDs.
 }
 
 // The response message for parent user details.
@@ -394,24 +318,22 @@ message GetUserParentDetailsResponse {
 
 // Message for a single user's parent details.
 message UserParentDetail {
-    int64 user_id = 1; // The input user ID.
+    string user_id = 1; // The input user ID.
     string name = 2; // Name of the user.
-    int64 parent_id = 3; // The parent user ID.
+    string parent_id = 3; // The parent user ID.
     string parent_name = 4; // Name of the parent user.
 }
 
 
 message GetPartnerMetaDataDetailsRequest{
-    int64 partner_id = 1;
+    string partner_id = 1;
 }
 
 message GetPartnerMetaDataDetailsResponse {
     string type_of_business = 1;       
     int32 years_in_business = 2;       
     int64 annual_revenue = 3;         
-    bool is_maglo_enabled = 4;         
     bool is_talko_enabled = 5;
-    bool is_babbler_enabled = 6;
     bool is_email_verification_enabled = 7;
     bool is_phone_number_verification_enabled = 8;
     bool can_create_deals = 9;
@@ -432,7 +354,7 @@ message GetPartnerMetaDataDetailsResponse {
     bool is_add_number_enabled = 24;
     bool is_obotaai_enabled = 25;
     string team_strict_hierarchy_mode = 26;
-    int64  team_strict_hierarchy_start_role_id = 27;
+    string team_strict_hierarchy_start_role_id = 27;
     bool is_user_tracker_enabled = 28;
     bool can_view_report_management = 29;
     bool can_download_call_logs = 30;
@@ -444,23 +366,17 @@ message GetPartnerMetaDataDetailsResponse {
 }
 
 message GetPartnerServiceRequest{
-    int64 partner_id = 1; //Partner id for get enabled services
+    string partner_id = 1; //Partner id for get enabled services
 }
 
 message GetPartnerServiceDetailsResponse{
-    bool is_maglo_service_enabled=1;
-    bool is_maglo_service_free_trial_enabled=2;
     bool is_talko_service_enabled=3;
     bool is_talko_service_free_trial_enabled=4;
-    bool is_babbler_service_enabled=5;
-    bool is_babbler_service_free_trial_enabled=6;
     bool is_email_verification_enabled=7;
     bool is_phone_number_verification_enabled=8;
     bool can_create_deals=9;
     bool can_add_workflow=10;
     bool can_view_workflow=11;
-    bool is_maglo_app_free_trial_enabled=12;
-    bool is_maglo_app_enabled=13;
     bool is_mailer_enabled=14;
     bool is_gsm_calling_enabled=15;
     bool can_view_task_management=16;
@@ -468,7 +384,6 @@ message GetPartnerServiceDetailsResponse{
     string subscription_mode = 18;
     bool is_rule_based_assignment_enabled = 19;
     bool can_view_pipeline_management = 20;
-    bool is_complementary_babbler_enabled = 21;
     bool can_view_contact = 22;
     bool can_view_organization = 23;
     bool enable_dialer = 24;
@@ -505,8 +420,8 @@ message GetPartnerServiceDetailsResponse{
 // Request to fetch wallet & transaction history
 message GetWalletTransactionHistoryRequest {
     MContext mcontext = 1;         // Metadata context
-    int64 partner_id = 2;          // Partner ID
-    optional string service_name = 3; // Optional: Service name (Babbler, Talko, Maglo)
+    string partner_id = 2;          // Partner ID
+    optional string service_name = 3; // Optional: Service name (Talko, Obotaai)
     optional string transaction_type = 4; // Optional: CREDIT, DEBIT, FREEZE, UNFREEZE
 }
 
@@ -519,7 +434,7 @@ message GetWalletTransactionHistoryResponse {
 
 // Wallet summary information
 message WalletDetail {
-    int64 wallet_id = 1;           // Wallet ID
+    string wallet_id = 1;           // Wallet ID
     double balance = 2;            // Current balance
     double frozen_balance = 3;     // Frozen balance
     string currency = 4;           // Currency type (e.g., INR, USD)
@@ -527,7 +442,7 @@ message WalletDetail {
 
 // Transaction information
 message TransactionDetail {
-    int64 id = 1;                  // Transaction ID
+    string id = 1;                  // Transaction ID
     double amount = 2;             // Transaction amount
     string service_name = 3;       // Service name
     string transaction_type = 4;   // Transaction type (CREDIT, DEBIT, etc.)
@@ -537,7 +452,7 @@ message TransactionDetail {
 
 
 message GetPartnerApiKeyRequest{
-    int64 partner_id = 1;
+    string partner_id = 1;
 }
 
 message GetPartnerApiKeyResponse{
@@ -545,11 +460,11 @@ message GetPartnerApiKeyResponse{
 }
 
 message GetUserParentHierarchyRequest {
-    int64 user_id = 1;
+    string user_id = 1;
 }
 
 message ParentUser {
-    int64 user_id = 1;
+    string user_id = 1;
     string name = 2;
     string role = 3;
     int64 role_hierarchy = 4;
@@ -562,11 +477,11 @@ message GetUserParentHierarchyResponse {
 
 // Countries
 message GetCountriesByIdsRequest {
-    repeated int64 ids = 1;
+    repeated string ids = 1;
 }
 
 message CountryDetail {
-    int64  id   = 1;
+    string id = 1;
     string name = 2;
     string slug = 3;
 }
@@ -578,14 +493,14 @@ message GetCountriesByIdsResponse {
 
 // States
 message GetStatesByIdsRequest {
-    repeated int64 ids = 1;
+    repeated string ids = 1;
 }
 
 message StateDetail {
-    int64  id         = 1;
+    string id = 1;
     string name       = 2;
     string slug       = 3;
-    int64  country_id = 4;
+    string country_id = 4;
 }
 
 message GetStatesByIdsResponse {
@@ -595,14 +510,14 @@ message GetStatesByIdsResponse {
 
 // Cities
 message GetCitiesByIdsRequest {
-    repeated int64 ids = 1;
+    repeated string ids = 1;
 }
 
 message CityDetail {
-    int64  id       = 1;
+    string id = 1;
     string name     = 2;
     string slug     = 3;
-    int64  state_id = 4;
+    string state_id = 4;
 }
 
 message GetCitiesByIdsResponse {
@@ -620,7 +535,7 @@ message GetCountriesByNamesResponse {
 
 message GetStatesByNamesRequest {
     repeated string names       = 1;
-    repeated int64  country_ids = 2;  // optional — narrows to specific countries
+    repeated string country_ids = 2;  // optional — narrows to specific countries
 }
 message GetStatesByNamesResponse {
     string               message = 1;
@@ -629,7 +544,7 @@ message GetStatesByNamesResponse {
 
 message GetCitiesByNamesRequest {
     repeated string names     = 1;
-    repeated int64  state_ids = 2;  // optional — narrows to specific states
+    repeated string state_ids = 2;  // optional — narrows to specific states
 }
 message GetCitiesByNamesResponse {
     string              message = 1;
@@ -640,7 +555,7 @@ message GetAllRolesRequest {}
 
 // A single role record.
 message RoleDetail {
-    int64  id          = 1;
+    string id = 1;
     string name        = 2;
     string slug        = 3;
     int64  hierarchy   = 4;   // lower = more senior (Admin=1, Agent=8, etc.)
@@ -659,7 +574,7 @@ message GetAllRolesResponse {
 
 // A member of a team with the role effective within that team.
 message TeamMemberDetail {
-    int64  user_id        = 1;
+    string user_id = 1;
     string effective_role = 2;  // COALESCE(team_member.role_id, user.role_id) slug
     int64  hierarchy      = 3;  // effective role hierarchy
     string data_scope     = 4;  // data_scope of the effective role (ALL/SUBTREE/OWN)
@@ -667,24 +582,24 @@ message TeamMemberDetail {
 
 // A team with its members.
 message TeamDetail {
-    int64  team_id        = 1;
+    string team_id = 1;
     string name           = 2;
-    int64  partner_id     = 3;
-    int64  parent_team_id = 4;
+    string partner_id = 3;
+    string parent_team_id = 4;
     bool   is_internal    = 5;
     repeated TeamMemberDetail members = 6;
 }
 
 message GetUserTeamsRequest {
-    int64 user_id = 1;
+    string user_id = 1;
 }
 
 message GetPartnerTeamsRequest {
-    int64 partner_id = 1;
+    string partner_id = 1;
 }
 
 message GetTeamMembersRequest {
-    int64 team_id = 1;
+    string team_id = 1;
 }
 
 message GetTeamsResponse {

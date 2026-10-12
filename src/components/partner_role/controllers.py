@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -130,7 +131,7 @@ class PartnerRoleController:
     @inject
     async def update_partner_role(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         data: UpdatePartnerRole,
         partner_role_service: PartnerRoleService = Depends(
             Provide[Container.partner_role_service]
@@ -154,7 +155,7 @@ class PartnerRoleController:
     @inject
     async def delete_partner_role(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         partner_role_service: PartnerRoleService = Depends(
             Provide[Container.partner_role_service]
         ),

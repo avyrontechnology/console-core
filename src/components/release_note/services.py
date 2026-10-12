@@ -1,10 +1,9 @@
+from uuid import UUID
 from typing import Optional , List , Dict, Any
 from fastapi import UploadFile , File
 
 from src.components.release_note.errors import ReleaseNoteUpdateError
-from src.components.digital_assets.storage.helper import StorageHelper
 from src.components.release_note.models import ReleaseNotes
-from src.components.digital_assets.schema import UploadDigitalAssetResponse
 from src.components.release_note.repositories import ReleaseNotesRepository
 from src.components.release_note.schemas import (
     ReleaseNotesResponse,
@@ -13,38 +12,34 @@ from src.components.release_note.schemas import (
 )
 from src.components.common.constants import CurrentUserMap
 
-from src.components.digital_assets.services import DigitalAssetService
-from src.components.digital_assets.logger_adapter import LoggerAdapter
-from src.components.digital_assets.constants import DigitalAssetEnum
+from src.loggers.console_service_logger import ConsoleServiceLogger
 
 from src.components.release_note.errors import (
     ReleaseNoteNotFoundError,
     UnauthorizedReleaseNoteAccessError,
     ReleaseNoteFileUploadError,
 )
-logger = LoggerAdapter().get_logger()
+logger = ConsoleServiceLogger.get_logger()
 
 class ReleaseNotesService:
 
     def __init__(
         self,
         release_notes_repository: ReleaseNotesRepository,
-        digital_asset_service: DigitalAssetService,
     ):
         self.__release_notes_repository = release_notes_repository
-        self.__digital_asset_service = digital_asset_service
         
     # ======================================================
     # COMMON HELPERS (NEW - SAFE)
     # ======================================================
 
-    async def _get_note_or_raise(self, release_note_id: int) -> ReleaseNotes:
+    async def _get_note_or_raise(self, release_note_id: UUID) -> ReleaseNotes:
         note = await self.__release_notes_repository.get_release_note_by_id(release_note_id)
         if not note:
             raise ReleaseNoteNotFoundError(release_note_id)
         return note
 
-    def _check_access(self, note: ReleaseNotes, partner_id: int, current_user: dict):
+    def _check_access(self, note: ReleaseNotes, partner_id: UUID, current_user: dict):
         current_user_hierarchy = current_user.get(CurrentUserMap.ROLE_HIERARCHY_LEVEL)
 
         if (
@@ -56,35 +51,19 @@ class ReleaseNotesService:
     async def _upload_file(
         self,
         input_file: File,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
     ) -> Optional[str]:
-
+        # File storage retired: refuse files, keep
+        # text-only notes working.
         if not input_file or not input_file.filename:
             return None
-
-        try:
-            asset_response: UploadDigitalAssetResponse = await self.__digital_asset_service.create_digital_asset(
-                partner_id=partner_id,
-                asset_type=DigitalAssetEnum.OTHER.name,
-                input_file=input_file,
-                user_id=user_id,
-            )
-            return asset_response.file_name
-
-        except Exception as exc:
-            logger.error(f"Digital asset upload failed: {exc}")
-            raise ReleaseNoteFileUploadError()
+        raise ReleaseNoteFileUploadError()
 
     def _build_file_url(self, file_path: Optional[str]) -> Optional[str]:
-        return StorageHelper.get_presigned_url(file_path) if file_path else None
+        return None
 
     def _attach_urls_to_history(self, history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        
-        for item in history:
-            if item.get("file_path"):
-                item["file_url"] = StorageHelper.get_presigned_url(item["file_path"])
-        
         return history
 
 
@@ -97,8 +76,8 @@ class ReleaseNotesService:
         description: str,
         markup: str,
         input_file: File,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         svc_name: str, 
     ) -> ReleaseNotesResponse:
 
@@ -122,11 +101,7 @@ class ReleaseNotesService:
                 )
             )
 
-            file_url: Optional[str] = (
-                StorageHelper.get_presigned_url(release_note.da_file_path)
-                if release_note.da_file_path
-                else None
-            )
+            file_url: Optional[str] = None
              # FULL VERSION HISTORY
             history: List[Dict[str, Any]]  = release_note.version_history or []
 
@@ -156,8 +131,8 @@ class ReleaseNotesService:
     # ======================================================
     async def get_release_note_by_id(
         self,
-        release_note_id: int,
-        partner_id: int,
+        release_note_id: UUID,
+        partner_id: UUID,
         current_user:dict,
         svc_name: Optional[str],  
         
@@ -229,7 +204,7 @@ class ReleaseNotesService:
     
     async def get_all_release_notes(
         self,
-        partner_id: int,
+        partner_id: UUID,
         current_user: dict,
     ) -> list[ReleaseNotesbyallResponse]:
 
@@ -257,11 +232,7 @@ class ReleaseNotesService:
             ):
                  continue
             
-                file_url: Optional[str] = (
-                    StorageHelper.get_presigned_url(release_note.da_file_path)
-                    if release_note.da_file_path
-                    else None
-                )
+                file_url: Optional[str] = None
                 version = None
                 if release_note.version_history and len(release_note.version_history) > 0:
                     version = release_note.version_history[-1].get("version")
@@ -294,13 +265,13 @@ class ReleaseNotesService:
     # ======================================================
     async def update_release_note(
         self,
-        release_note_id: int,
+        release_note_id: UUID,
         title: Optional[str],
         description: Optional[str],
         markup: Optional[str],
         input_file: Optional[UploadFile],
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         current_user: dict,
     ) -> ReleaseNotesResponse:
 
@@ -382,8 +353,8 @@ class ReleaseNotesService:
     # ======================================================
     async def get_release_note_history(
         self,
-        release_note_id: int,
-        partner_id: int,
+        release_note_id: UUID,
+        partner_id: UUID,
         current_user: dict,
     ) -> List[Dict[str, Any]]:
 

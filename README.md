@@ -17,13 +17,13 @@ This guide outlines the steps to set up the project environment, including creat
 
 ##
 ## Create a Directory and Navigate to It :
-1. Create a new directory named `maglo`:
+1. Create a new directory named `console-core`:
 
     ```bash
-        mkdir maglo
+        mkdir console-core
 2. Navigate to the newly created directory:
     ```bash
-        cd maglo
+        cd console-core
 ##
 ## Clone the repository from GitHub using SSH:
         git clone git@github.com:MakunaiGlobal/console-service.git

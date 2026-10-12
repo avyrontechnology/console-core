@@ -1,7 +1,7 @@
+from uuid import UUID
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 from fastapi import Request, UploadFile
 from sqlalchemy.exc import IntegrityError
@@ -42,14 +42,12 @@ class TestPartnerService:
         self.user_repository_mock = AsyncMock()
         self.partner_repository_mock = AsyncMock()
         self.audit_log_mock = AsyncMock()
-        self.digital_asset_service_mock = AsyncMock()
 
         self.partner_service = PartnerService(
             partner_repository=self.partner_repository_mock,
             console_service_logger=self.mock_logger,
             partner_service_cache=self.redis_mock,
             audit_service=self.audit_log_mock,
-            digital_asset_service=self.digital_asset_service_mock,
         )
 
         # Test data
@@ -63,17 +61,16 @@ class TestPartnerService:
         )
 
         self.partner_response = SimpleNamespace(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Tech Solutions",
             company_legal_name="Tech Solutions Pvt Ltd",
             gst_no="12ABCDE1234F1Z5",
             cin_no="U12345DL2024PTC123456",
             active_license=1,
             description="Tech Solutions is a leading IT company.",
-            is_maglo_publisher=True,
         )
 
-        self.current_user_mock = {"user_id": 1}
+        self.current_user_mock = {"user_id": UUID("11111111-1111-1111-1111-111111111111")}
 
     async def test_create_partner_success(self):
         """Test successful creation of a partner."""
@@ -87,7 +84,7 @@ class TestPartnerService:
         )
 
         created_partner = Partner(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Tech Solutions",
             company_legal_name="Tech Solutions Pvt Ltd",
             gst_no="12ABCDE1234F1Z5",
@@ -107,7 +104,6 @@ class TestPartnerService:
             audit_service=audit_service_mock,
             console_service_logger=logger_mock,
             partner_service_cache=None,
-            digital_asset_service=None,
         )
 
         # Act
@@ -133,7 +129,7 @@ class TestPartnerService:
         self.partner_repository_mock.get_by_id.return_value = self.partner_response
 
         # Call the get_partner_by_id method
-        partner = await self.partner_service.get_partner_by_id(1)
+        partner = await self.partner_service.get_partner_by_id(UUID("11111111-1111-1111-1111-111111111111"))
 
         # Assert the partner's details
         assert partner.name == "Tech Solutions"
@@ -203,7 +199,7 @@ class TestPartnerService:
         )
 
         with pytest.raises(PartnerException):
-            await self.partner_service.delete_partner_by_id(1, self.current_user_mock)
+            await self.partner_service.delete_partner_by_id(UUID("11111111-1111-1111-1111-111111111111"), self.current_user_mock)
 
         # Check that the error is logged
         self.mock_logger.error.assert_called_with(
@@ -222,10 +218,10 @@ class TestPartnerService:
 
         # Call the service method to get partner by ID
         with pytest.raises(PartnerException):
-            await self.partner_service.get_partner_by_id(partner_id=1)
+            await self.partner_service.get_partner_by_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         # Ensure the repository method was called with the correct ID
-        self.partner_repository_mock.get_by_id.assert_called_with(1)
+        self.partner_repository_mock.get_by_id.assert_called_with(UUID("11111111-1111-1111-1111-111111111111"))
 
         # Ensure error logging was performed
         self.mock_logger.error.assert_called_with(
@@ -244,10 +240,10 @@ class TestPartnerService:
 
         # Call the service method to get partner by ID
         with pytest.raises(Exception):
-            await self.partner_service.get_partner_by_id(partner_id=999)
+            await self.partner_service.get_partner_by_id(partner_id= UUID("99999999-9999-9999-9999-999999999999"))
 
         # Ensure the repository method was called with the correct ID
-        self.partner_repository_mock.get_by_id.assert_called_with(999)
+        self.partner_repository_mock.get_by_id.assert_called_with(UUID("99999999-9999-9999-9999-999999999999"))
 
         # Ensure error logging was performed for the generic exception
         self.mock_logger.error.assert_called_with(
@@ -265,7 +261,7 @@ class TestPartnerService:
         # Call the service method to delete the partner by ID
         with pytest.raises(Exception):
             await self.partner_service.delete_partner_by_id(
-                partner_id=999, current_user={"user_id": 1}
+                partner_id= UUID("99999999-9999-9999-9999-999999999999"), current_user={"user_id": UUID("11111111-1111-1111-1111-111111111111")}
             )
 
     async def test_update_partner_integrity_error(self):
@@ -289,7 +285,7 @@ class TestPartnerService:
         # Call the service method to update a partner
         with pytest.raises(PartnerException):
             await self.partner_service.update_partner(
-                partner_id=1, partner_data=partner_data, current_user={"id": 1}
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"), partner_data=partner_data, current_user={"id": UUID("11111111-1111-1111-1111-111111111111")}
             )
 
         # Ensure error logging was performed for the integrity error
@@ -318,7 +314,7 @@ class TestPartnerService:
         # Call the service method to update a partner
         with pytest.raises(Exception):
             await self.partner_service.update_partner(
-                partner_id=1, partner_data=partner_data, current_user={"id": 1}
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"), partner_data=partner_data, current_user={"id": UUID("11111111-1111-1111-1111-111111111111")}
             )
 
         # Ensure error logging was performed for the generic exception
@@ -326,58 +322,6 @@ class TestPartnerService:
             "Error while update Partner: Generic error occurred during update"
         )
 
-    async def test_upload_partner_profile_success(self):
-        """Test successful upload of partner profile."""
-        # Arrange
-        partner_id = 1
-        partner_logo = MagicMock(spec=UploadFile)
-        uploaded_logo = MagicMock(
-            partner_logo_id=1, partner_logo=MagicMock(name="logo.png")
-        )
-        self.partner_repository_mock.upload_partner_profile.return_value = uploaded_logo
-
-        # Act
-        await self.partner_service.upload_partner_profile(
-            partner_id=partner_id,
-            current_user=self.current_user_mock,
-            partner_logo=partner_logo,
-        )
-
-    async def test_upload_partner_profile_partner_not_found(self):
-        """Test upload partner profile when partner is not found."""
-        # Arrange
-        partner_id = 999
-        partner_logo = MagicMock(spec=UploadFile)
-        self.partner_repository_mock.update_partner_logo.side_effect = (
-            PartnerNotFoundError("Partner not found with id: {}".format(partner_id))
-        )
-
-        # Act & Assert
-        with pytest.raises(
-            PartnerNotFoundError, match=f"Partner not found with id: {partner_id}"
-        ):
-            await self.partner_service.upload_partner_profile(
-                partner_id=partner_id,
-                current_user=self.current_user_mock,
-                partner_logo=partner_logo,
-            )
-
-    async def test_upload_partner_profile_unexpected_error(self):
-        """Test upload partner profile with an unexpected error."""
-        # Arrange
-        partner_id = 1
-        partner_logo = MagicMock(spec=UploadFile)
-        self.partner_repository_mock.update_partner_logo.side_effect = Exception(
-            "Unexpected error"
-        )
-
-        # Act & Assert
-        with pytest.raises(Exception, match="Unexpected error"):
-            await self.partner_service.upload_partner_profile(
-                partner_id=partner_id,
-                current_user=self.current_user_mock,
-                partner_logo=partner_logo,
-            )
 
     def test_get_partner_statuses_success(self):
         """Test successful retrieval of all partner statuses."""
@@ -398,7 +342,7 @@ class TestPartnerService:
     async def test_change_partner_status_success(self):
         """Test successful change of partner status and feedback flag."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "ACTIVE"
         is_feedback_enabled = True
         current_partner = Partner(
@@ -458,7 +402,7 @@ class TestPartnerService:
     async def test_change_partner_status_no_update_needed(self):
         """Test change partner status when no update is needed."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_status = "ACTIVE"
         current_feedback_enabled = True
         current_partner = Partner(
@@ -490,7 +434,7 @@ class TestPartnerService:
     async def test_change_partner_status_partner_not_found(self):
         """Test change partner status when partner is not found."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.partner_repository_mock.get_by_id.return_value = None
         self.mock_logger.error.reset_mock()
 
@@ -508,7 +452,7 @@ class TestPartnerService:
     async def test_change_partner_status_repository_failure(self):
         """Test change partner status when repository update fails."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_partner = Partner(
             id=partner_id,
             name="Tech Solutions",
@@ -533,7 +477,7 @@ class TestPartnerService:
     async def test_change_partner_status_unexpected_exception(self):
         """Test change partner status with an unexpected exception."""
         # Arrange
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         current_partner = Partner(
             id=partner_id,
             name="Tech Solutions",
@@ -571,7 +515,7 @@ class TestPartnerService:
 
         # Ensure the error is logged
         self.mock_logger.error.assert_called_with(
-            "Error changing partner status for partner_id=1: Unexpected error"
+            "Error changing partner status for partner_id=11111111-1111-1111-1111-111111111111: Unexpected error"
         )
 
     @pytest.mark.asyncio
@@ -590,7 +534,7 @@ class TestPartnerService:
 
         # Ensure the error is logged
         self.mock_logger.error.assert_called_with(
-            "Error changing partner status for partner_id=1: Unexpected error"
+            "Error changing partner status for partner_id=11111111-1111-1111-1111-111111111111: Unexpected error"
         )
 
     async def test_onboard_partner_success(self):
@@ -604,9 +548,9 @@ class TestPartnerService:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -625,7 +569,7 @@ class TestPartnerService:
             return_value=True
         )
         auth_service_utility_mock.get_password_hash.return_value = "hashed_pwd"
-        auth_service_mock.get_role_by_hierarchy.return_value = Role(id=1, name="Admin")
+        auth_service_mock.get_role_by_hierarchy.return_value = Role(id= UUID("11111111-1111-1111-1111-111111111111"), name="Admin")
         self.partner_repository_mock.onboard_partner = AsyncMock(
             return_value=partner_details
         )
@@ -653,9 +597,9 @@ class TestPartnerService:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -706,9 +650,9 @@ class TestPartnerService:
             name="Test User",
             phone_number="+919595903456",
         )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
+        partner_meta_data = PartnerMetaDataDetails(is_talko_free_trial__enabled=True)
         partner_details = PartnerDetails(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Test Partner",
             company_legal_name="Test Partner",
             description="Sample Partner",
@@ -731,23 +675,6 @@ class TestPartnerService:
             "Error while creating Partner: DB error"
         )
 
-    async def test_set_trial_expiry_time_maglo_enabled(self):
-        """Should set maglo expiry time and enable maglo when free trial enabled."""
-        user_details = UserDetails(
-            email="t@e.com",
-            password="Test@123",
-            phone_number="+919595903445",
-            name="test name",
-        )
-        partner_meta_data = PartnerMetaDataDetails(is_maglo_free_trial_enabled=True)
-
-        self.partner_service.set_trial_expiry_time_and_allow_services(
-            partner_meta_data, user_details
-        )
-
-        assert partner_meta_data.maglo_trail_expiry_time is not None
-        assert user_details.is_maglo_enabled is True
-
     async def test_set_trial_expiry_time_talko_enabled(self):
         """Should set talko expiry time and enable talko when free trial enabled."""
         user_details = UserDetails(
@@ -765,24 +692,6 @@ class TestPartnerService:
 
         assert partner_meta_data.talko_trail_expiry_time is not None
         assert user_details.is_talko_enabled is True
-
-    async def test_set_trial_expiry_time_babbler_enabled(self):
-        """Should set babbler expiry time and enable babbler when free trial enabled."""
-        user_details = UserDetails(
-            email="t@e.com",
-            password="Test@123",
-            phone_number="+919595903445",
-            name="test name",
-            is_babbler_enabled=True,
-        )
-        partner_meta_data = PartnerMetaDataDetails(is_babbler_free_trial__enabled=True)
-
-        self.partner_service.set_trial_expiry_time_and_allow_services(
-            partner_meta_data, user_details
-        )
-
-        assert partner_meta_data.babbler_trail_expiry_time is not None
-        assert user_details.is_babbler_enabled is True
 
     async def test_check_partner_free_trial_eligible_success(self):
         """Should return True if partner is eligible."""
@@ -913,7 +822,6 @@ class TestPartnerService:
             console_service_logger=logger,
             partner_service_cache=partner_service_cache,
             audit_service=AsyncMock(),
-            digital_asset_service=AsyncMock(),
         )
         return (
             service,
@@ -936,8 +844,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=True)
         repository.toggle_partner_activation.return_value = (
             True,
@@ -958,7 +866,7 @@ class TestPartnerService:
         repository.toggle_partner_activation.assert_awaited_once_with(
             partner_id=partner_id, partner_data=partner_data
         )
-        user_service.is_user_internal.assert_awaited_once_with(1)
+        user_service.is_user_internal.assert_awaited_once_with(UUID("11111111-1111-1111-1111-111111111111"))
 
         assert isinstance(response, TogglePartnerActivationResponse)
         assert response.is_active is True
@@ -978,8 +886,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=False)
         repository.toggle_partner_activation.return_value = (
             False,
@@ -1021,8 +929,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=True)
         user_service.is_user_internal.return_value = False
 
@@ -1050,8 +958,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=True)
         user_service.is_user_internal.return_value = True
         repository.toggle_partner_activation.side_effect = PartnerNotFoundError(
@@ -1082,8 +990,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=True)
         user_service.is_user_internal.return_value = True
         repository.toggle_partner_activation.side_effect = PartnerException(
@@ -1112,8 +1020,8 @@ class TestPartnerService:
             user_service,
             user_session_service,
         ) = toggle_partner_activation_setup
-        current_user = {CurrentUserMap.USER_ID: 1}
-        partner_id = 42
+        current_user = {CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111")}
+        partner_id= UUID("42424242-4242-4242-4242-424242424242")
         partner_data = TogglePartnerActivation(is_active=True)
         user_service.is_user_internal.return_value = True
         repository.toggle_partner_activation.side_effect = Exception("unexpected")
@@ -1128,57 +1036,4 @@ class TestPartnerService:
             )
         logger.error.assert_called_with(
             "An unexpected error occured while updating the partner active status: unexpected"
-        )
-
-    @patch("starlette_context.context.get", return_value="maglo-web")
-    @patch("httpx.AsyncClient.post")
-    async def test_call_external_lead_creation_api_success(self, mock_post, mock_context_get):
-        """Test external lead API success case."""
-        # Arrange
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_response.text = '{"status": "success"}'
-        mock_response.json.return_value = {"status": "success"}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
-        user_details = UserDetails(
-            name="Test user",
-            email="test@gmail.com",
-            phone_number="+919595903456",
-            password="Test@1234",
-        )
-        # Act
-        result = await self.partner_service.call_external_lead_creation_api(
-            user_details
-        )
-
-        # Assert
-        assert result == True
-
-    @patch("starlette_context.context.get", return_value="maglo-web")
-    @patch("httpx.AsyncClient.post")
-    async def test_call_external_lead_creation_api_failure(self, mock_post, mock_context_get):
-        """Test external lead API failure (exception case)."""
-        # Arrange
-        mock_post.side_effect = httpx.RequestError(
-            "Connection error", request=MagicMock()
-        )
-
-        user_details = UserDetails(
-            name="Test user",
-            email="test@gmail.com",
-            phone_number="+919595903456",
-            password="Test@1234",
-        )
-
-        # Act
-        result = await self.partner_service.call_external_lead_creation_api(
-            user_details
-        )
-
-        # Assert
-        assert result is None
-        self.mock_logger.error.assert_called()
-        self.mock_logger.error.assert_any_call(
-            "Failed to call external lead API: Connection error"
         )

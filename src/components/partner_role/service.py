@@ -1,9 +1,9 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 from src.components.audit_log.schema import AuditLogSchema
 from src.components.audit_log.services import AuditService
 from src.components.auth.models import Role
-from src.components.cache.helper import CacheHelper
 from src.components.common.actions import AuditActions
 from src.components.common.constants import CurrentUserMap
 from src.components.common.resources import Resource
@@ -39,20 +39,15 @@ class PartnerRoleService:
         console_service_logger: ConsoleServiceLogger,
         audit_service: AuditService,
         partner_config_service: PartnerConfigService,
-        cache_helper: CacheHelper,
     ) -> None:
         self.__repo: PartnerRoleRepository = partner_role_repository
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
         self.__audit_service: AuditService = audit_service
         self.__partner_config_service: PartnerConfigService = partner_config_service
-        self.__cache: CacheHelper = cache_helper
 
     # ------------------------------ helpers ------------------------------- #
 
-    async def __invalidate_partner_teams_cache(self, partner_id: int) -> None:
-        await self.__cache.invalidate_partner_teams_cache(partner_id)
-
-    async def __ensure_enabled(self, partner_id: int) -> None:
+    async def __ensure_enabled(self, partner_id: UUID) -> None:
         config: Optional[PartnerConfigResponse] = (
             await self.__partner_config_service.get_partner_config_by_key(
                 partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
@@ -107,14 +102,14 @@ class PartnerRoleService:
         return None if (mid <= prev or mid >= ref_h) else mid
 
     async def ensure_partner_catalog(
-        self, partner_id: int, current_user: Dict[str, Any]
+        self, partner_id: UUID, current_user: Dict[str, Any]
     ) -> None:
         """Public hook: materialize the partner's catalog (copy-on-customize).
 
         Internal users may materialize any partner's catalog; external users
         may only materialize their own partner's catalog.
         """
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
         is_internal: bool = bool(current_user.get("is_internal"))
         if not is_internal and partner_id != current_user.get(CurrentUserMap.PARTNER_ID):
             raise PartnerRoleException(PartnerRoleExceptionMsg.UNAUTHORIZED_PARTNER_ACCESS)
@@ -130,7 +125,6 @@ class PartnerRoleService:
         await self.__repo.materialize_catalog(
             partner_id, bool(partner.is_internal), user_id
         )
-        await self.__invalidate_partner_teams_cache(partner_id)
 
     # ------------------------------ CRUD ---------------------------------- #
 
@@ -139,15 +133,15 @@ class PartnerRoleService:
         return "_".join(name.strip().split())
 
     @staticmethod
-    def __build_slug(normalized_name: str, role_id: int) -> str:
+    def __build_slug(normalized_name: str, role_id: UUID) -> str:
         """Derive a partner role's slug from its own name and id: ``{normalized_name}_{id}``."""
         return "{}_{}".format(normalized_name, role_id)
 
     async def create_partner_role(
         self, data: CreatePartnerRole, current_user: Dict[str, Any]
     ) -> Role:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         await self.__ensure_enabled(partner_id)
         partner: Optional[Partner] = await self.__repo.get_partner(partner_id)
@@ -223,11 +217,6 @@ class PartnerRoleService:
             base_role_id=data.base_role_id,
         )
 
-        await self.__invalidate_partner_teams_cache(partner_id)
-        # A rebalance (above) renumbers the whole catalog's hierarchy, so every
-        # assigned user's cached role_hierarchy_level can go stale in maglo.
-        await self.__cache.invalidate_role_derived_user_caches()
-
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.create,
@@ -249,7 +238,7 @@ class PartnerRoleService:
         """Pagination is zero-based and optional: pass both ``limit`` and
         ``offset`` to page (row_offset = offset * limit), or neither to get
         everything."""
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         partner: Optional[Partner] = await self.__repo.get_partner(partner_id)
         if partner is None:
             raise PartnerRoleException(PartnerRoleExceptionMsg.PARTNER_NOT_FOUND)
@@ -278,10 +267,10 @@ class PartnerRoleService:
         )
 
     async def update_partner_role(
-        self, role_id: int, data: UpdatePartnerRole, current_user: Dict[str, Any]
+        self, role_id: UUID, data: UpdatePartnerRole, current_user: Dict[str, Any]
     ) -> Role:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         await self.__ensure_enabled(partner_id)
         role: Optional[Role] = await self.__repo.get_partner_role(role_id, partner_id)
@@ -296,10 +285,6 @@ class PartnerRoleService:
                 del values["data_scope"]
 
         updated: Role = await self.__repo.update_role(role_id, values, user_id)
-        await self.__invalidate_partner_teams_cache(partner_id)
-        # data_scope / hierarchy edits change every assigned user's effective
-        # scope, which maglo reads from GRPC_GET_USER_DETAILS / GRPC_GET_USER_ROLE.
-        await self.__cache.invalidate_role_derived_user_caches()
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.update,
@@ -312,9 +297,9 @@ class PartnerRoleService:
         )
         return updated
 
-    async def delete_partner_role(self, role_id: int, current_user: Dict[str, Any]) -> None:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-        user_id: int = current_user.get(CurrentUserMap.USER_ID)
+    async def delete_partner_role(self, role_id: UUID, current_user: Dict[str, Any]) -> None:
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+        user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
         await self.__ensure_enabled(partner_id)
         role: Optional[Role] = await self.__repo.get_partner_role(role_id, partner_id)
@@ -325,7 +310,6 @@ class PartnerRoleService:
             raise PartnerRoleException(PartnerRoleExceptionMsg.ROLE_IN_USE)
 
         await self.__repo.soft_delete_role(role_id, user_id)
-        await self.__invalidate_partner_teams_cache(partner_id)
         await self.__audit_service.log_action(
             AuditLogSchema(
                 action=AuditActions.delete,

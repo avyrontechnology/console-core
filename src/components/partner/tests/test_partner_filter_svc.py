@@ -1,3 +1,4 @@
+from uuid import UUID
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -27,7 +28,6 @@ class TestPartnerFilterService:
         self.partner_repository_mock = AsyncMock()
         self.mock_logger = mock_logger
         self.user_service_mock = AsyncMock()
-        self.partner_config_service_mock = AsyncMock()
         self.partner_meta_data_service_mock = AsyncMock()
         self.filter_service = PartnerFilterService(
             partner_repository=self.partner_repository_mock,
@@ -49,7 +49,7 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 1,
+                "id": UUID("11111111-1111-1111-1111-111111111111"),
                 "name": "Acme",
                 "company_legal_name": "Acme Corp",
                 "gst_no": "GST123",
@@ -64,7 +64,7 @@ class TestPartnerFilterService:
         fake_admin = type(
             "Admin",
             (),
-            {"partner_id": 1, "email": "admin@acme.com", "phone_number": "9999999999"},
+            {"partner_id": UUID("11111111-1111-1111-1111-111111111111"), "email": "admin@acme.com", "phone_number": "9999999999"},
         )()
 
         fake_query = select(Partner)
@@ -78,15 +78,9 @@ class TestPartnerFilterService:
             []  # Second call: returns counts (empty since no configs)
         ]
 
-        # Mock partner config
-        fake_config = type("Cfg", (), {"partner_id": 1, "value": "true"})()
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = [
-            fake_config
-        ]
-
         # Mock metadata
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            1: {"is_maglo_free_trial_enabled": True}
+            1: {"is_talko_free_trial__enabled": True}
         }
 
         # Mock admin users
@@ -104,7 +98,6 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 
@@ -130,7 +123,7 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 2,
+                "id": UUID("22222222-2222-2222-2222-222222222222"),
                 "name": "Beta",
                 "company_legal_name": "Beta Corp",
                 "gst_no": "GST789",
@@ -156,12 +149,9 @@ class TestPartnerFilterService:
         # No admin users
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
 
-        # Mock partner config (is_maglo_enabled)
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = []
-
         # Mock partner metadata
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            2: {"is_maglo_free_trial_enabled": False}
+            2: {"is_talko_free_trial__enabled": False}
         }
 
         # Mock builder
@@ -174,7 +164,6 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 
@@ -259,7 +248,7 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 6,
+                "id": UUID("66666666-6666-6666-6666-666666666666"),
                 "name": "RecentPartner",
                 "company_legal_name": "Recent Corp",
                 "gst_no": "GSTRECENT",
@@ -285,12 +274,11 @@ class TestPartnerFilterService:
         # No admin users
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
 
-        # Mock partner config (maglo_enabled flag)
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = []
+        
 
         # Mock metadata service (free trial flag)
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            6: {"is_maglo_free_trial_enabled": False}
+            6: {"is_talko_free_trial__enabled": False}
         }
 
         # Mock builder
@@ -303,13 +291,12 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 
         assert response.total_count == 1
         assert len(response.partners_data) == 1
-        assert response.partners_data[0].id == 6
+        assert response.partners_data[0].id == UUID("66666666-6666-6666-6666-666666666666")
 
     @pytest.mark.asyncio
     async def test_enlist_partners_dashboard_filter_gt_fifty_licenses(self):
@@ -326,7 +313,7 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 5,
+                "id": UUID("55555555-5555-5555-5555-555555555555"),
                 "name": "BigPartner",
                 "company_legal_name": "Big Corp",
                 "gst_no": "GSTBIG",
@@ -353,9 +340,8 @@ class TestPartnerFilterService:
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
 
         # Required mocks
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = []
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            5: {"is_maglo_free_trial_enabled": False}
+            5: {"is_talko_free_trial__enabled": False}
         }
 
         with patch(
@@ -367,7 +353,6 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 
@@ -375,13 +360,13 @@ class TestPartnerFilterService:
         assert response.partners_data[0].active_license > 50
 
     @pytest.mark.asyncio
-    async def test_enlist_partners_dashboard_filter_maglo(self):
+    async def test_enlist_partners_dashboard_filter_talko(self):
         filter_request = PartnerFilterRequest(
             filters=[],
             order_by=[],
             limit=5,
             offset=0,
-            dashboard_filters=DashboardFilters.PARTNERS_USING_MAGLO,
+            dashboard_filters=DashboardFilters.PARTNERS_USING_TALKO,
             is_custom_role_permission_enabled=False,
         )
 
@@ -389,13 +374,13 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 4,
-                "name": "MagloPartner",
-                "company_legal_name": "Maglo Corp",
-                "gst_no": "GSTMAGLO",
-                "cin_no": "CINMAGLO",
+                "id": UUID("44444444-4444-4444-4444-444444444444"),
+                "name": "TalkoPartner",
+                "company_legal_name": "Talko Corp",
+                "gst_no": "GSTTALKO",
+                "cin_no": "CINTALKO",
                 "active_license": 20,
-                "description": "Maglo Partner",
+                "description": "Talko Partner",
                 "created_at": 17000003,
                 "is_active": True,
             },
@@ -415,15 +400,9 @@ class TestPartnerFilterService:
         # No admin users
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
 
-        # Feature flag: is_maglo_enabled must be true
-        fake_cfg = type("Cfg", (), {"partner_id": 4, "value": "true"})()
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = [
-            fake_cfg
-        ]
-
         # Free trial mock
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            4: {"is_maglo_free_trial_enabled": False}
+            4: {"is_talko_free_trial__enabled": False}
         }
 
         with patch(
@@ -435,12 +414,11 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 
         assert response.total_count == 1
-        assert response.partners_data[0].name == "MagloPartner"
+        assert response.partners_data[0].name == "TalkoPartner"
 
     @pytest.mark.asyncio
     async def test_enlist_partners_custom_role_permission_enabled(self):
@@ -457,7 +435,7 @@ class TestPartnerFilterService:
             "Partner",
             (),
             {
-                "id": 3,
+                "id": UUID("33333333-3333-3333-3333-333333333333"),
                 "name": "CustomRole",
                 "company_legal_name": "CustomRole Corp",
                 "gst_no": "GST999",
@@ -484,9 +462,8 @@ class TestPartnerFilterService:
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
 
         # Required mocks
-        self.partner_config_service_mock.get_partner_config_by_key.return_value = []
         self.partner_meta_data_service_mock.get_partner_meta_data_by_partner_ids.return_value = {
-            3: {"is_maglo_free_trial_enabled": False}
+            3: {"is_talko_free_trial__enabled": False}
         }
 
         with patch(
@@ -498,7 +475,6 @@ class TestPartnerFilterService:
             response = await self.filter_service.enlist_partners_dynamically(
                 filter_request,
                 user_service=self.user_service_mock,
-                partner_config_service=self.partner_config_service_mock,
                 partner_meta_data_service=self.partner_meta_data_service_mock,
             )
 

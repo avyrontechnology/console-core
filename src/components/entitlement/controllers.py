@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, List
 
 from dependency_injector.wiring import Provide, inject
@@ -66,7 +67,7 @@ class EntitlementController:
         """
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(TokenKeys.PARTNER_ID)
+            partner_id: UUID = current_user.get(TokenKeys.PARTNER_ID)
 
             logger.info(
                 "Controller: update_entitlement_start_date started for partner_id={}, order_id={}".format(
@@ -186,7 +187,7 @@ class EntitlementController:
         """
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(TokenKeys.USER_ID)
+            user_id: UUID = current_user.get(TokenKeys.USER_ID)
 
             validated, error = SchemaValidator.validate(
                 {

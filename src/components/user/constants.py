@@ -15,7 +15,6 @@ class UserResponseMsg:
     PHONE_NUMBER_ALREADY_EXISTS: str = "Provided phone number already exists for other user."
     OTP_SENT: str = "OTP has been sent on email"
     ACCOUNT_DELETED: str = "Your account has been deleted successfully."
-    MAGLO_APP_NOT_ENABLED: str = "Maglo app is not enabled."
 
 class UserLogMsg:
     USER_NOT_FOUND: str = "user not found"
@@ -47,9 +46,6 @@ class ValidationMsg:
     MANDATORY_COLUMNS_MISSING = "Missing required column: {column}"
     ONLY_CSV_SUPPORTED = "Only CSV or Excel (.xlsx) files are supported."
     NO_USER_RECORDS = "No user records found. Please add user details to upload."
-    USER_PUBLISHER_NOT_SUPPORTED = (
-        "Column 'is_maglo_publisher' is not supported for bulk upload."
-    )
     INVALID_CSV_FORMAT = "Only CSV and XLSX files are supported."
 
     # --- Bulk-upload PARENT column messages ---

@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 import jwt
@@ -11,6 +12,13 @@ from sqlalchemy.sql import column, values
 
 from src.components.api_key.schemas import ApiKeyResponse
 from src.components.api_key.services import ApiKeyService
+from src.components.common.rpc_uuid import (
+    parse_uuid,
+    parse_uuid_or_none,
+    parse_uuid_list,
+    uuid_list_str,
+    uuid_str,
+)
 from src.components.auth.constant import (
     RoleDictKeys,
     RPCExceptionMsg,
@@ -19,8 +27,6 @@ from src.components.auth.constant import (
 )
 from src.components.auth.models import Role
 from src.components.auth.repositories import AuthRepository
-from src.components.digital_assets.models import DigitalAssets
-from src.components.digital_assets.storage.helper import StorageHelper
 from src.components.entitlement.services import EntitlementService
 from src.components.entitlement.utils import EntitlementUtils
 from src.components.grace.repositories import GraceRepository
@@ -43,7 +49,6 @@ from src.pub.auth_pb2 import (
     ChildHierarchy,
     CityDetail,
     CountryDetail,
-    GetAllPublishersResponse,
     GetAllRolesResponse,
     GetCitiesByIdsResponse,
     GetCitiesByNamesResponse,
@@ -52,7 +57,6 @@ from src.pub.auth_pb2 import (
     GetPartnerApiKeyResponse,
     GetPartnerDetailsResponse,
     GetPartnerMetaDataDetailsResponse,
-    GetPublisherDataResponse,
     GetServiceBoardUserDetailsResponse,
     GetStatesByIdsResponse,
     GetStatesByNamesResponse,
@@ -69,10 +73,6 @@ from src.pub.auth_pb2 import (
     GetUserRoleResponse,
     GetUserTeamRoleResponse,
     ParentUser,
-    PublisherAddressDetail,
-    PublisherDetails,
-    PublisherSummary,
-    PublisherUserDetail,
     RoleDetail,
     StateDetail,
     TeamDetail,
@@ -127,9 +127,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                 session_id=user_session.session_id,
                 user_id=payload.get("user_id"),
                 partner_id=payload.get("partner_id"),
-                is_maglo_enabled=payload.get("is_maglo_enabled"),
                 is_talko_enabled=payload.get("is_talko_enabled"),
-                is_babbler_enabled=payload.get("is_babbler_enabled"),
                 is_internal=payload.get("is_internal"),
                 is_wallet_enabled=payload.get("is_wallet_enabled"),
                 is_obotaai_enabled=payload.get("is_obotaai_enabled"),
@@ -163,9 +161,9 @@ class AuthServiceGRPC(AuthServiceServicer):
                 - child_hierarchy (list): A list of ChildHierarchy objects, each with a user ID and its child user IDs.
         """
         mcontext = request.mcontext
-        user_ids = request.user_ids
+        user_ids = parse_uuid_list(request.user_ids, "user_ids")
 
-        self.__logger.info(f"Fetching child user hierarchies for user_ids: {user_ids}")
+        self.__logger.info(f"Fetching child user hierarchies for user_ids: {uuid_list_str(user_ids)}")
 
         if not user_ids:
             self.__logger.error("No user IDs provided in request")
@@ -230,9 +228,9 @@ class AuthServiceGRPC(AuthServiceServicer):
                 child_hierarchy_list = []
                 for row in rows:
                     user_id = row.user_id
-                    child_ids = [cid for cid in row.child_ids if cid] or []
+                    child_ids = [uuid_str(cid) for cid in row.child_ids if cid] or []
                     child_hierarchy_list.append(
-                        ChildHierarchy(user_id=user_id, child_ids=child_ids)
+                        ChildHierarchy(user_id=uuid_str(user_id), child_ids=child_ids)
                     )
 
                 return GetUserChildHierarchyResponse(
@@ -266,16 +264,16 @@ class AuthServiceGRPC(AuthServiceServicer):
         """
 
         mcontext = request.mcontext
-        user_id = request.user_id
-
-        self.__logger.info(f"Fetching child user list for user_id: {user_id}")
-
-        if not user_id:
+        if not request.user_id:
             self.__logger.error("User ID not provided in request")
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
+
+        self.__logger.info(f"Fetching child user list for user_id: {user_id}")
+
         try:
             # Fetch child users from user service or database
             async with self.__db_session_manager.session() as session:
@@ -320,7 +318,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                 # Map the results to UserDetail messages
                 users_details = [
                     UserDetail(
-                        user_id=row.get(UserKeys.USER_ID),
+                        user_id=uuid_str(row.get(UserKeys.USER_ID)),
                         name=row.get(UserKeys.NAME),
                         email=row.get(UserKeys.EMAIL),
                         is_active=row.get(UserKeys.IS_ACTIVE),
@@ -351,15 +349,15 @@ class AuthServiceGRPC(AuthServiceServicer):
         grace_repo: GraceRepository = Depends(Provide["grace_repository"]),
     ):
         mcontext = request.mcontext
-        user_id = request.user_id
-
-        self.__logger.info(f"Fetching user details for user_id: {user_id}")
-        if not user_id:
+        if not request.user_id:
             self.__logger.error("User ID not provided in request")
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
+
+        self.__logger.info(f"Fetching user details for user_id: {user_id}")
 
         try:
             async with self.__db_session_manager.session() as session:
@@ -373,7 +371,6 @@ class AuthServiceGRPC(AuthServiceServicer):
                         Role.hierarchy.label("role_hierarchy_level"),
                         Role.data_scope.label("role_data_scope"),
                         Role.name.label("role_name"),
-                        User.is_maglo_publisher.label("is_maglo_publisher"),
                         User.phone_number.label("phone_number"),
                         User.is_active.label("is_active"),
                         User.is_email_verified.label("is_email_verified"),
@@ -395,7 +392,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 user_row: dict = dict(user_row)
 
-                partner_id: int = user_row.get("partner_id")
+                partner_id: UUID = user_row.get("partner_id")
                 role_hierarchy: int = user_row.get("role_hierarchy_level") or 99
 
                 additional_info: dict = user_row.get("additional_info") or {}
@@ -410,8 +407,6 @@ class AuthServiceGRPC(AuthServiceServicer):
                 # Default: all services false
                 show_popup_map: dict = {
                     Platform.CONSOLE: False,
-                    Platform.MAGLO: False,
-                    Platform.BABBLER: False,
                     Platform.OBOTAAI: False,
                 }
                 try:
@@ -449,20 +444,15 @@ class AuthServiceGRPC(AuthServiceServicer):
                     user_row["name"] = f"{user_row.get('name')} (Inactive)"
 
                 user_profile = UserProfile(
-                    user_id=user_row.get(UserKeys.USER_ID),
+                    user_id=uuid_str(user_row.get(UserKeys.USER_ID)),
                     name=user_row.get(UserKeys.NAME),
                     email=user_row.get(UserKeys.EMAIL),
-                    partner_id=user_row.get(UserKeys.PARTNER_ID),
+                    partner_id=uuid_str(user_row.get(UserKeys.PARTNER_ID)),
                     role_hierarchy_level=user_row.get(UserKeys.ROLE_HIERARCHY_LEVEL),
                     role_data_scope=user_row.get("role_data_scope") or "",
                     role_name=user_row.get("role_name") or "",
                     partner_name=user_row.get(UserKeys.PARTNER_NAME),
-                    is_maglo_publisher=user_row.get(UserKeys.IS_MAGLO_PUBLISHER),
-                    is_babbler_enabled=config_map.get(
-                        UserKeys.IS_BABBLER_ENABLED, False
-                    ),
                     is_talko_enabled=config_map.get(UserKeys.IS_TALKO_ENABLED, False),
-                    is_maglo_enabled=config_map.get(UserKeys.IS_MAGLO_ENABLED, False),
                     phone_number=user_row.get(UserKeys.PHONE_NUMBER),
                     is_active=user_row.get(UserKeys.IS_ACTIVE),
                     is_email_verified=user_row.get(UserKeys.IS_EMAIL_VERIFIED),
@@ -516,16 +506,15 @@ class AuthServiceGRPC(AuthServiceServicer):
         """
         Retrieve the permissions for a given user ID.
         """
-        user_id = request.user_id
-
-        self.__logger.info(f"Fetching permissions for user_id: {user_id}")
-
-        if not user_id:
+        if not request.user_id:
             self.__logger.error("User ID not provided in request")
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
+
+        self.__logger.info(f"Fetching permissions for user_id: {user_id}")
         try:
             # Fetch permissions from user
             user_permissions: list[str] = (
@@ -549,16 +538,15 @@ class AuthServiceGRPC(AuthServiceServicer):
         """
         Retrieve the role for a given user ID.
         """
-        user_id = request.user_id
-
-        self.__logger.info(f"Fetching role for user_id: {user_id}")
-
-        if not user_id:
+        if not request.user_id:
             self.__logger.error("User ID not provided in request")
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
+
+        self.__logger.info(f"Fetching role for user_id: {user_id}")
         try:
             # Fetch role from user
             user_role = await auth_service.get_role_by_user_id(user_id)
@@ -575,7 +563,7 @@ class AuthServiceGRPC(AuthServiceServicer):
             )
 
     async def __resolve_team_effective_role(
-        self, session, user_id: int, team_id: int
+        self, session, user_id: UUID, team_id: UUID
     ):
         """Resolve the effective role for a user WITHIN a team.
 
@@ -601,7 +589,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         if row is None:
             return False, None, "", 0, ""
 
-        effective_role_id: Optional[int] = row.role_id or row.default_role_id
+        effective_role_id: Optional[UUID] = row.role_id or row.default_role_id
         role_slug: str = ""
         role_hierarchy: int = 0
         role_data_scope: str = ""
@@ -634,16 +622,16 @@ class AuthServiceGRPC(AuthServiceServicer):
         else the user's global ``User.role_id``. Permissions are computed for that
         effective role (super-admin / system-admin still get everything).
         """
-        user_id = request.user_id
-        team_id = request.team_id
-        self.__logger.info(
-            "GetUserTeamRole called user_id={} team_id={}".format(user_id, team_id)
-        )
-        if not user_id or not team_id:
+        if not request.user_id or not request.team_id:
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
+        team_id = parse_uuid(request.team_id, "team_id")
+        self.__logger.info(
+            "GetUserTeamRole called user_id={} team_id={}".format(user_id, team_id)
+        )
         try:
             async with self.__db_session_manager.session() as session:
                 (
@@ -690,13 +678,13 @@ class AuthServiceGRPC(AuthServiceServicer):
         ),
     ):
         """Return the configured permission slugs granted to a specific role."""
-        role_id = request.role_id
-        self.__logger.info("GetRolePermissions called role_id={}".format(role_id))
-        if not role_id:
+        if not request.role_id:
             raise GrpcException(
                 details=RPCExceptionMsg.ROLE_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        role_id = parse_uuid(request.role_id, "role_id")
+        self.__logger.info("GetRolePermissions called role_id={}".format(role_id))
         try:
             permissions: list[str] = (
                 await partner_config_service.role_permission_check(role_id)
@@ -716,7 +704,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         self, request, context, user_service=Depends(Provide[Container.console_service])
     ) -> List[UserDetail]:
 
-        user_ids: List[int] = request.user_ids
+        user_ids: List[UUID] = parse_uuid_list(request.user_ids, "user_ids")
         show_inactive_users: Optional[bool] = request.show_inactive_users
         self.__logger.info(f"Fetching service board users :{user_ids}, details.")
 
@@ -733,7 +721,7 @@ class AuthServiceGRPC(AuthServiceServicer):
             )
             users_details = [
                 UserDetail(
-                    user_id=row.get(UserKeys.USER_ID),
+                    user_id=uuid_str(row.get(UserKeys.USER_ID)),
                     name=row.get(UserKeys.NAME),
                     email=row.get(UserKeys.EMAIL),
                     is_active=row.get(UserKeys.IS_ACTIVE),
@@ -765,16 +753,15 @@ class AuthServiceGRPC(AuthServiceServicer):
         grace_repo: GraceRepository = Depends(Provide["grace_repository"]),
     ):
         mcontext = request.mcontext
-        partner_id = request.partner_id
-
-        self.__logger.info(f"Fetching partner details for partner_id: {partner_id}")
-
-        if not partner_id:
+        if not request.partner_id:
             self.__logger.error("Partner ID not provided in request")
             raise GrpcException(
                 details="Partner ID not found",
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        partner_id = parse_uuid(request.partner_id, "partner_id")
+
+        self.__logger.info(f"Fetching partner details for partner_id: {partner_id}")
 
         try:
             # ── Fetch partner row ─────────────────────────────────────────────
@@ -793,26 +780,13 @@ class AuthServiceGRPC(AuthServiceServicer):
                         Partner.cin_no.label("cin_no"),
                         Partner.gst_no.label("gst_no"),
                         Partner.is_active.label("is_active"),
-                        Partner.is_maglo_publisher.label("is_maglo_publisher"),
                         Partner.created_at.label("created_at"),
                         Partner.partner_status.label("partner_status"),
-                        DigitalAssets.name.label("partner_logo"),
-                        User.name.label("publisher_username"),
-                        User.email.label("publisher_email"),
                         Partner.is_feedback_enabled.label("is_feedback_enabled"),
                         Partner.active_license.label("active_license"),
-                        (
-                            User.is_maglo_publisher.is_(True) & User.is_active.is_(True)
-                        ).label("has_active_maglo_publisher"),
                         address_exists_subquery.label("has_address"),
                     )
                     .select_from(Partner)
-                    .outerjoin(DigitalAssets, Partner.id == DigitalAssets.partner_id)
-                    .outerjoin(
-                        User,
-                        (Partner.id == User.partner_id)
-                        & (User.is_maglo_publisher.is_(True)),
-                    )
                     .where(Partner.id == partner_id)
                 )
 
@@ -828,15 +802,10 @@ class AuthServiceGRPC(AuthServiceServicer):
                         status_code=StatusCode.NOT_FOUND,
                     )
 
-                partner_logo: Optional[str] = (
-                    StorageHelper.get_presigned_url(partner_row.get("partner_logo"))
-                    if partner_row.get("partner_logo")
-                    else None
-                )
+                partner_logo: Optional[str] = None
 
                 is_publisher_onboarding_completed: bool = bool(
-                    partner_row.get("has_active_maglo_publisher")
-                    and partner_row.get("has_address")
+                    partner_row.get("has_address")
                 )
 
             # ── Fetch subscription status (outside db session) ────────────────
@@ -870,18 +839,15 @@ class AuthServiceGRPC(AuthServiceServicer):
 
             # ── Build and return response ─────────────────────────────────────
             partner_detail = {
-                "partner_id": partner_row.get("partner_id"),
+                "partner_id": uuid_str(partner_row.get("partner_id")),
                 "name": partner_row.get("name"),
                 "company_legal_name": partner_row.get("company_legal_name"),
                 "cin_no": partner_row.get("cin_no"),
                 "gst_no": partner_row.get("gst_no"),
                 "is_active": partner_row.get("is_active"),
-                "is_maglo_publisher": partner_row.get("is_maglo_publisher"),
                 "partner_status": partner_row.get("partner_status"),
                 "partner_logo": partner_logo,
                 "created_at": partner_row.get("created_at"),
-                "publisher_username": partner_row.get("publisher_username"),
-                "publisher_email": partner_row.get("publisher_email"),
                 "is_feedback_enabled": partner_row.get("is_feedback_enabled"),
                 "is_publisher_onboarding_completed": is_publisher_onboarding_completed,
                 "subscription_status": subscription_status_map,
@@ -904,149 +870,6 @@ class AuthServiceGRPC(AuthServiceServicer):
                 status_code=StatusCode.INTERNAL,
             )
 
-    async def GetPublisherData(self, request, context):
-        """
-        Retrieve publisher data including partner details, addresses, and user details.
-
-        Args:
-            request (GetPublisherDataRequest): Request containing:
-                - mcontext: Request metadata.
-                - partner_id: The ID of the partner.
-
-        Returns:
-            GetPublisherDataResponse: Contains partner details, address details, and user details.
-        """
-        mcontext = request.mcontext
-        partner_id = request.partner_id
-
-        self.__logger.info(f"Fetching publisher data for partner_id: {partner_id}")
-        try:
-            async with self.__db_session_manager.session() as session:
-                partner_query = select(
-                    Partner.id.label("partner_id"),
-                    Partner.name.label("name"),
-                ).where(Partner.id == partner_id, Partner.is_active == True)
-
-                partner_result = await session.execute(partner_query)
-                partner_row = partner_result.mappings().first()
-
-                if not partner_row:
-                    self.__logger.error(
-                        f"Partner not found for partner_id: {partner_id}"
-                    )
-                    raise GrpcException(
-                        details="Partner not found",
-                        status_code=StatusCode.NOT_FOUND,
-                    )
-
-                address_query = select(
-                    PartnerAddress.id,
-                    PartnerAddress.address_1,
-                    PartnerAddress.address_2,
-                    PartnerAddress.address_type,
-                    PartnerAddress.city,
-                    PartnerAddress.state,
-                    PartnerAddress.country,
-                    PartnerAddress.pincode,
-                ).where(PartnerAddress.partner_id == partner_id)
-
-                address_result = await session.execute(address_query)
-                address_rows = address_result.mappings().all()
-
-                user_query = select(
-                    User.id,
-                    User.name,
-                    User.email,
-                    User.phone_number,
-                    User.alternate_phone_number,
-                ).where(
-                    (User.partner_id == partner_id)
-                    & (User.is_maglo_publisher.is_(True))
-                    & (User.is_active.is_(True))
-                )
-
-                user_result = await session.execute(user_query)
-                user_rows = user_result.mappings().all()
-
-                # Construct response
-                partner_detail = PublisherDetails(
-                    partner_id=partner_row["partner_id"],
-                    name=partner_row["name"],
-                )
-
-                address_details = [
-                    PublisherAddressDetail(
-                        id=row["id"],
-                        address_1=row["address_1"],
-                        address_2=row["address_2"] or "",
-                        address_type=row["address_type"],
-                        city=row["city"],
-                        state=row["state"],
-                        country=row["country"],
-                        pincode=row["pincode"],
-                    )
-                    for row in address_rows
-                ]
-
-                user_details = [
-                    PublisherUserDetail(
-                        id=row["id"],
-                        name=row["name"],
-                        email=row["email"],
-                        phone_number=row["phone_number"],
-                        alternate_phone_number=row["alternate_phone_number"],
-                    )
-                    for row in user_rows
-                ]
-
-                self.__logger.info(
-                    f"Publisher data retrieved for partner_id: {partner_id}"
-                )
-
-                return GetPublisherDataResponse(
-                    message="Success",
-                    partner_detail=partner_detail,
-                    address_details=address_details,
-                    user_details=user_details,
-                )
-
-        except Exception as exc:
-            self.__logger.error(f"Error fetching publisher data: {exc}")
-            raise GrpcException(
-                details=RPCExceptionMsg.ERROR_MSG,
-                status_code=StatusCode.INTERNAL,
-            )
-
-    async def GetAllPublishers(self, request, context):
-        try:
-
-            async with self.__db_session_manager.session() as session:
-                self.__logger.info("Fetching all publishers")
-                query = select(Partner.id, Partner.name).where(
-                    Partner.is_maglo_publisher == True
-                )
-                result = await session.execute(query)
-
-                publishers = []
-                for (
-                    id_,
-                    name,
-                ) in result.all():  # result.all() returns list of tuples (id, name)
-                    publishers.append(PublisherSummary(id=id_, name=name))
-
-                response = GetAllPublishersResponse(
-                    message="Publishers fetched successfully", publishers=publishers
-                )
-                return response
-
-        except Exception as exc:
-            self.__logger.error(f"Error fetching partner details: {exc}")
-            raise GrpcException(
-                details=RPCExceptionMsg.ERROR_MSG,
-                status_code=StatusCode.INTERNAL,
-            )
-
-    @inject
     async def GetActiveUsersByPartnerId(
         self,
         request,
@@ -1054,7 +877,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         console_service: UserService = Depends(Provide[Container.console_service]),
     ):
         try:
-            partner_id: int = request.partner_id
+            partner_id: UUID = parse_uuid(request.partner_id, "partner_id")
             self.__logger.info(
                 "Get All Active User throough RPC for partner ID: {}".format(partner_id)
             )
@@ -1063,7 +886,7 @@ class AuthServiceGRPC(AuthServiceServicer):
             )
             result = [
                 ActiveUserDetails(
-                    id=user.get("id"),
+                    id=uuid_str(user.get("id")),
                     name=user.get("name"),
                     email=user.get("email"),
                     phone_number=user.get("phone_number"),
@@ -1109,8 +932,8 @@ class AuthServiceGRPC(AuthServiceServicer):
                 - message (str): A success message indicating the operation was successful.
                 - user_details (list): A list of UserParentDetail objects, each with user ID, name, parent ID, and parent name.
         """
-        user_ids = request.user_ids
-        self.__logger.info(f"Fetching parent details for user_ids: {user_ids}")
+        user_ids = parse_uuid_list(request.user_ids, "user_ids")
+        self.__logger.info(f"Fetching parent details for user_ids: {uuid_list_str(user_ids)}")
 
         try:
             async with self.__db_session_manager.session() as session:
@@ -1135,9 +958,9 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 user_details = [
                     UserParentDetail(
-                        user_id=row["user_id"],
+                        user_id=uuid_str(row["user_id"]),
                         name=row["name"],
-                        parent_id=row["parent_id"] or 0,
+                        parent_id=uuid_str(row["parent_id"]),
                         parent_name=row["parent_name"] or "",
                     )
                     for row in rows
@@ -1170,7 +993,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         RPC method for get partner meta data details
         """
         try:
-            partner_id = request.partner_id
+            partner_id = parse_uuid(request.partner_id, "partner_id")
             meta_data = (
                 await partner_meta_data_service.get_partner_meta_data_by_partner_id(
                     partner_id
@@ -1203,11 +1026,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                 type_of_business=meta_data.type_of_business,
                 years_in_business=meta_data.years_in_business,
                 annual_revenue=meta_data.annual_revenue,
-                is_maglo_enabled=services_enabled_dict.get("is_maglo_enabled", False),
                 is_talko_enabled=services_enabled_dict.get("is_talko_enabled", False),
-                is_babbler_enabled=services_enabled_dict.get(
-                    "is_babbler_enabled", False
-                ),
                 can_create_deals=services_enabled_dict.get("can_create_deals", False),
                 can_add_workflow=services_enabled_dict.get("can_add_workflow", False),
                 can_view_workflow=services_enabled_dict.get("can_view_workflow", False),
@@ -1234,7 +1053,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                 is_add_number_enabled=services_enabled_dict.get("is_add_number_enabled", False),
                 is_obotaai_enabled=services_enabled_dict.get("is_obotaai_enabled", False),
                 team_strict_hierarchy_mode=get_str_value("team_strict_hierarchy_mode"),
-                team_strict_hierarchy_start_role_id=int(services_enabled_dict.get("team_strict_hierarchy_start_role_id") or 0),
+                team_strict_hierarchy_start_role_id=uuid_str(services_enabled_dict.get("team_strict_hierarchy_start_role_id")),
                 is_user_tracker_enabled=services_enabled_dict.get("is_user_tracker_enabled", False),
                 can_view_report_management=services_enabled_dict.get("can_view_report_management", False),
                 can_view_helpdesk_management=services_enabled_dict.get("can_view_helpdesk_management", False),
@@ -1258,7 +1077,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         Returns plain dict (no schema).
         """
         try:
-            partner_id = request.partner_id
+            partner_id = parse_uuid(request.partner_id, "partner_id")
             service_name = request.service_name or None
             transaction_type = request.transaction_type or None
 
@@ -1292,14 +1111,14 @@ class AuthServiceGRPC(AuthServiceServicer):
             # Prepare plain dict response
             return {
                 "wallet": {
-                    "wallet_id": wallet.id,
+                    "wallet_id": uuid_str(wallet.id),
                     "balance": wallet.balance,
                     "frozen_balance": wallet.frozen_balance,
                     "currency": wallet.currency,
                 },
                 "transactions": [
                     {
-                        "id": tx.id,
+                        "id": uuid_str(tx.id),
                         "amount": tx.amount,
                         "service_name": tx.service_name,
                         "transaction_type": tx.transaction_type,
@@ -1328,7 +1147,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         api_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
     ):
         try:
-            partner_id: int = request.partner_id
+            partner_id: UUID = parse_uuid(request.partner_id, "partner_id")
             self.__logger.info(f"Getting API Key for partner Partner ID: {partner_id}")
             api_key_response: ApiKeyResponse = await api_service.workflow_get_api_key(
                 partner_id=partner_id
@@ -1346,13 +1165,12 @@ class AuthServiceGRPC(AuthServiceServicer):
             return GetPartnerApiKeyResponse(api_key="None")
 
     async def GetUserParentHierarchy(self, request, context):
-        user_id = request.user_id
-
-        if not user_id:
+        if not request.user_id:
             raise GrpcException(
                 details=RPCExceptionMsg.USER_ID_NOT_FOUND,
                 status_code=StatusCode.INVALID_ARGUMENT,
             )
+        user_id = parse_uuid(request.user_id, "user_id")
 
         try:
             async with self.__db_session_manager.session() as session:
@@ -1400,7 +1218,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 parents = [
                     ParentUser(
-                        user_id=row.user_id,
+                        user_id=uuid_str(row.user_id),
                         name=row.name,
                         role=row.role,
                         role_hierarchy=row.role_hierarchy,
@@ -1426,7 +1244,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         Returns CountryDetail (id, name, slug) for each found country.
         IDs not found in DB are silently omitted from the response.
         """
-        ids = list(request.ids)
+        ids = parse_uuid_list(request.ids, "ids")
 
         if not ids:
             raise GrpcException(
@@ -1436,7 +1254,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
         try:
             async with self.__db_session_manager.session() as session:
-                self.__logger.info("GetCountriesByIds called with ids: {}".format(ids))
+                self.__logger.info("GetCountriesByIds called with ids: {}".format(uuid_list_str(ids)))
 
                 query = select(Countries).where(Countries.id.in_(ids))
                 result = await session.execute(query)
@@ -1444,7 +1262,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 countries = [
                     CountryDetail(
-                        id=row.id,
+                        id=uuid_str(row.id),
                         name=row.name,
                         slug=row.slug,
                     )
@@ -1477,7 +1295,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         Returns StateDetail (id, name, slug, country_id) for each found state.
         IDs not found in DB are silently omitted from the response.
         """
-        ids = list(request.ids)
+        ids = parse_uuid_list(request.ids, "ids")
 
         if not ids:
             raise GrpcException(
@@ -1487,7 +1305,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
         try:
             async with self.__db_session_manager.session() as session:
-                self.__logger.info("GetStatesByIds called with ids: {}".format(ids))
+                self.__logger.info("GetStatesByIds called with ids: {}".format(uuid_list_str(ids)))
 
                 query = select(States).where(States.id.in_(ids))
                 result = await session.execute(query)
@@ -1495,10 +1313,10 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 states = [
                     StateDetail(
-                        id=row.id,
+                        id=uuid_str(row.id),
                         name=row.name,
                         slug=row.slug,
-                        country_id=row.country_id,
+                        country_id=uuid_str(row.country_id),
                     )
                     for row in rows
                 ]
@@ -1529,7 +1347,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         Returns CityDetail (id, name, slug, state_id) for each found city.
         IDs not found in DB are silently omitted from the response.
         """
-        ids = list(request.ids)
+        ids = parse_uuid_list(request.ids, "ids")
 
         if not ids:
             raise GrpcException(
@@ -1539,7 +1357,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
         try:
             async with self.__db_session_manager.session() as session:
-                self.__logger.info("GetCitiesByIds called with ids: {}".format(ids))
+                self.__logger.info("GetCitiesByIds called with ids: {}".format(uuid_list_str(ids)))
 
                 query = select(Cities).where(Cities.id.in_(ids))
                 result = await session.execute(query)
@@ -1547,10 +1365,10 @@ class AuthServiceGRPC(AuthServiceServicer):
 
                 cities = [
                     CityDetail(
-                        id=row.id,
+                        id=uuid_str(row.id),
                         name=row.name,
                         slug=row.slug,
-                        state_id=row.state_id,
+                        state_id=uuid_str(row.state_id),
                     )
                     for row in rows
                 ]
@@ -1599,7 +1417,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                 result = await session.execute(query)
                 rows = result.scalars().all()
                 countries = [
-                    CountryDetail(id=row.id, name=row.name, slug=row.slug)
+                    CountryDetail(id=uuid_str(row.id), name=row.name, slug=row.slug)
                     for row in rows
                 ]
                 self.__logger.info(
@@ -1626,7 +1444,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         used to disambiguate states with identical names across countries.
         """
         raw_names = list(request.names)
-        country_ids = list(request.country_ids)
+        country_ids = parse_uuid_list(request.country_ids, "country_ids")
         if not raw_names:
             raise GrpcException(
                 details="names must be a non-empty list of state name strings",
@@ -1637,7 +1455,7 @@ class AuthServiceGRPC(AuthServiceServicer):
             async with self.__db_session_manager.session() as session:
                 self.__logger.info(
                     "GetStatesByNames called with names: {}, country_ids: {}".format(
-                        raw_names, country_ids
+                        raw_names, uuid_list_str(country_ids)
                     )
                 )
                 query = select(States).where(
@@ -1649,10 +1467,10 @@ class AuthServiceGRPC(AuthServiceServicer):
                 rows = result.scalars().all()
                 states = [
                     StateDetail(
-                        id=row.id,
+                        id=uuid_str(row.id),
                         name=row.name,
                         slug=row.slug,
-                        country_id=row.country_id,
+                        country_id=uuid_str(row.country_id),
                     )
                     for row in rows
                 ]
@@ -1678,7 +1496,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         used to disambiguate cities with identical names across states.
         """
         raw_names = list(request.names)
-        state_ids = list(request.state_ids)
+        state_ids = parse_uuid_list(request.state_ids, "state_ids")
         if not raw_names:
             raise GrpcException(
                 details="names must be a non-empty list of city name strings",
@@ -1689,7 +1507,7 @@ class AuthServiceGRPC(AuthServiceServicer):
             async with self.__db_session_manager.session() as session:
                 self.__logger.info(
                     "GetCitiesByNames called with names: {}, state_ids: {}".format(
-                        raw_names, state_ids
+                        raw_names, uuid_list_str(state_ids)
                     )
                 )
                 query = select(Cities).where(
@@ -1701,7 +1519,10 @@ class AuthServiceGRPC(AuthServiceServicer):
                 rows = result.scalars().all()
                 cities = [
                     CityDetail(
-                        id=row.id, name=row.name, slug=row.slug, state_id=row.state_id
+                        id=uuid_str(row.id),
+                        name=row.name,
+                        slug=row.slug,
+                        state_id=uuid_str(row.state_id),
                     )
                     for row in rows
                 ]
@@ -1729,7 +1550,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         Return all active, non-deleted roles.
 
         Called with an empty GetAllRolesRequest — no filter parameters.
-        The caller (Maglo) fetches the full list and validates locally
+        The caller fetches the full list and validates locally
         rather than making repeated per-ID calls.
 
         Response fields:
@@ -1748,7 +1569,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
             role_details = [
                 RoleDetail(
-                    id=r["id"],
+                    id=uuid_str(r["id"]),
                     name=r["name"],
                     slug=r["slug"],
                     hierarchy=r["hierarchy"],
@@ -1785,7 +1606,7 @@ class AuthServiceGRPC(AuthServiceServicer):
         member_details: List[TeamMemberDetail] = []
         for member in members:
             # Effective role = per-team override if set, else the user's role.
-            effective_role_id: Optional[int] = member.role_id
+            effective_role_id: Optional[UUID] = member.role_id
             if effective_role_id is None:
                 effective_role_id = (
                     await session.execute(
@@ -1811,7 +1632,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
             member_details.append(
                 TeamMemberDetail(
-                    user_id=member.user_id,
+                    user_id=uuid_str(member.user_id),
                     effective_role=role_slug,
                     hierarchy=role_hierarchy,
                     data_scope=role_data_scope,
@@ -1819,17 +1640,17 @@ class AuthServiceGRPC(AuthServiceServicer):
             )
 
         return TeamDetail(
-            team_id=team.id,
+            team_id=uuid_str(team.id),
             name=team.name or "",
-            partner_id=team.partner_id or 0,
-            parent_team_id=team.parent_team_id or 0,
+            partner_id=uuid_str(team.partner_id),
+            parent_team_id=uuid_str(team.parent_team_id),
             is_internal=bool(team.is_internal),
             members=member_details,
         )
 
     async def GetUserTeams(self, request, context):
         """Return all active teams a user belongs to (with members + roles)."""
-        user_id = request.user_id
+        user_id = parse_uuid(request.user_id, "user_id")
         self.__logger.info("GetUserTeams called for user_id={}".format(user_id))
         try:
             async with self.__db_session_manager.session() as session:
@@ -1854,7 +1675,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
     async def GetPartnerTeams(self, request, context):
         """Return all active teams of a partner (with members + roles)."""
-        partner_id = request.partner_id
+        partner_id = parse_uuid(request.partner_id, "partner_id")
         self.__logger.info("GetPartnerTeams called for partner_id={}".format(partner_id))
         try:
             async with self.__db_session_manager.session() as session:
@@ -1877,7 +1698,7 @@ class AuthServiceGRPC(AuthServiceServicer):
 
     async def GetTeamMembers(self, request, context):
         """Return the members of a team as directory UserDetail records."""
-        team_id = request.team_id
+        team_id = parse_uuid(request.team_id, "team_id")
         self.__logger.info("GetTeamMembers called for team_id={}".format(team_id))
         try:
             async with self.__db_session_manager.session() as session:
@@ -1916,7 +1737,7 @@ class AuthServiceGRPC(AuthServiceServicer):
                             role_hierarchy = role_row.hierarchy or 0
                     members.append(
                         UserDetail(
-                            user_id=row.id,
+                            user_id=uuid_str(row.id),
                             email=row.email or "",
                             is_active=bool(row.is_active),
                             is_suspended=bool(row.is_suspended),

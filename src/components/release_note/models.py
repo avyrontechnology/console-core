@@ -1,15 +1,10 @@
-from sqlalchemy import (
-    Column,
-    String,
-    JSON,
-    Integer,
-    Boolean,
-    Text,
-)
+import uuid
+from uuid import UUID
+from sqlalchemy import Column, String, JSON, Boolean, Text
+from sqlalchemy.dialects.postgresql import UUID
 from typing import Optional
 import time
 from src.components.database.base_model import MetaData
-from src.components.digital_assets.storage.helper import StorageHelper
 
 
 class ReleaseNotes(MetaData):
@@ -17,7 +12,7 @@ class ReleaseNotes(MetaData):
 
 
     title = Column(String(255), nullable=False)
-    partner_id = Column(Integer, nullable=False)
+    partner_id = Column(UUID(as_uuid=True), nullable=False)
     da_file_path = Column(String(255), nullable=True)
     version_history = Column(JSON, nullable=True, default=list)    
     is_active = Column(Boolean, default=True, nullable=False)
@@ -33,7 +28,7 @@ class ReleaseNotes(MetaData):
         description: str,
         file_path: str,
         markup: Optional[str],
-        user_id: int,
+        user_id: UUID,
     ) -> None:
         """
         Maintain last 5 versions only
@@ -51,8 +46,7 @@ class ReleaseNotes(MetaData):
                 "title": self.title,
                 "description": self.description,
                 "file_path": self.da_file_path,
-                "file_url": StorageHelper.get_presigned_url(self.da_file_path)
-                if self.da_file_path else None,
+                "file_url": None,
                 "updated_at": self.created_at,
                 "markup": self.markup,
                 "updated_by": self.created_by,
@@ -68,9 +62,7 @@ class ReleaseNotes(MetaData):
             "title": title,
             "description": description,
             "file_path": file_path,
-            "file_url": StorageHelper.get_presigned_url(file_path)
-            if file_path
-            else None,
+            "file_url": None,
             "updated_at": int(time.time() * 1000),
             "markup": markup,  
             "updated_by": user_id,

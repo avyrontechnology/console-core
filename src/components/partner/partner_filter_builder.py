@@ -9,7 +9,6 @@ from src.components.common.datetime import DateTimeUtil
 from src.components.filters.builder import BaseFilterBuilder
 from src.components.filters.criteria import BaseFilterCriteria
 from src.components.partner.models import Partner
-from src.components.partner_config.models import PartnerConfig
 from src.components.partner_meta_data.models import PartnerMetaData
 from src.components.user.models import User
 from src.exceptions import PartnerException
@@ -46,19 +45,6 @@ class PartnerFilterBuilder(BaseFilterBuilder):
             )
             return query.where(subquery)
 
-        if field_name == "is_partner_paid":
-            paid_alaias = aliased(PartnerConfig)
-            subquery = (
-                select(literal_column("1"))
-                .where(
-                    paid_alaias.partner_id == Partner.id,
-                    paid_alaias.key == "is_maglo_enabled",
-                    cast(paid_alaias.value, String) == "true",
-                )
-                .exists()
-            )
-            return query.where(subquery if value else ~subquery)
-
         if field_name == "is_free_trial_enabled":
             meta_alias = aliased(PartnerMetaData)
             current_time_ms = DateTimeUtil.get_current_time()
@@ -66,8 +52,8 @@ class PartnerFilterBuilder(BaseFilterBuilder):
                 select(literal_column("1"))
                 .where(
                     meta_alias.partner_id == Partner.id,
-                    meta_alias.maglo_trail_expiry_time != None,
-                    meta_alias.maglo_trail_expiry_time > current_time_ms,
+                    meta_alias.talko_trail_expiry_time != None,
+                    meta_alias.talko_trail_expiry_time > current_time_ms,
                 )
                 .exists()
             )

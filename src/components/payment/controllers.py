@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List
 
 from dependency_injector.wiring import Provide, inject
@@ -47,7 +48,7 @@ class PaymentController:
             logger (ConsoleServiceLogger): Logger instance DI.
         """
         try:
-            partner_id: int = request.state.user.get(TokenKeys.PARTNER_ID)
+            partner_id: UUID = request.state.user.get(TokenKeys.PARTNER_ID)
 
             logger.info("Fetching payment history for partner_id={}".format(partner_id))
 

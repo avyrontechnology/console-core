@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -38,7 +39,7 @@ class TestUserTrackerRepository:
     async def test_get_user_current_status_success_with_value(self):
         """Test successfully getting user current status when user has a value"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         expected_status = "On Break"
         expected_icon = "#123456"
 
@@ -65,7 +66,7 @@ class TestUserTrackerRepository:
     async def test_get_user_current_status_success_with_null(self):
         """Test getting user current status when DB value is NULL (falls back to AWAY)"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Create a mock user with null status
         user_mock = MagicMock(spec=User)
@@ -86,7 +87,7 @@ class TestUserTrackerRepository:
     async def test_get_user_current_status_user_not_found(self):
         """Test when user does not exist"""
         # Arrange
-        user_id = 999
+        user_id= UUID("99999999-9999-9999-9999-999999999999")
 
         # Create a mock result that returns None
         result_mock = MagicMock()
@@ -102,7 +103,7 @@ class TestUserTrackerRepository:
     async def test_get_user_current_status_db_error(self):
         """Test database error during fetch"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.mock_session.execute = AsyncMock(side_effect=SQLAlchemyError("DB connection error"))
 
@@ -118,7 +119,7 @@ class TestUserTrackerRepository:
     async def test_update_user_current_status_success(self):
         """Test successfully updating user status"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "Offline"
         previous_status = "Active"
         new_icon = "#654321"
@@ -147,7 +148,7 @@ class TestUserTrackerRepository:
     async def test_update_user_current_status_with_null_previous(self):
         """Test updating status when previous was NULL"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "On Break"
 
         # Create a mock user with null status
@@ -170,7 +171,7 @@ class TestUserTrackerRepository:
     async def test_update_user_current_status_user_not_found(self):
         """Test updating status for non-existent user"""
         # Arrange
-        user_id = 999
+        user_id= UUID("99999999-9999-9999-9999-999999999999")
         new_status = "Active"
 
         # Create a mock result that returns None
@@ -187,7 +188,7 @@ class TestUserTrackerRepository:
     async def test_update_user_current_status_db_error(self):
         """Test database error during update"""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         new_status = "Active"
 
         # Create a mock user
@@ -210,7 +211,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_success_new_format(self):
         """Test getting custom statuses with new format data"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         expected_data = {
             "uuid1": {"display_id": "custom_1", "name": "In Meeting"},
             "uuid2": {"display_id": "custom_2", "name": "Remote"}
@@ -237,7 +238,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_success_old_format_migration(self):
         """Test getting custom statuses with old format (string values) and migrating"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         old_format_data = {
             "key1": "In Meeting",
             "key2": "Remote"
@@ -269,7 +270,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_no_config(self):
         """Test when no config exists for partner"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         # Create mock scalars result that returns None
         scalars_mock = MagicMock()
@@ -288,7 +289,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_db_error(self):
         """Test database error during fetch"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         self.mock_session.execute = AsyncMock(side_effect=SQLAlchemyError("DB error"))
 
@@ -301,7 +302,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_migration_with_existing_display_ids(self):
         """Test migration when some entries already have display_ids"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         mixed_data = {
             "uuid1": {"display_id": "custom_5", "name": "Meeting"},
             "key2": "Remote"  # old format
@@ -331,7 +332,7 @@ class TestUserTrackerRepository:
     async def test_get_custom_statuses_migration_with_malformed_display_ids(self):
         """Test migration when display_ids are malformed"""
         # Arrange
-        partner_id = 100
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         mixed_data = {
             "uuid1": {"display_id": "custom_abc", "name": "Meeting"},
             "key2": "Remote"  # old format
@@ -363,8 +364,8 @@ class TestUserTrackerRepository:
     async def test_upsert_custom_statuses_update_existing(self):
         """Test updating existing custom statuses config"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         custom_statuses = {
             "uuid1": {"display_id": "custom_1", "name": "Updated Name"}
         }
@@ -396,8 +397,8 @@ class TestUserTrackerRepository:
     async def test_upsert_custom_statuses_create_new(self):
         """Test creating new custom statuses config"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         custom_statuses = {
             "uuid1": {"display_id": "custom_1", "name": "New Status"}
         }
@@ -463,8 +464,8 @@ class TestUserTrackerRepository:
     async def test_upsert_custom_statuses_db_error(self):
         """Test database error during upsert"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         custom_statuses = {"uuid1": {"display_id": "custom_1", "name": "Test"}}
 
         self.mock_session.execute = AsyncMock(side_effect=SQLAlchemyError("Upsert failed"))

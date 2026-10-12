@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Dict, List, Optional, Type, Union
 
 from sqlalchemy import update
@@ -13,7 +14,6 @@ from src.components.db_constants.models import (
     MediaConstants,
 )
 from src.components.db_constants.schema import ConstantResponseSchema
-from src.components.digital_assets.models import DigitalAssets
 from src.loggers.console_service_logger import ConsoleServiceLogger
 
 
@@ -38,38 +38,21 @@ class ConstantsRepository:
                 self.console_service_logger.info(
                     "Fetching constants for model type: {}".format(constant_model)
                 )
-                media_models: bool = constant_model in [
-                    MediaConstants,
-                    GlobalMediaConstants,
-                ]
-                stmt: Select[Type[ConstantsBase]] = (
-                    select(constant_model).options(joinedload(constant_model.media))
-                    if media_models
-                    else select(constant_model)
+                result: ScalarResult[ConstantsBase] = await session.execute(
+                    select(constant_model)
                 )
-                result: ScalarResult[ConstantsBase] = await session.execute(stmt)
                 constants: List[ConstantsBase] = result.scalars().all()
 
                 constants_schema: List[ConstantResponseSchema] = [
                     ConstantResponseSchema(
                         id=constant.id,
                         name=constant.name,
-                        value=(
-                            constant.media.name
-                            if media_models and constant.media
-                            else constant.value
-                        ),
+                        value=constant.value,
                         description=constant.description,
                         version=constant.version,
                         updated_by=constant.updated_by,
                         updated_at=constant.updated_at,
-                        additional_info=(
-                            await self.update_additional_info_for_media_constants(
-                                constant.additional_info
-                            )
-                            if media_models and constant.additional_info
-                            else constant.additional_info
-                        ),
+                        additional_info=constant.additional_info,
                     )
                     for constant in constants
                 ]
@@ -80,37 +63,8 @@ class ConstantsRepository:
                 )
                 raise e
 
-    async def update_additional_info_for_media_constants(
-        self, additional_info: Dict[str, Union[int, str]]
-    ) -> Dict[str, Union[int, str]]:
-        """
-        Fetch media names for foreign key values in additional_info.
-        """
-        asset_ids: set[int] = {
-            value for value in additional_info.values() if isinstance(value, int)
-        }
-
-        try:
-            async with self.session_factory() as session:
-                media_results: ScalarResult[DigitalAssets] = await session.execute(
-                    select(DigitalAssets.id, DigitalAssets.name).filter(
-                        DigitalAssets.id.in_(asset_ids)
-                    )
-                )
-                media_objects: Dict[int, str] = {
-                    media.id: media.name for media in media_results.all()
-                }
-
-            return {
-                key: media_objects.get(value, value)
-                for key, value in additional_info.items()
-            }
-        except Exception as e:
-            self.console_service_logger.error(f"Error fetching media: {e}")
-            return additional_info
-
     async def get_constant_by_id(
-        self, constant_model: type[ConstantsBase], id: int
+        self, constant_model: type[ConstantsBase], id: UUID
     ) -> List[ConstantResponseSchema]:
         """
         Retrieve a constant by its ID from the database.
@@ -139,12 +93,12 @@ class ConstantsRepository:
 
     async def update_constant(
         self,
-        id: int,
+        id: UUID,
         constant_model: Type[ConstantsBase],
         value: object,
         version: int,
         additional_info: Dict[str, Union[int, str]],
-        user_id: int = int,
+        user_id: UUID = int,
         description: Optional[str] = None,
     ) -> List[ConstantResponseSchema]:
         """
@@ -198,11 +152,11 @@ class ConstantsRepository:
 
     async def rollback_version(
         self,
-        id: int,
+        id: UUID,
         constant_model: Type[ConstantsBase],
         value: object,
         version: int,
-        user_id: int,
+        user_id: UUID,
         additional_info: Dict[str, Union[int, str]],
     ) -> List[ConstantResponseSchema]:
         """

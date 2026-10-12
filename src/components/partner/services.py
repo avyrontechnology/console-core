@@ -1,12 +1,10 @@
-import asyncio
+from uuid import UUID
 import copy
 import json
 from typing import Any, List, Optional
-from starlette_context import context as request_context
 
-import httpx
 from dependency_injector.wiring import Provide
-from fastapi import Depends, Request, UploadFile
+from fastapi import Depends, Request
 from sqlalchemy.exc import IntegrityError
 
 from src.components.audit_log.schema import AuditLogSchema
@@ -19,9 +17,6 @@ from src.components.common.actions import AuditActions
 from src.components.common.constants import CurrentUserMap
 from src.components.common.datetime import DateTimeUtil
 from src.components.common.resources import Resource
-from src.components.digital_assets.constants import DigitalAssetEnum
-from src.components.digital_assets.schema import UploadDigitalAssetResponse
-from src.components.digital_assets.services import DigitalAssetService
 from src.components.partner.constant import (
     PartnerResponseData,
     PartnerStatus,
@@ -49,7 +44,6 @@ from src.components.session_mangement.services import UserSessionService
 from src.components.user.services import UserService
 from src.components.wallet.errors import WalletAlreadyExistsError
 from src.components.wallet.services import WalletService
-from src.core.environment import ENV
 from src.core.redis import RedisCache
 from src.exceptions import (
     AuthException,
@@ -67,13 +61,11 @@ class PartnerService:
         audit_service: AuditService,
         console_service_logger: ConsoleServiceLogger,
         partner_service_cache: CacheHelper,
-        digital_asset_service: DigitalAssetService,
     ) -> None:
         self.__repository: PartnerRepository = partner_repository
         self.__audit_service: AuditService = audit_service
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
         self.__partner_service_cache: CacheHelper = partner_service_cache
-        self.__digital_asset_service: DigitalAssetService = digital_asset_service
 
     async def enlist_partners_dynamically(
         self,
@@ -85,7 +77,7 @@ class PartnerService:
         ),
     ) -> dict[str, Any]:
         try:
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not await user_service.is_user_internal(user_id):
                 raise AuthException()
             self.__console_service_logger.info("Getting all partners from database.")
@@ -104,7 +96,7 @@ class PartnerService:
             )
             raise ex
 
-    async def get_partner_by_id(self, partner_id: int) -> Partner:
+    async def get_partner_by_id(self, partner_id: UUID) -> Partner:
         try:
             self.__console_service_logger.info(
                 "Getting the partner with id :{} ".format(partner_id)
@@ -168,12 +160,6 @@ class PartnerService:
 
             await self.__audit_service.log_action(log_entry)
 
-            if partner_data.is_maglo_publisher:
-                await self.__partner_service_cache.clear_pattern(
-                    prefix=RedisCache.KeysPrefix.MAGLO,
-                    pattern=CacheKeys.GRPC_GET_ALL_PUBLISHERS,
-                )
-
             return created_partner
 
         except IntegrityError as ex:
@@ -196,7 +182,7 @@ class PartnerService:
             )
             raise ex
 
-    async def delete_partner_by_id(self, partner_id: int, current_user: dict) -> None:
+    async def delete_partner_by_id(self, partner_id: UUID, current_user: dict) -> None:
         try:
 
             self.__console_service_logger.info(
@@ -220,21 +206,6 @@ class PartnerService:
             )
             await self.__audit_service.log_action(log_entry)
 
-            cache_patterns: list = [
-                CacheKeys.GRPC_GET_USER_DETAILS.format(partner_id, ""),
-                CacheKeys.HOME_PAGE.format(partner_id, ""),
-                CacheKeys.GRPC_GET_PARTNER_DETAILS.format(partner_id),
-                CacheKeys.GRPC_GET_PUBLISHER_DATA.format(partner_id),
-            ]
-
-            if deleted_partner.is_maglo_publisher:
-                cache_patterns.append(CacheKeys.GRPC_GET_ALL_PUBLISHERS)
-
-            await self.__partner_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=cache_patterns,
-            )
-
             return deleted_partner
         except PartnerNotFoundError as ex:
             self.__console_service_logger.error(
@@ -250,7 +221,7 @@ class PartnerService:
             raise ex
 
     async def update_partner(
-        self, partner_id: int, partner_data: UpdatePartnerRequest, current_user: dict
+        self, partner_id: UUID, partner_data: UpdatePartnerRequest, current_user: dict
     ) -> Partner:
         try:
             user_id = current_user.get(CurrentUserMap.USER_ID)
@@ -288,21 +259,6 @@ class PartnerService:
             )
             await self.__audit_service.log_action(log_entry)
 
-            cache_pattern: list = [
-                CacheKeys.HOME_PAGE.format(partner_id, ""),
-                CacheKeys.GRPC_GET_USER_DETAILS.format(partner_id, ""),
-                CacheKeys.GRPC_GET_PARTNER_DETAILS.format(partner_id),
-                CacheKeys.GRPC_GET_PUBLISHER_DATA.format(partner_id),
-            ]
-
-            if updated_partner.is_maglo_publisher:
-                cache_pattern.append(CacheKeys.GRPC_GET_ALL_PUBLISHERS)
-
-            await self.__partner_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=cache_pattern,
-            )
-
             return updated_partner_response
 
         except PartnerNotFoundError as exec:
@@ -320,60 +276,6 @@ class PartnerService:
         except Exception as ex:
             self.__console_service_logger.error(
                 "Error while update Partner: {}".format(str(ex))
-            )
-            raise ex
-
-    async def upload_partner_profile(
-        self,
-        partner_id: int,
-        current_user: dict,
-        partner_logo: UploadFile,
-    ) -> None:
-        try:
-            self.__console_service_logger.info(
-                "Received the partner logo for partner id : {}".format(partner_id)
-            )
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            created_partner: Partner = await self.__repository.get_by_id(partner_id)
-            if not created_partner:
-                raise PartnerNotFoundError("Partner not found: {}".format(partner_id))
-
-            digital_asset_response: UploadDigitalAssetResponse = (
-                await self.__digital_asset_service.create_digital_asset(
-                    partner_id=partner_id,
-                    asset_type=DigitalAssetEnum.CONSOLE_PARTNER_LOGO.name,
-                    input_file=partner_logo,
-                    user_id=user_id,
-                )
-            )
-
-            self.__console_service_logger.info(
-                f"Uploaded logo for partner: {partner_id}"
-            )
-            updated_partner: Partner = await self.__repository.update_partner_logo(
-                partner_id=partner_id,
-                partner_logo_id=digital_asset_response.id,
-                user_id=user_id,
-            )
-            updated_partner_with_logo: Partner = await self.__repository.get_by_id(
-                updated_partner.id
-            )
-
-            await self.__partner_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=CacheKeys.GRPC_GET_PARTNER_DETAILS.format(partner_id),
-            )
-
-            return updated_partner_with_logo
-
-        except PartnerNotFoundError as ex:
-            self.__console_service_logger.error(
-                "Error while uploading Partner logo: {}".format(str(ex))
-            )
-            raise ex
-        except Exception as ex:
-            self.__console_service_logger.error(
-                "Error while uploading Partner logo: {}".format(str(ex))
             )
             raise ex
 
@@ -399,7 +301,7 @@ class PartnerService:
 
     async def change_partner_status(
         self,
-        partner_id: int,
+        partner_id: UUID,
         status: Optional[str],
         is_feedback_enabled: Optional[bool],
     ) -> ChangePartnerStatusResponse:
@@ -439,20 +341,8 @@ class PartnerService:
             if not updated_partner:
                 raise ValueError(f"Partner with id={partner_id} not found or inactive")
 
-            cache_patterns: list = [
-                CacheKeys.GRPC_GET_PARTNER_DETAILS.format(partner_id),
-            ]
-
-            if is_feedback_enabled:
-                cache_patterns.append(CacheKeys.HOME_PAGE.format(partner_id, ""))
-
             self.__console_service_logger.info(
                 f"Successfully updated partner_id={partner_id}"
-            )
-
-            await self.__partner_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=cache_patterns,
             )
 
             return ChangePartnerStatusResponse(
@@ -499,9 +389,6 @@ class PartnerService:
                 partner_data.partner_meta_data
             )
             partner_details: PartnerDetails = partner_data.partner_details
-
-            # call external lead api for create lead
-            asyncio.create_task(self.call_external_lead_creation_api(user_details))
 
             # check partner is eligible for free trial
             await self.check_partner_free_trial_eligible(partner_data)
@@ -573,17 +460,9 @@ class PartnerService:
             DateTimeUtil.get_current_time()
             + (TrialPartnerConstant.TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000)
         )
-        if partner_meta_data_details.is_maglo_free_trial_enabled:
-            partner_meta_data_details.maglo_trail_expiry_time = expiry_time_ms
-            user_details.is_maglo_enabled = True
         if partner_meta_data_details.is_talko_free_trial__enabled:
             partner_meta_data_details.talko_trail_expiry_time = expiry_time_ms
             user_details.is_talko_enabled = True
-        if partner_meta_data_details.is_babbler_free_trial__enabled:
-            partner_meta_data_details.babbler_trail_expiry_time = expiry_time_ms
-            user_details.is_babbler_enabled = True
-        if partner_meta_data_details.is_maglo_app_free_trail_enabled:
-            partner_meta_data_details.maglo_app_trail_expiry_time = expiry_time_ms
 
     async def check_partner_free_trial_eligible(
         self, partner_data: PartnerOnboardingDetails
@@ -614,7 +493,7 @@ class PartnerService:
     async def toggle_partner_activation(
         self,
         current_user: dict,
-        partner_id: int,
+        partner_id: UUID,
         partner_data: TogglePartnerActivation,
         user_service: UserService = Depends(Provide["console_service"]),
         user_session_service: UserSessionService = Depends(
@@ -627,7 +506,7 @@ class PartnerService:
                     partner_id
                 )
             )
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not await user_service.is_user_internal(current_user_id):
                 self.__console_service_logger.error(
                     "Only internal team members can change the active status of partners"
@@ -651,13 +530,6 @@ class PartnerService:
                         partner_id
                     )
                 )
-            cache_patterns: list = [
-                CacheKeys.GRPC_GET_PARTNER_DETAILS.format(partner_id),
-                CacheKeys.GRPC_GET_PUBLISHER_DATA.format(partner_id),
-            ]
-            await self.__partner_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO, pattern=cache_patterns
-            )
             await self.__partner_service_cache.clear_pattern(
                 prefix=RedisCache.KeysPrefix.CONSOLE,
                 pattern=CacheKeys.TOKEN.format(partner_id, ""),
@@ -681,46 +553,3 @@ class PartnerService:
                 )
             )
             raise exec
-
-    async def call_external_lead_creation_api(self, user_details: UserDetails):
-        """Call the external lead API to create a lead."""
-        MAGLO_LEAD_INBOUND_API = ENV.MAGLO_LEAD_INBOUND_API
-        SOURCE_KEY = ENV.SOURCE_KEY
-        CHANNEL_KEY = ENV.CHANNEL_KEY
-        
-        client_type: str = request_context.get("client_type")
-        
-        headers = {
-            "accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Client-Type": client_type,
-        }
-
-        payload = {
-            "lead_data": {
-                "name": user_details.name,
-                "email": user_details.email,
-                "phone_number": user_details.phone_number,
-            },
-            "lead_source_dataset": {"channel": "free_trial", "campaign": "onboarding"},
-        }
-
-        url = f"{MAGLO_LEAD_INBOUND_API}?source_key={SOURCE_KEY}&channel_key={CHANNEL_KEY}"
-        self.__console_service_logger.info(
-            f"Calling external lead API with client_type={client_type}, url={url}"
-        )
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    url, headers=headers, json=payload, timeout=10.0
-                )
-                self.__console_service_logger.info(
-                    f"External lead API response [{response.status_code}]: {response.text}"
-                )
-                response.raise_for_status()
-                return True
-            except Exception as e:
-                self.__console_service_logger.error(
-                    f"Failed to call external lead API: {e}"
-                )
-                return None

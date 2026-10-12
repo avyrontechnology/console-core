@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, List, Optional, Tuple  
 
 from src.components.cache import TTL
@@ -64,7 +65,7 @@ class LocationService:
 
     async def get_states_by_country(
         self,
-        country_id: Optional[int],
+        country_id: Optional[UUID],
         search_by: str,
         limit: Optional[int] = None,   
         offset: Optional[int] = None,  
@@ -128,7 +129,7 @@ class LocationService:
 
     async def get_cities_by_state(
         self,
-        state_id: int,
+        state_id: UUID,
         search_by: str,
         limit: Optional[int] = None,  
         offset: Optional[int] = None, 
@@ -186,7 +187,7 @@ class LocationService:
             )
             raise ex
 
-    async def is_country_exists(self, country_id: int) -> bool:
+    async def is_country_exists(self, country_id: UUID) -> bool:
         try:
             exists: bool = await self.__repository.is_country_exists(country_id)
             return exists
@@ -196,7 +197,7 @@ class LocationService:
             )
             raise ex
 
-    async def is_state_exists(self, state_id: int) -> bool:
+    async def is_state_exists(self, state_id: UUID) -> bool:
         try:
             exists: bool = await self.__repository.is_state_exists(state_id)
             return exists
@@ -207,7 +208,7 @@ class LocationService:
             raise ex
 
     async def validate_location_hierarchy(
-        self, country_id: int, state_id: int, city_id: int
+        self, country_id: UUID, state_id: UUID, city_id: UUID
     ) -> None:
         """
         Validation method to ensure the hierarchy of country, state, and city is correct.

@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
@@ -5,10 +6,8 @@ from sqlalchemy import select, update, exists
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.components.auth.constant import TokenKeys
 from src.components.session_mangement.models import UserSession
 from src.components.user.models import User
-from src.components.user_config.models import UserConfig
 
 class UserSessionRepository:
     """Repository for handling CRUD operations for the UserSession model."""
@@ -64,7 +63,7 @@ class UserSessionRepository:
 
     async def deactivate_all_sessions_by_user_id(
         self,
-        user_id: int | list[int],
+        user_id: UUID | list[UUID],
         service_name:str | list[str] | None = None,
     ) -> int:
         """
@@ -85,8 +84,8 @@ class UserSessionRepository:
 
 
     async def deactivate_all_sessions_by_partner_id(
-        self, partner_id: int, service_name: str = None
-    ) -> Tuple[int, List[int]]:
+        self, partner_id: UUID, service_name: str = None
+    ) -> Tuple[int, List[UUID]]:
         """
         Deactivate all active user sessions belonging to a specific partner.
         Returns a tuple: (count of deactivated sessions, list of affected user IDs).
@@ -126,67 +125,6 @@ class UserSessionRepository:
 
             return deactivated_count, user_ids
 
-    async def deactivate_or_create_user_configs_by_user_ids(
-        self, user_ids: list[int], config: bool
-    ) -> int:
-        """
-        For given user_ids:
-        - If a UserConfig exists for key='is_maglo_enabled', set its value to False.
-        - If not exists, create it with value=False.
-        Returns total number of affected/created rows.
-        """
-        if not user_ids:
-            return 0
-
-        async with self.__session_factory() as session:
-            # 1️⃣ Fetch all configs where key='is_maglo_enabled' for given users
-            existing_configs = (
-                (
-                    await session.execute(
-                        select(UserConfig.user_id).where(
-                            UserConfig.user_id.in_(user_ids),
-                            UserConfig.key == TokenKeys.IS_MAGLO_ENABLED,
-                            UserConfig.is_active == True,
-                        )
-                    )
-                )
-                .scalars()
-                .all()
-            )
-
-            existing_user_ids = set(existing_configs)
-            missing_user_ids = set(user_ids) - existing_user_ids
-
-            # 2️⃣ Update existing configs
-            update_stmt = (
-                update(UserConfig)
-                .where(
-                    UserConfig.user_id.in_(existing_user_ids),
-                    UserConfig.key == TokenKeys.IS_MAGLO_ENABLED,
-                )
-                .values(value=config)
-                .execution_options(synchronize_session=False)
-            )
-            update_result = await session.execute(update_stmt)
-
-            # 3️⃣ Create configs for users who don't have it
-            new_configs = [
-                UserConfig(
-                    user_id=uid,
-                    key=TokenKeys.IS_MAGLO_ENABLED,
-                    value=config,
-                    is_active=True,
-                )
-                for uid in missing_user_ids
-            ]
-            session.add_all(new_configs)
-
-            await session.commit()
-
-            total_affected = (update_result.rowcount or 0) + len(new_configs)
-            return total_affected
-
-
     async def deactivate_all_sessions_by_service_name(
         self,
         service_name: str,
@@ -215,7 +153,7 @@ class UserSessionRepository:
 
     def _build_session_deactive_filters(
         self,
-        user_id: int | list[int],
+        user_id: UUID | list[UUID],
         service_names: str | list[str] | None = None,
     ):
         filters = [UserSession.is_active.is_(True)]
@@ -235,7 +173,7 @@ class UserSessionRepository:
 
     async def has_active_session(
             self, 
-            user_id: int, 
+            user_id: UUID, 
             current_time: int,
             service_name: str
         ) -> bool:

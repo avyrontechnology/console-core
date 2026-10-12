@@ -16,7 +16,7 @@ service UserService{
 
 // UserDetail message representing a user's directory information.
 message UserDetail {
-    int64 user_id = 1;        // User's ID.
+    string user_id = 1;        // User's ID.
     string email = 2;         // Email of the child user.
     string name = 3;          // Full name of the user.
     string role = 4;
@@ -24,7 +24,7 @@ message UserDetail {
 
 
 message GetPartnerUserDetailsByHierarchyRequest{
-    int64 partner_id = 1;
+    string partner_id = 1;
     int64 role_hierarchy_level = 2;
 }
 
@@ -36,13 +36,13 @@ message GetPartnerUserDetailsByHierarchyResponse{
 
 // UserAvailabilityStatus message representing a user's current status.
 message UserAvailabilityStatus {
-    int64 user_id = 1;        // User's ID.
+    string user_id = 1;        // User's ID.
     string current_status = 2; // User's current status (e.g. Active, On Break, Offline, or a partner-defined custom status).
 }
 
 
 message GetUsersAvailabilityStatusRequest {
-    repeated int64 user_ids = 1;
+    repeated string user_ids = 1;
 }
 
 

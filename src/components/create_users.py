@@ -1,3 +1,4 @@
+from uuid import UUID
 import asyncio
 import json
 import os
@@ -36,7 +37,7 @@ from src.core.db import DatabaseSessionManager
 
 # Constants
 PARTNER_ID = 2
-FILE_PATH = "User list of MBBS department for maglow.xlsx"
+FILE_PATH = "User list of MBBS department.xlsx"
 REPORT_FILE_PATH = "user_creation_report.xlsx"
 ROLE_IDS = {
     "ADMIN": 1,
@@ -170,9 +171,9 @@ async def create_user_directly(
     password: str,
     name: str,
     designation: str,
-    partner_id: int,
-    role_id: int,
-    parent_id: Optional[int] = None,
+    partner_id: UUID,
+    role_id: UUID,
+    parent_id: Optional[UUID] = None,
     phone_number: Optional[str] = None,
     db: DatabaseSessionManager = None,
 ) -> Optional[int]:

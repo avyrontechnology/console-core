@@ -2,13 +2,10 @@ from fastapi import APIRouter
 
 from src.components.api_key.controllers import ApiKeysController
 from src.components.auth.controller import AuthController
-from src.components.oauth_server import config as _oauth_cfg
-from src.components.oauth_server.controllers import OAuthController
 from src.components.common.controllers import AppConfigController
 from src.components.default_role_permission.controllers import (
     DefaultRolePermissionController,
 )
-from src.components.digital_assets.controllers import DigitalAssetController
 from src.components.location.controllers import LocationController
 from src.components.partner_address.controllers import PartnerAddressController
 from src.components.partner_config.controllers import PartnerConfigController
@@ -89,11 +86,6 @@ class Router:
         )
 
         router.include_router(
-            DigitalAssetController.digital_asset_router,
-            prefix="",
-            tags=["Digital Assets"],
-        )
-        router.include_router(
             ConstantsController.constants_router,
             prefix="",
             tags=["Constants"],
@@ -168,27 +160,3 @@ class Router:
             prefix="",
             tags=["Partner DB Config"],
         )
-
-        # ── OAuth 2.1 self-hosted server (gated by OAUTH_ENABLED) ─────────
-        # Three sub-routers, registered at the SAME parent prefix so the
-        # discovery (/.well-known/...), public (/oauth/register, /oauth/
-        # token, /oauth/authorize, ...) and authenticated (/oauth/consent
-        # /..., /oauth/authorize/continue) endpoints all live under the
-        # console-service prefix. AuthMiddleware exempts the public ones
-        # by path suffix (see middlewares/constants.py).
-        if _oauth_cfg.OAUTH_ENABLED:
-            router.include_router(
-                OAuthController.discovery_router,
-                prefix="",
-                tags=["OAuth Discovery"],
-            )
-            router.include_router(
-                OAuthController.oauth_public_router,
-                prefix="",
-                tags=["OAuth Public"],
-            )
-            router.include_router(
-                OAuthController.oauth_authenticated_router,
-                prefix="",
-                tags=["OAuth Authenticated"],
-            )

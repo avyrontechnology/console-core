@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -40,7 +41,7 @@ class TestPartnerAddressService:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
 
         self.address_data = Contrasts.AddressData(
@@ -51,14 +52,14 @@ class TestPartnerAddressService:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             is_address_same=True,
         )
 
     async def test_partner_exists_success(self):
         """Test checking if a partner exists and is active."""
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock repository's partner_exists method to return True
         self.address_repository_mock.partner_exists.return_value = True
 
@@ -79,7 +80,7 @@ class TestPartnerAddressService:
     async def test_partner_exists_handles_exception(self):
         """Test handling exceptions when checking if a partner exists."""
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock repository's partner_exists method to raise an exception
         self.address_repository_mock.partner_exists.side_effect = Exception(
             "Database error"
@@ -100,7 +101,7 @@ class TestPartnerAddressService:
     async def test_get_by_id_success(self):
         """Test retrieving an address by ID successfully."""
 
-        address_id = 1
+        address_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock the repository's get_by_id method to return a mock address
         self.address_repository_mock.get_by_id.return_value = self.mock_address
         self.address_repository_mock.partner_exists.return_value = True
@@ -119,9 +120,9 @@ class TestPartnerAddressService:
     async def test_delete_by_id_success(self):
         """Test successfully deleting an address by ID."""
 
-        address_id = 1
+        address_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock the repository's delete_by_id method
-        self.address_repository_mock.delete_by_id.return_value = PartnerAddress(id=1, partner_id=123, address_1="Some street")
+        self.address_repository_mock.delete_by_id.return_value = PartnerAddress(id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("12312312-3123-1231-2312-312312312312"), address_1="Some street")
 
         # Call delete_by_id method
         await self.partner_address_service.delete_by_id(address_id)
@@ -140,7 +141,7 @@ class TestPartnerAddressService:
     async def test_delete_by_id_handles_exception(self):
         """Test exception handling during address deletion."""
 
-        address_id = 1
+        address_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock the repository's delete_by_id method to raise an exception
         self.address_repository_mock.delete_by_id.side_effect = Exception(
             "Database error"
@@ -164,7 +165,7 @@ class TestPartnerAddressService:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
 
         # Mock the repository method to return this address
@@ -184,7 +185,7 @@ class TestPartnerAddressService:
         assert result[0].state == "TechState"
         assert result[0].country == "Techland"
         assert result[0].pincode == "123456"
-        assert result[0].partner_id == 1
+        assert result[0].partner_id== UUID("11111111-1111-1111-1111-111111111111")
 
         # Verify that the repository's get_all method was called
         self.address_repository_mock.get_all.assert_called_once()
@@ -214,7 +215,7 @@ class TestPartnerAddressService:
         assert result[0].state == "TechState"
         assert result[0].country == "Techland"
         assert result[0].pincode == "123456"
-        assert result[0].partner_id == 1
+        assert result[0].partner_id== UUID("11111111-1111-1111-1111-111111111111")
 
         # Verify the repository method was called
         self.address_repository_mock.get_all.assert_called_once()
@@ -331,7 +332,7 @@ class TestPartnerAddressService:
         )
 
     async def test_get_partner_address_by_partner_id_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_address_list = [MagicMock()]
         mock_response = MagicMock()
         # Repository now returns a list
@@ -350,7 +351,7 @@ class TestPartnerAddressService:
             )
 
     async def test_get_partner_address_by_partner_id_not_found(self):
-        partner_id = 2
+        partner_id= UUID("22222222-2222-2222-2222-222222222222")
         self.address_repository_mock.get_partner_address_by_partner_id = AsyncMock(
             side_effect=AddressNotFoundError(partner_id)
         )
@@ -363,7 +364,7 @@ class TestPartnerAddressService:
         )
 
     async def test_get_partner_address_by_partner_id_unexpected_exception(self):
-        partner_id = 3
+        partner_id= UUID("33333333-3333-3333-3333-333333333333")
         self.address_repository_mock.get_partner_address_by_partner_id = AsyncMock(
             side_effect=Exception("DB error")
         )
@@ -377,8 +378,8 @@ class TestPartnerAddressService:
 
     @pytest.mark.asyncio
     async def test_upsert_partner_address_success(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = MagicMock(spec=UpdatePartnerAddressRequest)
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock()
@@ -401,8 +402,8 @@ class TestPartnerAddressService:
 
     @pytest.mark.asyncio
     async def test_upsert_partner_address_partner_not_found(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = MagicMock(spec=UpdatePartnerAddressRequest)
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = None
@@ -416,8 +417,8 @@ class TestPartnerAddressService:
 
     @pytest.mark.asyncio
     async def test_upsert_partner_address_generic_exception(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = MagicMock(spec=UpdatePartnerAddressRequest)
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock()

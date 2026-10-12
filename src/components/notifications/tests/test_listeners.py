@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import MagicMock, patch
 
 from src.components.notifications.constants import NotificationServiceType
@@ -8,7 +9,7 @@ class TestHandleEvent:
     @staticmethod
     def _mock_event(
         *,
-        source="maglo",
+        source="talko",
         event_name="LEAD_ASSIGNED",
         heading="New lead",
         body="You have a new lead",
@@ -19,7 +20,7 @@ class TestHandleEvent:
         event.event_name = event_name
         event.heading = heading
         event.body = body
-        event.payload = payload if payload is not None else {"assigned_to": 5, "payload": {"lead_id": 10}}
+        event.payload = payload if payload is not None else {"assigned_to": "55555555-5555-5555-5555-555555555555", "payload": {"lead_id": 10}}
         event.model_dump.return_value = {
             "source": source,
             "event_name": event_name,
@@ -31,12 +32,12 @@ class TestHandleEvent:
 
     def test_handle_event_valid_source_dispatches_task(self):
         message = {
-            "source": "maglo",
+            "source": "talko",
             "event_name": "LEAD_ASSIGNED",
             "created_at": 1,
             "heading": "New lead",
             "body": "You have a new lead",
-            "payload": {"assigned_to": 5, "payload": {"lead_id": 10}},
+            "payload": {"assigned_to": "55555555-5555-5555-5555-555555555555", "payload": {"lead_id": 10}},
         }
         mock_logger = MagicMock()
         mock_event = self._mock_event(
@@ -59,24 +60,24 @@ class TestHandleEvent:
 
             mock_apply.assert_called_once_with(
                 kwargs={
-                    "user_id": 5,
+                    "user_id": UUID("55555555-5555-5555-5555-555555555555"),
                     "title": "New lead",
                     "body": "You have a new lead",
                     "data": {"lead_id": 10},
-                    "source": NotificationServiceType.MAGLO.value,
+                    "source": NotificationServiceType.TALKO.value,
                     "event_name": "LEAD_ASSIGNED",
-                    "service_type": NotificationServiceType.MAGLO.value,
+                    "service_type": NotificationServiceType.TALKO.value,
                 }
             )
 
     def test_handle_event_string_payload_is_parsed(self):
         message = {
-            "source": "maglo",
+            "source": "talko",
             "event_name": "LEAD_ASSIGNED",
             "created_at": 1,
             "heading": "New lead",
             "body": "You have a new lead",
-            "payload": '{"assigned_to": 5, "payload": {"lead_id": 10}}',
+            "payload": '{"assigned_to": "55555555-5555-5555-5555-555555555555", "payload": {"lead_id": 10}}',
         }
         mock_logger = MagicMock()
         mock_event = self._mock_event(
@@ -99,18 +100,18 @@ class TestHandleEvent:
 
             mock_apply.assert_called_once_with(
                 kwargs={
-                    "user_id": 5,
+                    "user_id": UUID("55555555-5555-5555-5555-555555555555"),
                     "title": "New lead",
                     "body": "You have a new lead",
                     "data": {"lead_id": 10},
-                    "source": NotificationServiceType.MAGLO.value,
+                    "source": NotificationServiceType.TALKO.value,
                     "event_name": "LEAD_ASSIGNED",
-                    "service_type": NotificationServiceType.MAGLO.value,
+                    "service_type": NotificationServiceType.TALKO.value,
                 }
             )
     def test_handle_event_flat_payload_is_preserved(self):
         message = {
-            "source": "maglo",
+            "source": "talko",
             "event_name": "LEAD_ASSIGNED",
             "created_at": 1,
             "heading": "New lead",
@@ -121,7 +122,7 @@ class TestHandleEvent:
                 "event_type": "LEAD_ASSIGNED",
                 "lead_email": "meenakshi6931@gmail.com",
                 "lead_phone": "+916219614894",
-                "assigned_to": 33,
+                "assigned_to": "33333333-3333-3333-3333-333333333333",
                 "lead_request_id": 71567,
                 "service_board_id": 70,
             },
@@ -147,28 +148,28 @@ class TestHandleEvent:
 
             mock_apply.assert_called_once_with(
                 kwargs={
-                    "user_id": 33,
+                    "user_id": UUID("33333333-3333-3333-3333-333333333333"),
                     "title": "New lead",
                     "body": "You have a new lead",
                     "data": message["payload"],
-                    "source": NotificationServiceType.MAGLO.value,
+                    "source": NotificationServiceType.TALKO.value,
                     "event_name": "LEAD_ASSIGNED",
-                    "service_type": NotificationServiceType.MAGLO.value,
+                    "service_type": NotificationServiceType.TALKO.value,
                 }
             )
             
-    def test_handle_event_babbler_source_dispatches_task(self):
+    def test_handle_event_talko_source_dispatches_task(self):
         message = {
-            "source": "babbler",
+            "source": "talko",
             "event_name": "WHATSAPP_MESSAGE_RECEIVED",
             "created_at": 1,
             "heading": "New lead",
             "body": "You have a new lead",
-            "payload": {"assigned_to": 7, "payload": {}},
+            "payload": {"assigned_to": "77777777-7777-7777-7777-777777777777", "payload": {}},
         }
         mock_logger = MagicMock()
         mock_event = self._mock_event(
-            source="babbler",
+            source="talko",
             event_name="WHATSAPP_MESSAGE_RECEIVED",
             heading=message["heading"],
             body=message["body"],
@@ -189,13 +190,13 @@ class TestHandleEvent:
 
             mock_apply.assert_called_once_with(
                 kwargs={
-                    "user_id": 7,
+                    "user_id": UUID("77777777-7777-7777-7777-777777777777"),
                     "title": "New lead",
                     "body": "You have a new lead",
                     "data": {},
-                    "source": NotificationServiceType.BABBLER.value,
+                    "source": NotificationServiceType.TALKO.value,
                     "event_name": "WHATSAPP_MESSAGE_RECEIVED",
-                    "service_type": NotificationServiceType.BABBLER.value,
+                    "service_type": NotificationServiceType.TALKO.value,
                 }
             )
 
@@ -243,7 +244,7 @@ class TestHandleEvent:
         }
         mock_logger = MagicMock()
         mock_event = self._mock_event(
-            source="maglo",
+            source="talko",
             heading=message["heading"],
             body=message["body"],
             payload={},
@@ -269,7 +270,7 @@ class TestHandleEvent:
 
     def test_handle_event_missing_payload_defaults_to_empty_dict(self):
         message = {
-            "source": "maglo",
+            "source": "talko",
             "event_name": "LEAD_ASSIGNED",
             "created_at": 1,
             "heading": "H",
@@ -300,15 +301,15 @@ class TestHandleEvent:
                     "title": "H",
                     "body": "B",
                     "data": {},
-                    "source": NotificationServiceType.MAGLO.value,
+                    "source": NotificationServiceType.TALKO.value,
                     "event_name": "LEAD_ASSIGNED",
-                    "service_type": NotificationServiceType.MAGLO.value,
+                    "service_type": NotificationServiceType.TALKO.value,
                 }
             )
 
     def test_handle_event_logs_received_event(self):
         message = {
-            "source": "maglo",
+            "source": "talko",
             "event_name": "LEAD_ASSIGNED",
             "created_at": 1,
             "heading": "H",

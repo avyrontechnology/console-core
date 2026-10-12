@@ -1,8 +1,9 @@
+from uuid import UUID
 import json
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Body, Depends, Query, Request, UploadFile, status
+from fastapi import APIRouter, Body, Depends, Query, Request, status
 from sqlalchemy.exc import IntegrityError
 
 from src.components.common.errors import ErrorMsg
@@ -16,7 +17,6 @@ from src.components.common.response import (
     SuccessResponse,
     UnauthorizedResponse,
 )
-from src.components.digital_assets.storage.helper import StorageHelper
 from src.components.partner import messages
 from src.components.partner.constant import (
     DashboardFilters,
@@ -94,7 +94,7 @@ class PartnerController:
     @inject
     async def get_partners_by_id(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_service: PartnerService = Depends(Provide[Container.partner_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -171,7 +171,7 @@ class PartnerController:
     @inject
     async def delete_partner(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_service: PartnerService = Depends(Provide[Container.partner_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -210,7 +210,7 @@ class PartnerController:
     @inject
     async def update_partner(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_data: UpdatePartnerRequest = Body(...),
         partner_service: PartnerService = Depends(Provide[Container.partner_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
@@ -249,57 +249,6 @@ class PartnerController:
             console_service_logger.error("Error updating partner: {}".format(repr(ex)))
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
-    @partner_router.post(
-        "/upload_partner_profile/{partner_id}", response_model=PartnerProfileResponse
-    )
-    @permission_check(PermissionDependency)
-    @inject
-    async def upload_partner_profile(
-        request: Request,
-        partner_id: int,
-        partner_logo: UploadFile = None,
-        partner_service: PartnerService = Depends(Provide[Container.partner_service]),
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-    ):
-        try:
-            console_service_logger.info(
-                "Received the partner logo for partner id: {}".format(partner_id)
-            )
-            current_user: dict = request.state.user
-            uploaded_logo: UploadFile = await partner_service.upload_partner_profile(
-                partner_id, current_user, partner_logo
-            )
-            console_service_logger.info(
-                "Partner profile updated successfully: {}".format(uploaded_logo)
-            )
-            partner_logo_presigned_url: str = (
-                StorageHelper.get_presigned_url(uploaded_logo.partner_logo.name)
-                if uploaded_logo.partner_logo_id
-                else None
-            )
-
-            return {
-                "message": "Logo uploaded successfully.",
-                "partner_logo_url": partner_logo_presigned_url,
-            }
-        except PartnerNotFoundError as ex:
-            console_service_logger.error("Partner not found: {}".format(repr(ex)))
-            return NotFoundResponse(str(ex))
-
-        except PartnerException as ex:
-            console_service_logger.error(
-                "Unexpected error while updating partner profile: {}".format(repr(ex))
-            )
-            return BadRequestResponse(PartnerResponseData.PARTNER_EXIST)
-
-        except Exception as ex:
-            console_service_logger.error(
-                "Error updating partner profile: {}".format(repr(ex))
-            )
-            return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
-
     @partner_router.get("/get_partner_statuses")
     @permission_check(PermissionDependency)
     @inject
@@ -322,7 +271,7 @@ class PartnerController:
         """
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get("user_id")
+            current_user_id: UUID = current_user.get("user_id")
             console_service_logger.info(
                 "Received request to get partner statuses by user id: {}".format(
                     current_user_id
@@ -432,7 +381,7 @@ class PartnerController:
     @inject
     async def toggle_partner_activation(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_data: TogglePartnerActivation = Body(...),
         partner_service: PartnerService = Depends(Provide[Container.partner_service]),
         console_service_logger: ConsoleServiceLogger = Depends(

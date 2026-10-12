@@ -27,4 +27,7 @@ class AuditService:
         self.__audit_log_repository = audit_log_repository
 
     async def log_action(self, log_entry: AuditLogSchema):
+        # resource_id column is String(36): stringify UUIDs at the boundary.
+        if log_entry.resource_id is not None:
+            log_entry.resource_id = str(log_entry.resource_id)
         await self.__audit_log_repository.create_audit_log(log_entry)

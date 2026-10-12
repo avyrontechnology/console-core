@@ -1,3 +1,4 @@
+from uuid import UUID
 from collections import namedtuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,7 +25,7 @@ def setup_method():
     UserMetadataRow = namedtuple(
         "UserMetadataRow", ["user_id", "meta_key", "meta_value"]
     )
-    mock_row = UserMetadataRow(user_id=1, meta_key="test_key", meta_value="test_value")
+    mock_row = UserMetadataRow(user_id= UUID("11111111-1111-1111-1111-111111111111"), meta_key="test_key", meta_value="test_value")
     mock_session = AsyncMock()
     mock_session.execute.return_value.scalars.return_value.all.return_value = [mock_row]
 
@@ -41,7 +42,7 @@ def setup_method():
 async def test_get_all_user_metadata(setup_method):
     """Test fetching all user metadata."""
     # Set up the mock return value
-    mock_row = UserMetadata(user_id=1, meta_key="test_key", meta_value="test_value")
+    mock_row = UserMetadata(user_id= UUID("11111111-1111-1111-1111-111111111111"), meta_key="test_key", meta_value="test_value")
     setup_method.get_all_user_metadata.return_value = [mock_row]
 
     # Directly call get_all_user_metadata without using `async with`
@@ -56,7 +57,7 @@ async def test_get_all_user_metadata(setup_method):
 @pytest.mark.asyncio
 async def test_update_user_metadata(setup_method):
     """Test updating existing user metadata."""
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
     updated_metadata = UserMetadata(
         user_id=user_id, meta_key="updated_key", meta_value="updated_value"
     )
@@ -77,7 +78,7 @@ async def test_update_user_metadata(setup_method):
 @pytest.mark.asyncio
 async def test_add_user_metadata():
     """Test adding new user metadata."""
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
     new_metadata = UserMetadata(
         user_id=user_id, meta_key="new_key", meta_value="new_value"
     )
@@ -102,7 +103,7 @@ async def test_add_user_metadata():
 @pytest.mark.asyncio
 async def test_delete_umetadata_by_user_id():
     """Test deleting user metadata by user ID."""
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     # Patch the repository directly in the test to ensure clarity on the mock usage
     with patch(
@@ -127,7 +128,7 @@ async def test_update_user_metadata_not_found(setup_method):
     async with setup_method as repository:
         with pytest.raises(UserNotFoundError):
             await repository.update_user_metadata(
-                user_id=2, meta_key="nonexistent_key", meta_value="value"
+                user_id= UUID("22222222-2222-2222-2222-222222222222"), meta_key="nonexistent_key", meta_value="value"
             )
 
 
@@ -135,7 +136,7 @@ async def test_update_user_metadata_not_found(setup_method):
 async def test_add_user_metadata_already_exists(setup_method):
     """Test adding metadata that already exists."""
     setup_method.add_user_metadata.side_effect = UserMetadataAlreadyExistsException
-    new_metadata = UserMetadata(user_id=1, meta_key="test_key", meta_value="value")
+    new_metadata = UserMetadata(user_id= UUID("11111111-1111-1111-1111-111111111111"), meta_key="test_key", meta_value="value")
 
     async with setup_method as repository:
         with pytest.raises(UserMetadataAlreadyExistsException):
@@ -158,7 +159,7 @@ async def test_add_user_metadata_db_integrity_error(setup_method):
     setup_method.add_user_metadata.side_effect = IntegrityError(
         "Integrity error", None, None
     )
-    new_metadata = UserMetadata(user_id=1, meta_key="new_key", meta_value="new_value")
+    new_metadata = UserMetadata(user_id= UUID("11111111-1111-1111-1111-111111111111"), meta_key="new_key", meta_value="new_value")
 
     async with setup_method as repository:
         with pytest.raises(UserMetadataException):

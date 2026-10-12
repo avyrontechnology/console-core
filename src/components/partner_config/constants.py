@@ -17,9 +17,7 @@ class PartnerConfigEnum(str, Enum):
 
     IS_CUSTOM_ROLE_PERMISSION_ENABLED = "is_custom_role_permission_enabled"
     IS_OTP_ENABLED = "is_otp_enabled"
-    IS_MAGLO_ENABLED = "is_maglo_enabled"
     IS_TALKO_ENABLED = "is_talko_enabled"
-    IS_BABBLER_ENABLED = "is_babbler_enabled"
     SEND_USER_CREDENTIALS = "send_user_credentials"
     IS_EMAIL_VERIFICATION_ENABLED = "is_email_verification_enabled"
     IS_PHONE_NUMBER_VERIFICATION_ENABLED = "is_phone_number_verification_enabled"
@@ -31,8 +29,6 @@ class PartnerConfigEnum(str, Enum):
     SMTP_USERNAME = "smtp_username"
     SMTP_PASSWORD = "smtp_password"
     FROM_EMAIL = "from_email"
-    IS_MAGLO_APP_ENABLED = "is_maglo_app_enabled"
-    IS_BABBLER_APP_ENABLED = "is_babbler_app_enabled"
     IS_MAILER_ENABLED = "is_mailer_enabled"
     IS_GSM_CALLING_ENABLED = "is_gsm_calling_enabled"
     CAN_VIEW_TASK_MANAGEMENT = "can_view_task_management"
@@ -41,7 +37,6 @@ class PartnerConfigEnum(str, Enum):
     IS_RULE_BASED_ASSIGNMENT_ENABLED = "is_rule_based_assignment_enabled"
     USER_TRACKER_STATUSES = "user_tracker_statuses"
     CAN_VIEW_PIPELINE_MANAGEMENT = "can_view_pipeline_management"
-    IS_COMPLEMENTARY_BABBLER_ENABLED = "is_complementary_babbler_enabled"    
     CAN_VIEW_CONTACT = "can_view_contact"
     CAN_VIEW_ORGANIZATION = "can_view_organization"    
     ENABLE_DIALER = "enable_dialer"
@@ -81,8 +76,6 @@ class PartnerConfigEnum(str, Enum):
     IS_STICKY_DIDS_ENABLED: str = "is_sticky_dids_enabled"
     CAN_ADD_ADDRESS_WITH_GOOGLE_PLACES: str = "can_add_address_with_google_places"
     IS_ASSIGNEE_SYNC_ENABLED: str = "is_assignee_sync_enabled"
-
-MAILMG_BASE_URL = "https://maglo-mailer.makunaiglobal.ai/mailmg-service/v1"
 
 
 class SubscriptionModeEnum(str, Enum):

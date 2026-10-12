@@ -1,9 +1,10 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Any, Callable, List, Optional, Set, Tuple
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from src.components.common.datetime import DateTimeUtil
 from src.components.partner import messages
@@ -43,17 +44,14 @@ class PartnerRepository:
         )
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
-    async def get_by_id(self, partner_id: int) -> Partner:
+    async def get_by_id(self, partner_id: UUID) -> Partner:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
                     "Getting partner with id :{}".format(partner_id)
                 )
-                # Eagerly load the partner_logo to avoid lazy load issues
                 result = await session.execute(
-                    select(Partner)
-                    .options(joinedload(Partner.partner_logo))
-                    .filter(Partner.id == partner_id)
+                    select(Partner).filter(Partner.id == partner_id)
                 )
 
                 partner = result.scalars().first()
@@ -91,12 +89,8 @@ class PartnerRepository:
                 )
 
                 if existing_partner:
-                    is_maglo_publisher = bool(partner_data.is_maglo_publisher)
-                    existing_is_maglo_publisher = bool(
-                        existing_partner.is_maglo_publisher
-                    )
                     self.__console_service_logger.debug(
-                        f"Existing partner found: ID={existing_partner.id}, is_maglo_publisher={existing_is_maglo_publisher}"
+                        f"Existing partner found: ID={existing_partner.id}"
                     )
 
                     conflict_field = None
@@ -116,45 +110,19 @@ class PartnerRepository:
                                 existing_partner.id
                             )
                         )
-                    is_publisher_conflict = (
-                        not is_maglo_publisher and existing_is_maglo_publisher
-                    ) or (is_maglo_publisher and existing_is_maglo_publisher)
 
                     error_message_map = {
-                        (True, "name"): messages.PUBLISHER_ALREADY_EXISTS,
-                        (False, "name"): messages.PARTNER_ALREADY_EXISTS,
-                        (
-                            True,
-                            "company_legal_name",
-                        ): messages.PUBLISHER_COMPANY_LEGAL_NAME_ALREADY_EXISTS,
-                        (
-                            False,
-                            "company_legal_name",
-                        ): messages.PARTNER_COMPANY_LEGAL_NAME_ALREADY_EXISTS,
+                        "name": messages.PARTNER_ALREADY_EXISTS,
+                        "company_legal_name": messages.PARTNER_COMPANY_LEGAL_NAME_ALREADY_EXISTS,
                     }
-                    error_message = error_message_map[
-                        (is_publisher_conflict, conflict_field)
-                    ]
+                    error_message = error_message_map[conflict_field]
 
                     self.__console_service_logger.info(
-                        f"{'Publisher' if is_publisher_conflict else 'Partner'} with {conflict_field} already exists with ID: {existing_partner.id}"
+                        f"Partner with {conflict_field} already exists with ID: {existing_partner.id}"
                     )
-                    if not (is_maglo_publisher and not existing_is_maglo_publisher):
-                        raise PartnerException(
-                            message=error_message, id=existing_partner.id
-                        )
-
-                    # Update to maglo publisher
-                    self.__console_service_logger.debug(
-                        f"Updating partner ID {existing_partner.id} to maglo publisher"
+                    raise PartnerException(
+                        message=error_message, id=existing_partner.id
                     )
-                    existing_partner.is_maglo_publisher = True
-                    await session.commit()
-                    await session.refresh(existing_partner)
-                    self.__console_service_logger.info(
-                        f"Updated partner ID {existing_partner.id} to maglo publisher"
-                    )
-                    return existing_partner
 
                 # Create new partner
                 self.__console_service_logger.debug(
@@ -176,7 +144,7 @@ class PartnerRepository:
                 )
                 session.add(partner)
                 await session.flush()
-                partner_id: int = partner.id
+                partner_id: UUID = partner.id
                 self.__console_service_logger.info(
                     f"Generated Partner ID before commit: {partner_id}"
                 )
@@ -233,7 +201,7 @@ class PartnerRepository:
             )
             raise
 
-    async def delete_by_id(self, partner_id: int, user_id: int) -> Partner:
+    async def delete_by_id(self, partner_id: UUID, user_id: UUID) -> Partner:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -274,8 +242,8 @@ class PartnerRepository:
 
     async def update(
         self,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         partner_data=UpdatePartnerRequest,
     ) -> Partner:
         try:
@@ -316,46 +284,9 @@ class PartnerRepository:
             )
             raise ex
 
-    async def update_partner_logo(
-        self,
-        partner_id: int,
-        partner_logo_id: int,
-        user_id: int,
-    ) -> Partner:
-        try:
-            async with self.__session_factory() as session:
-                self.__console_service_logger.info(
-                    "Updating logo for partner_id: {}".format(partner_id)
-                )
-
-                result = await session.execute(select(Partner).filter_by(id=partner_id))
-                partner = result.scalars().first()
-
-                if not partner:
-                    raise PartnerNotFoundError(
-                        "Partner not found with id: {}".format(partner_id)
-                    )
-
-                partner.partner_logo_id = partner_logo_id
-                partner.updated_by = user_id
-
-                await session.commit()
-                await session.refresh(partner)
-                return partner
-        except PartnerNotFoundError as ex:
-            self.__console_service_logger.error(
-                "Error while updating partner logo: {}".format(str(ex))
-            )
-            raise ex
-        except Exception as ex:
-            self.__console_service_logger.error(
-                "Error while updating partner logo: {}".format(str(ex))
-            )
-            raise ex
-
     async def change_partner_status(
         self,
-        partner_id: int,
+        partner_id: UUID,
         status: Optional[str],
         is_feedback_enabled: Optional[bool],
     ) -> Optional[Partner]:
@@ -426,12 +357,9 @@ class PartnerRepository:
                     **partner_meta_data_details.model_dump(
                         exclude_unset=True,
                         exclude={
-                            "is_maglo_free_trial_enabled",
                             "is_talko_free_trial__enabled",
-                            "is_babbler_free_trial__enabled",
                             "is_email_verification_enabled",
                             "is_phone_number_verification_enabled",
-                            "is_maglo_app_free_trail_enabled",
                             "subscription_mode",
                         },
                     ),
@@ -448,10 +376,7 @@ class PartnerRepository:
 
                 await session.flush()
                 trial_flags: dict = {
-                    "is_maglo_enabled": partner_meta_data_details.is_maglo_free_trial_enabled,
                     "is_talko_enabled": partner_meta_data_details.is_talko_free_trial__enabled,
-                    "is_babbler_enabled": partner_meta_data_details.is_babbler_free_trial__enabled,
-                    "is_maglo_app_enabled": partner_meta_data_details.is_maglo_app_free_trail_enabled,
                 }
 
                 for key, enabled in trial_flags.items():
@@ -563,7 +488,7 @@ class PartnerRepository:
                 raise exec
 
     async def toggle_partner_activation(
-        self, partner_id: int, partner_data: TogglePartnerActivation
+        self, partner_id: UUID, partner_data: TogglePartnerActivation
     ) -> tuple[Any, list[dict[str, Any]]]:
         try:
             async with self.__session_factory() as session:

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,10 +28,10 @@ class TestAuthRepository:
         self.session = mock_session_factory.return_value.__aenter__.return_value
         self.mock_logger = mock_logger
 
-        self.mock_role = Role(id=1, name="Admin", slug="admin", is_active=True)
+        self.mock_role = Role(id= UUID("11111111-1111-1111-1111-111111111111"), name="Admin", slug="admin", is_active=True)
 
         self.mock_permission = Permission(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             title="View Users",
             slug="view_users",
             description="Permission to view users",
@@ -38,7 +39,7 @@ class TestAuthRepository:
 
     async def test_get_role_by_id(self):
         """Test getting a role by ID."""
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_role = Role(id=role_id, name="Admin", slug="admin", is_active=True)
 
         # Mock the database execution and response
@@ -52,12 +53,12 @@ class TestAuthRepository:
         result = await self.auth_repository.get_role_by_id(role_id)
 
         # Assert the results
-        assert result.id == 1
+        assert result.id == UUID("11111111-1111-1111-1111-111111111111")
         assert result.name == "Admin"
 
     async def test_get_role_by_id_not_found(self):
         """Test getting a role by ID when the role is not found."""
-        role_id = 2
+        role_id= UUID("22222222-2222-2222-2222-222222222222")
 
         # Mock the behavior of session.execute().scalars().one_or_none() to return None
         mock_scalars = MagicMock()
@@ -76,7 +77,7 @@ class TestAuthRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.auth_repository.get_role_by_id(id=1)
+            await self.auth_repository.get_role_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -85,7 +86,7 @@ class TestAuthRepository:
 
     async def test_delete_role(self):
         """Test deleting a role."""
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_scalars = MagicMock()
         mock_scalars.one_or_none.return_value = self.mock_role
@@ -94,7 +95,7 @@ class TestAuthRepository:
         mock_execute.scalars.return_value = mock_scalars
         self.session.execute = AsyncMock(return_value=mock_execute)
 
-        result = await self.auth_repository.delete_role(role_id, user_id=1)
+        result = await self.auth_repository.delete_role(role_id, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result.id == role_id
         assert result.is_deleted is True
@@ -105,7 +106,7 @@ class TestAuthRepository:
             side_effect=IntegrityError("Duplicate entry", {}, None)
         )
         user_role = MagicMock()
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         with pytest.raises(AuthException) as exc_info:
             await self.auth_repository.add_role(user_role=user_role, user_id=user_id)
@@ -117,7 +118,7 @@ class TestAuthRepository:
         user_role = RoleData(
             name="Admin", slug="admin", hierarchy=1, description="Admin role"
         )
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.session.commit = AsyncMock(side_effect=Exception("Unexpected Error"))
 
@@ -134,11 +135,13 @@ class TestAuthRepository:
 
         mock_scalars = MagicMock()
         mock_scalars.one_or_none.return_value = None
-        self.session.execute.return_value.scalars.return_value = mock_scalars
+        mock_execute = MagicMock()
+        mock_execute.scalars.return_value = mock_scalars
+        self.session.execute = AsyncMock(return_value=mock_execute)
         with pytest.raises(RoleNotFoundError):
-            await self.auth_repository.delete_role(id=1, user_id=1)
+            await self.auth_repository.delete_role(id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
-        self.mock_logger.warning.assert_called_with("Role not found for deletion: id=1")
+        self.mock_logger.warning.assert_called_with("Role not found for deletion: id=11111111-1111-1111-1111-111111111111")
 
     async def test_get_all_role(self):
         """Test getting all roles"""
@@ -183,7 +186,7 @@ class TestAuthRepository:
 
         self.session.execute = AsyncMock(return_value=mock_execute)
 
-        await self.auth_repository.get_all_role(True, partner_id=7)
+        await self.auth_repository.get_all_role(True, partner_id= UUID("77777777-7777-7777-7777-777777777777"))
 
         query = self.session.execute.call_args.args[0]
         assert "console_role.partner_id = " in str(query)
@@ -206,7 +209,7 @@ class TestAuthRepository:
 
     async def test_add_permission(self):
         """Test adding a permission."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Use PermissionData (Pydantic) as input
         permission_data = PermissionData(
@@ -244,7 +247,7 @@ class TestAuthRepository:
 
     async def test_delete_permission(self):
         """Test deleting a permission."""
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_scalars = MagicMock()
         mock_scalars.one_or_none.return_value = self.mock_permission
@@ -253,7 +256,7 @@ class TestAuthRepository:
         mock_execute.scalars.return_value = mock_scalars
         self.session.execute = AsyncMock(return_value=mock_execute)
 
-        result = await self.auth_repository.delete_permission(permission_id, user_id=1)
+        result = await self.auth_repository.delete_permission(permission_id, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result.id == permission_id
         assert result.is_deleted is True
@@ -262,12 +265,14 @@ class TestAuthRepository:
         # Mock no result found
         mock_scalars = MagicMock()
         mock_scalars.one_or_none.return_value = None
-        self.session.execute.return_value.scalars.return_value = mock_scalars
+        mock_execute = MagicMock()
+        mock_execute.scalars.return_value = mock_scalars
+        self.session.execute = AsyncMock(return_value=mock_execute)
         with pytest.raises(PermissionNotFoundError):
-            await self.auth_repository.delete_permission(id=1, user_id=1)
+            await self.auth_repository.delete_permission(id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.mock_logger.warning.assert_called_with(
-            "Permission not found for deletion: id=1"
+            "Permission not found for deletion: id=11111111-1111-1111-1111-111111111111"
         )
 
     async def test_add_permission_integrity_error(self):
@@ -278,14 +283,14 @@ class TestAuthRepository:
 
         with pytest.raises(AuthException) as exc_info:
             await self.auth_repository.add_permission(
-                user_permission=MagicMock(), user_id=1
+                user_permission=MagicMock(), user_id= UUID("11111111-1111-1111-1111-111111111111")
             )
 
         assert str(exc_info.value) == AuthExceptionMsg.PERMISSIONS_EXISTS
 
     async def test_get_permission_by_id(self):
         """Test getting a permission by ID."""
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the database execution and response
         mock_scalars = MagicMock()
@@ -297,12 +302,12 @@ class TestAuthRepository:
         result = await self.auth_repository.get_permission_by_id(permission_id)
 
         # Assert the results
-        assert result.id == 1
+        assert result.id == UUID("11111111-1111-1111-1111-111111111111")
         assert result.title == "View Users"
 
     async def test_get_permission_by_id_not_found(self):
         """Test getting a permission by ID when the permission is not found."""
-        permission_id = 2
+        permission_id= UUID("22222222-2222-2222-2222-222222222222")
 
         # Mock the behavior of session.execute().scalars().one_or_none() to return None
         mock_scalars = MagicMock()
@@ -320,7 +325,7 @@ class TestAuthRepository:
         """Test getting list of user permission"""
 
         mock_permission_list = ["Permission_1", "Permission_1"]
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = mock_permission_list
@@ -338,7 +343,7 @@ class TestAuthRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.auth_repository.get_user_permission(user_id=1)
+            await self.auth_repository.get_user_permission(user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -350,7 +355,7 @@ class TestAuthRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.auth_repository.delete_permission(id=1, user_id=1)
+            await self.auth_repository.delete_permission(id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -374,7 +379,7 @@ class TestAuthRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.auth_repository.get_permission_by_id(id=1)
+            await self.auth_repository.get_permission_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -386,7 +391,7 @@ class TestAuthRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.auth_repository.delete_role(id=1, user_id=1)
+            await self.auth_repository.delete_role(id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
@@ -406,7 +411,7 @@ class TestAuthRepository:
         )
 
     async def test_add_permission_generic_exception(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         # Use PermissionData (Pydantic) as input
         permission_data = PermissionData(
             title="View Users",
@@ -426,7 +431,7 @@ class TestAuthRepository:
 
     async def test_reset_password_success(self):
         """Test resetting password successfully."""
-        user = AsyncMock(id=1, name="Test User", email="test@example.com")
+        user = AsyncMock(id= UUID("11111111-1111-1111-1111-111111111111"), name="Test User", email="test@example.com")
         hashed_password = "new_hashed_password"
 
         self.session.execute = AsyncMock()
@@ -440,7 +445,7 @@ class TestAuthRepository:
 
     async def test_reset_password_generic_exception(self):
         """Test handling an unexpected error while resetting password."""
-        user = AsyncMock(id=1, name="Test User", email="test@example.com")
+        user = AsyncMock(id= UUID("11111111-1111-1111-1111-111111111111"), name="Test User", email="test@example.com")
         hashed_password = "new_hashed_password"
 
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
@@ -456,8 +461,8 @@ class TestAuthRepository:
     @pytest.mark.asyncio
     async def test_get_parents_by_role_id_success(self):
         """Test fetching parents by role ID."""
-        role_id = 1
-        current_user_partner_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user_partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_role_hierarchy = -4
         mock_parents = ["Parent 1", "Parent 2"]
 
@@ -481,8 +486,8 @@ class TestAuthRepository:
 
     async def test_get_parents_by_role_id_generic_exception(self):
         """Test handling an unexpected error while fetching parents by role ID."""
-        role_id = 1
-        current_user_partner_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user_partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
@@ -498,7 +503,7 @@ class TestAuthRepository:
 
     async def test_get_default_role_permission_for_user(self):
         """Test fetching default role permission slugs for a user."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_slugs = ["perm_1", "perm_2"]
 
         mock_scalars = MagicMock()
@@ -519,7 +524,7 @@ class TestAuthRepository:
         )
 
     async def test_get_default_role_permission_for_user_generic_exception(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
         with pytest.raises(Exception) as exc_info:
             await self.auth_repository.get_default_role_permission_for_user(user_id)
@@ -530,8 +535,8 @@ class TestAuthRepository:
 
     async def test_get_partner_role_permissions_by_partner_and_role(self):
         """Test fetching partner role permissions."""
-        partner_id = 1
-        role_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        role_id= UUID("22222222-2222-2222-2222-222222222222")
         mock_permissions = [self.mock_permission]
 
         mock_scalars = MagicMock()
@@ -550,8 +555,8 @@ class TestAuthRepository:
     async def test_get_partner_role_permissions_by_partner_and_role_generic_exception(
         self,
     ):
-        partner_id = 1
-        role_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        role_id= UUID("22222222-2222-2222-2222-222222222222")
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
         with pytest.raises(Exception) as exc_info:
             await self.auth_repository.get_partner_role_permissions_by_partner_and_role(
@@ -564,7 +569,7 @@ class TestAuthRepository:
 
     async def test_get_default_role_permissions_by_role_id(self):
         """Test fetching default role permissions by role id."""
-        role_id = 2
+        role_id= UUID("22222222-2222-2222-2222-222222222222")
         mock_permissions = [self.mock_permission]
 
         mock_scalars = MagicMock()
@@ -579,7 +584,7 @@ class TestAuthRepository:
         assert result == mock_permissions
 
     async def test_get_default_role_permissions_by_role_id_generic_exception(self):
-        role_id = 2
+        role_id= UUID("22222222-2222-2222-2222-222222222222")
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
         with pytest.raises(Exception) as exc_info:
             await self.auth_repository.get_default_role_permissions_by_role_id(role_id)
@@ -589,7 +594,7 @@ class TestAuthRepository:
         )
 
     async def test_update_permission_success(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = UpdatePermissionRquest(title="Updated Title")
 
         # Set expected updated value
@@ -620,7 +625,7 @@ class TestAuthRepository:
         assert isinstance(result, Permission)
 
     async def test_update_permission_not_found(self):
-        permission_id = 99
+        permission_id= UUID("99999999-9999-9999-9999-999999999999")
         update_data = UpdatePermissionRquest(title="New Title")
 
         mock_scalars = MagicMock()
@@ -635,7 +640,7 @@ class TestAuthRepository:
         )
 
     async def test_update_permission_integrity_error(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = UpdatePermissionRquest(title="Duplicate Title")
 
         mock_scalars = MagicMock()
@@ -652,7 +657,7 @@ class TestAuthRepository:
         assert str(exc.value) == AuthExceptionMsg.PERMISSIONS_EXISTS
 
     async def test_update_permission_unexpected_exception(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = UpdatePermissionRquest(title="Something Wrong")
 
         mock_scalars = MagicMock()
@@ -770,7 +775,7 @@ class TestAuthRepository:
         )
 
     async def test_update_role_success(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = {"name": "Updated Admin", "slug": "updated_admin"}
 
         # Set expected updated value
@@ -797,7 +802,7 @@ class TestAuthRepository:
         assert isinstance(result, Role)
 
     async def test_update_role_not_found(self):
-        role_id = 99
+        role_id= UUID("99999999-9999-9999-9999-999999999999")
         update_data = {"name": "New Name"}
 
         mock_scalars = MagicMock()
@@ -810,7 +815,7 @@ class TestAuthRepository:
         self.mock_logger.error.assert_any_call(f"Role not found: id={role_id}")
 
     async def test_update_role_integrity_error(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = {"name": "Duplicate Name"}
 
         mock_scalars = MagicMock()
@@ -826,7 +831,7 @@ class TestAuthRepository:
         assert str(exc.value) == AuthExceptionMsg.ROLE_EXISTS
 
     async def test_update_role_unexpected_exception(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = {"name": "Something Wrong"}
 
         mock_scalars = MagicMock()

@@ -12,13 +12,10 @@ class TokenKeys:
     ROLE = "user_role"
     PARTNER = "partner_id"
     IS_ACTIVE = "is_active"
-    IS_MAGLO_ENABLED = "is_maglo_enabled"
-    IS_BABBLER_ENABLED = "is_babbler_enabled"
     IS_TALKO_ENABLED = "is_talko_enabled"
     IS_INTERNAL: str = "is_internal"
     PARTNER_ID: str = "partner_id"
     IS_WALLET_ENABLED: str = "is_wallet_enabled"
-    IS_MAGLO_APP_ENABLED: str = "is_maglo_app_enabled"
     SUBSCRIPTION_MODE: str = "subscription_mode"
     IS_OBOTAAI_ENABLED: str = "is_obotaai_enabled"
 
@@ -61,8 +58,6 @@ class AuthExceptionMsg:
     RESTRICT_LOGIN: str = "Partner is inactive, can't log in."
     USERS_OF_DIFFERENT_PARTNER: str = "Can't get the users of different partner."
     ACCOUNT_DELETED: str = "Account is deleted."
-    MAGLO_APP_NOT_ENABLED: str = "Maglo app is not enabled."
-    USER_MAGLO_APP_NOT_ENABLED: str = "User is not enabled for the Maglo app."
     PARTNER_SERVICE_NOT_ENABLED: str = "Service '{}' is not enabled for this partner."
 
 
@@ -96,10 +91,7 @@ class UserKeys:
     PARTNER_ID: str = "partner_id"
     ROLE_HIERARCHY_LEVEL: str = "role_hierarchy_level"
     PARTNER_NAME: str = "partner_name"
-    IS_MAGLO_PUBLISHER: str = "is_maglo_publisher"
     ROLE: str = "role"
-    IS_BABBLER_ENABLED: str = "is_babbler_enabled"
-    IS_MAGLO_ENABLED: str = "is_maglo_enabled"
     PHONE_NUMBER: str = "phone_number"
     IS_TALKO_ENABLED: str = "is_talko_enabled"
     IS_ACTIVE: str = "is_active"
@@ -134,35 +126,23 @@ class PermissionAttributes:
 
 
 class ServiceNames(str, Enum):
-    MAGLO: str = "maglo"
     CONSOLE: str = "console"
-    BABBLER: str = "babbler"
     TALKO: str = "talko"
-    MAGLO_APP: str = "maglo_app"
     OBOTAAI: str  = "obotaai"
-    BABBLER_APP: str = "babbler_app"
 
 
 SvcFlagMap = {
-    "maglo": "is_maglo_enabled",
-    "babbler": "is_babbler_enabled",
     "talko": "is_talko_enabled",
-    "maglo_app": "is_maglo_app_enabled",
     "obotaai": "is_obotaai_enabled",
-    "babbler_app": "is_babbler_app_enabled",
 }
 
 config_keys: list[str] = [
-    "is_maglo_enabled",
-    "is_babbler_enabled",
     "is_talko_enabled",
     "is_wallet_enabled",
-    "is_maglo_app_enabled",
     "is_gsm_calling_enabled",
     "is_meeting_log_enabled",
     "enable_dialer",
     "is_obotaai_enabled",
-    "is_babbler_app_enabled",
     "can_view_products",
     "can_view_inventory",
     "can_view_payment_history",
@@ -182,16 +162,12 @@ class OtpConstants:
 
 
 class SignupConfigKeys(str, Enum):
-    MAGLO: str = "maglo"
     TALKO: str = "talko"
-    BABBLER: str = "babbler"
 
     def to_config_key(self) -> str:
         return f"is_{self.value}_enabled"
 
 
 class ServiceKeys:
-    IS_MAGLO_ENABLED = "is_maglo_enabled"
     IS_TALKO_ENABLED = "is_talko_enabled"
-    IS_BABBLER_ENABLED = "is_babbler_enabled"
     IS_OBOTAAI_ENABLED = "is_obotaai_enabled"

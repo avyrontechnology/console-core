@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -13,8 +14,6 @@ from src.components.db_constants.models import (
 from src.components.db_constants.repositories import ConstantsRepository
 from src.components.db_constants.schema import ConstantResponseSchema
 from src.components.db_constants.services import ConstantsService
-from src.components.digital_assets.services import DigitalAssetService
-from src.components.digital_assets.storage.helper import StorageHelper
 from src.exceptions import (
     ConstantNotFoundException,
     ConstantVersionException,
@@ -22,41 +21,29 @@ from src.exceptions import (
 )
 from src.loggers.console_service_logger import ConsoleServiceLogger
 
-
 @pytest.fixture
 def mock_constants_repository():
     return MagicMock(ConstantsRepository)
-
 
 @pytest.fixture
 def mock_console_service_logger():
     return MagicMock(ConsoleServiceLogger)
 
-
 @pytest.fixture
 def mock_audit_log_service():
     return MagicMock(AuditService)
-
-
-@pytest.fixture
-def mock_digital_asset_service():
-    return MagicMock(DigitalAssetService)
-
 
 @pytest.fixture
 def constants_service(
     mock_constants_repository,
     mock_console_service_logger,
     mock_audit_log_service,
-    mock_digital_asset_service,
 ):
     return ConstantsService(
         constants_repository=mock_constants_repository,
         console_service_logger=mock_console_service_logger,
-        audit_log_service=mock_audit_log_service,
-        digital_asset_service=mock_digital_asset_service,
+        audit_service=mock_audit_log_service,
     )
-
 
 @pytest.mark.asyncio
 async def test_get_constants_details(constants_service, mock_constants_repository):
@@ -67,15 +54,14 @@ async def test_get_constants_details(constants_service, mock_constants_repositor
     assert constants == []
     mock_constants_repository.fetch_constant_by_type.assert_called_once_with(model)
 
-
 def test_constant_response_schema():
     response_data = {
-        "id": 1,
+        "id": UUID("11111111-1111-1111-1111-111111111111"),
         "name": "Test Constant",
         "value": "Test Value",
         "description": "Test Description",
         "version": 1,
-        "updated_by": 101,
+        "updated_by": UUID("10110110-1101-1011-0110-110110110110"),
         "updated_at": datetime.now(),
         "additional_info": {"key": "value"},
     }
@@ -83,7 +69,6 @@ def test_constant_response_schema():
     assert constant.name == "Test Constant"
     assert constant.version == 1
     assert constant.additional_info == {"key": "value"}
-
 
 @pytest.mark.asyncio
 async def test_get_highest_version(constants_service):
@@ -94,11 +79,10 @@ async def test_get_highest_version(constants_service):
     )
     assert highest_version == 2
 
-
 @pytest.mark.asyncio
 async def test_get_constant_by_id(constants_service, mock_constants_repository):
     model = MagicMock()
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     mock_constants_repository.get_constant_by_id = AsyncMock(
         return_value="constant_data"
     )
@@ -109,13 +93,12 @@ async def test_get_constant_by_id(constants_service, mock_constants_repository):
         model, constant_id
     )
 
-
 @pytest.mark.asyncio
 async def test_get_constant_by_id_not_found(
     constants_service, mock_constants_repository
 ):
     model = MagicMock()
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     mock_constants_repository.get_constant_by_id = AsyncMock(return_value=None)
 
     constant = await constants_service.get_constant_by_id(constant_id, model)
@@ -124,56 +107,42 @@ async def test_get_constant_by_id_not_found(
         model, constant_id
     )
 
-
 @pytest.mark.asyncio
-async def test_update_constant_with_media(
+async def test_update_constant_value_only(
     constants_service,
     mock_constants_repository,
-    mock_digital_asset_service,
     mock_audit_log_service,
 ):
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     model = MagicMock()
-    value = "test_file"
-    is_media_type = True
-    asset_type = "OTHER"
-    user_id = 1
+    value = "new_value"
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
     description = None
 
     mock_constants_repository.get_constant_by_id = AsyncMock(
         return_value=MagicMock(value=None, additional_info=None)
-    )
-    mock_digital_asset_service.create_digital_asset = AsyncMock(
-        return_value=MagicMock(id="digital_asset_id")
     )
     mock_constants_repository.update_constant = AsyncMock(
         return_value="updated_constant"
     )
 
     updated_constant = await constants_service.update_constant(
-        constant_id, model, value, is_media_type, asset_type, user_id, description
+        constant_id, model, value, user_id, description
     )
 
     assert updated_constant == "updated_constant"
-    mock_digital_asset_service.create_digital_asset.assert_called_once_with(
-        partner_id=0,
-        asset_type=asset_type,
-        input_file=value,
-        user_id=user_id,
-    )
     mock_audit_log_service.log_action.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_update_constant_without_media(
     constants_service, mock_constants_repository, mock_audit_log_service
 ):
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     model = MagicMock()
     value = "new_value"
     is_media_type = False
     asset_type = "OTHER"
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
     description = "Updated description"
 
     mock_constants_repository.get_constant_by_id = AsyncMock(
@@ -184,23 +153,20 @@ async def test_update_constant_without_media(
     )
 
     updated_constant = await constants_service.update_constant(
-        constant_id, model, value, is_media_type, asset_type, user_id, description
+        constant_id, model, value, user_id, description
     )
 
     assert updated_constant == "updated_constant"
     mock_audit_log_service.log_action.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_update_constant_exception(
     constants_service, mock_constants_repository, mock_console_service_logger
 ):
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     model = MagicMock()
     value = "new_value"
-    is_media_type = False
-    asset_type = "OTHER"
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
     description = "Updated description"
 
     mock_constants_repository.get_constant_by_id = AsyncMock(
@@ -209,13 +175,12 @@ async def test_update_constant_exception(
 
     with pytest.raises(Exception, match="Update error"):
         await constants_service.update_constant(
-            constant_id, model, value, is_media_type, asset_type, user_id, description
+            constant_id, model, value, user_id, description
         )
 
     mock_console_service_logger.error.assert_called_once_with(
         "Unexpected error occured while updating Constants: Update error"
     )
-
 
 def test_get_highest_version_with_no_additional_info(constants_service):
     additional_info = {}
@@ -226,7 +191,6 @@ def test_get_highest_version_with_no_additional_info(constants_service):
     )
     assert highest_version == 1
 
-
 @pytest.mark.asyncio
 async def test_get_highest_version_with_non_versioned_data(constants_service):
     additional_info = {"key1": "value1", "key2": "value2"}
@@ -236,13 +200,12 @@ async def test_get_highest_version_with_non_versioned_data(constants_service):
     )
     assert highest_version == 1  # No versioned info, should return the current version
 
-
 @pytest.mark.asyncio
 async def test_get_constant_by_id_with_invalid_model(
     constants_service, mock_constants_repository
 ):
     invalid_model = "InvalidModel"
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     mock_constants_repository.get_constant_by_id = AsyncMock(return_value=None)
 
     constant = await constants_service.get_constant_by_id(constant_id, invalid_model)
@@ -251,13 +214,12 @@ async def test_get_constant_by_id_with_invalid_model(
         invalid_model, constant_id
     )
 
-
 @pytest.mark.asyncio
 async def test_get_constant_by_id_empty_response(
     constants_service, mock_constants_repository
 ):
     model = MagicMock()
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     mock_constants_repository.get_constant_by_id = AsyncMock(return_value=None)
 
     constant = await constants_service.get_constant_by_id(constant_id, model)
@@ -266,15 +228,14 @@ async def test_get_constant_by_id_empty_response(
         model, constant_id
     )
 
-
 @pytest.mark.asyncio
 async def test_rollback_constant_not_found(
     constants_service, mock_constants_repository, mock_console_service_logger
 ):
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 1
     constant_type = ConstantsTypes.CONSTANTS
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     mock_constants_repository.get_constant_by_id = AsyncMock(return_value=None)
 
@@ -285,23 +246,22 @@ async def test_rollback_constant_not_found(
 
     mock_console_service_logger.error.assert_has_calls(
         [
-            call("Constant with ID 1 not found."),
+            call("Constant with ID 11111111-1111-1111-1111-111111111111 not found."),
             call(
-                "An error occured while rollback constant: Constant with ID 1 not found."
+                "An error occured while rollback constant: Constant with ID 11111111-1111-1111-1111-111111111111 not found."
             ),
         ]
     )
-
 
 @pytest.mark.asyncio
 async def test_rollback_constant_no_previous_versions(
     constants_service, mock_constants_repository, mock_console_service_logger
 ):
     # Setup mock data for rollback
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 1
     constant_type = ConstantsTypes.CONSTANTS  # Replace with an actual constant type
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     constant = MagicMock(id=constant_id, version=2, additional_info=None)
     mock_constants_repository.get_constant_by_id = AsyncMock(return_value=constant)
@@ -314,23 +274,22 @@ async def test_rollback_constant_no_previous_versions(
 
     mock_console_service_logger.error.assert_has_calls(
         [
-            call("Constant with ID 1 has no previous versions."),
+            call("Constant with ID 11111111-1111-1111-1111-111111111111 has no previous versions."),
             call(
-                "An error occured while rollback constant: Constant with ID 1 has no previous versions."
+                "An error occured while rollback constant: Constant with ID 11111111-1111-1111-1111-111111111111 has no previous versions."
             ),
         ]
     )
-
 
 @pytest.mark.asyncio
 async def test_rollback_constant_already_at_target_version(
     constants_service, mock_constants_repository, mock_console_service_logger
 ):
     # Setup mock data for rollback
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 1
     constant_type = ConstantsTypes.CONSTANTS
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     constant = MagicMock(
         id=constant_id, version=1, additional_info={"version-1": "old_value"}
@@ -345,23 +304,22 @@ async def test_rollback_constant_already_at_target_version(
 
     mock_console_service_logger.error.assert_has_calls(
         [
-            call("Constant with ID 1 is already on version 1."),
+            call("Constant with ID 11111111-1111-1111-1111-111111111111 is already on version 1."),
             call(
-                "An error occured while rollback constant: Constant with ID 1 is already on version 1."
+                "An error occured while rollback constant: Constant with ID 11111111-1111-1111-1111-111111111111 is already on version 1."
             ),
         ]
     )
-
 
 @pytest.mark.asyncio
 async def test_rollback_constant_version_not_found_in_additional_info(
     constants_service, mock_constants_repository, mock_console_service_logger
 ):
     # Setup mock data for rollback
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 1
     constant_type = ConstantsTypes.CONSTANTS  # Replace with an actual constant type
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     constant = MagicMock(
         id=constant_id, version=2, additional_info={"version-2": "current_value"}
@@ -376,13 +334,12 @@ async def test_rollback_constant_version_not_found_in_additional_info(
 
     mock_console_service_logger.error.assert_has_calls(
         [
-            call("Version 1 not found in additional_info for Constant ID 1."),
+            call("Version 1 not found in additional_info for Constant ID 11111111-1111-1111-1111-111111111111."),
             call(
                 "An error occured while rollback constant: Version 1 not found in additional_info."
             ),
         ]
     )
-
 
 @pytest.mark.asyncio
 async def test_unexpected_error_in_fetch_constants_details(
@@ -400,7 +357,6 @@ async def test_unexpected_error_in_fetch_constants_details(
         "Unexpected error occured while fetching constants details in constants service: Unexpected error"
     )
 
-
 @pytest.mark.asyncio
 async def test_error_in_get_highest_version(
     constants_service, mock_console_service_logger
@@ -415,15 +371,14 @@ async def test_error_in_get_highest_version(
     with pytest.raises(Exception, match="Error getting highest version"):
         await constants_service.get_highest_version(additional_info, current_version)
 
-
 @pytest.mark.asyncio
 async def test_error_in_rollback_constant(
     constants_service, mock_console_service_logger, mock_constants_repository
 ):
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 1
     constant_type = ConstantsTypes.CONSTANTS
-    user_id = 1
+    user_id= UUID("11111111-1111-1111-1111-111111111111")
 
     mock_constants_repository.rollback_version = AsyncMock(
         side_effect=Exception("Version 1 not found in additional_info.")
@@ -443,22 +398,6 @@ async def test_error_in_rollback_constant(
             constant_id, target_version, constant_type, user_id
         )
 
-
-@pytest.mark.asyncio
-async def test_constant_media_processing(constants_service):
-    constant = MagicMock()
-    constant.media = "test_media_url"
-
-    with patch.object(
-        StorageHelper, "get_presigned_url", return_value="presigned_url"
-    ) as mock_get_presigned_url:
-        constant.media = StorageHelper.get_presigned_url(constant.media)
-
-        mock_get_presigned_url.assert_called_once_with("test_media_url")
-
-        assert constant.media == "presigned_url"
-
-
 @pytest.mark.asyncio
 async def test_get_highest_version_logs_and_raises_exception(
     constants_service, mock_console_service_logger
@@ -474,7 +413,6 @@ async def test_get_highest_version_logs_and_raises_exception(
         "An error occured while getting highest version of constant:"
         in mock_console_service_logger.error.call_args[0][0]
     )
-
 
 @pytest.mark.asyncio
 async def test_rollback_version(
@@ -496,9 +434,9 @@ async def test_rollback_version(
 
     constants_service.get_constant_by_id = AsyncMock(return_value=mock_constant)
 
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 2
-    user_id = 42
+    user_id= UUID("42424242-4242-4242-4242-424242424242")
     version_key = f"version-{target_version}"
 
     result = await constants_service.rollback_constant(
@@ -527,7 +465,6 @@ async def test_rollback_version(
 
     assert result == mock_updated_constant
 
-
 @pytest.mark.asyncio
 async def test_add_current_version_key_if_missing(
     constants_service, mock_constants_repository
@@ -544,9 +481,9 @@ async def test_add_current_version_key_if_missing(
 
     constants_service.get_constant_by_id = AsyncMock(return_value=mock_constant)
 
-    constant_id = 1
+    constant_id= UUID("11111111-1111-1111-1111-111111111111")
     target_version = 2
-    user_id = 42
+    user_id= UUID("42424242-4242-4242-4242-424242424242")
 
     await constants_service.rollback_constant(
         id=constant_id,
@@ -558,7 +495,6 @@ async def test_add_current_version_key_if_missing(
     current_version_key = f"version-{mock_constant.version}"
     assert current_version_key in mock_constant.additional_info
     assert mock_constant.additional_info[current_version_key] == "current_value"
-
 
 @pytest.mark.asyncio
 async def test_get_constants_details_with_media_constants(
@@ -587,33 +523,23 @@ async def test_get_constants_details_with_media_constants(
     )
     constants_service.constants_repository = mock_constants_repository
 
-    # Mock StorageHelper.get_presigned_url to return a dummy URL
-    with patch(
-        "src.components.digital_assets.storage.helper.StorageHelper.get_presigned_url",
-        side_effect=lambda url: f"https://cdn.example.com/{url.split('/')[-1]}",
-    ) as mock_presign:
-        # Call the method under test
-        result = await constants_service.get_constants_details(MediaConstants)
+    # Call the method under test (storage retired: raw values pass through)
+    result = await constants_service.get_constants_details(MediaConstants)
 
-        # Ensure URLs in additional_info are updated correctly
-        assert (
-            result[0].additional_info["thumbnail"]
-            == "https://cdn.example.com/image1.jpg"
-        )
-        assert result[0].additional_info["metadata"] == {
-            "size": "2MB"
-        }  # Non-string remains unchanged
-        assert result[0].value == "https://cdn.example.com/video1.mp4"
+    assert (
+        result[0].additional_info["thumbnail"]
+        == "s3://bucket/image1.jpg"
+    )
+    assert result[0].additional_info["metadata"] == {
+        "size": "2MB"
+    }  # Non-string remains unchanged
+    assert result[0].value == "s3://bucket/video1.mp4"
 
-        assert (
-            result[1].additional_info["preview"] == "https://cdn.example.com/image2.jpg"
-        )
-        assert result[1].additional_info["info"] == "https://cdn.example.com/info.json"
-        assert result[1].value == "https://cdn.example.com/video2.mp4"
-
-        # Ensure get_presigned_url was called for each string value
-        assert mock_presign.call_count == 5  # 3 additional_info + 2 value fields
-
+    assert (
+        result[1].additional_info["preview"] == "s3://bucket/image2.jpg"
+    )
+    assert result[1].additional_info["info"] == "s3://bucket/info.json"
+    assert result[1].value == "s3://bucket/video2.mp4"
 
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_enabled_with_message(constants_service):
@@ -636,7 +562,6 @@ async def test_get_navbar_marquee_config_enabled_with_message(constants_service)
         GlobalDynamicVariables
     )
 
-
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_disabled_hides_message(constants_service):
     enabled_row = MagicMock(value="false")
@@ -653,7 +578,6 @@ async def test_get_navbar_marquee_config_disabled_hides_message(constants_servic
     assert result.is_enabled is False
     assert result.message is None
 
-
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_unconfigured_defaults_to_disabled(
     constants_service,
@@ -664,7 +588,6 @@ async def test_get_navbar_marquee_config_unconfigured_defaults_to_disabled(
 
     assert result.is_enabled is False
     assert result.message is None
-
 
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_enabled_but_empty_message(constants_service):
@@ -682,7 +605,6 @@ async def test_get_navbar_marquee_config_enabled_but_empty_message(constants_ser
     assert result.is_enabled is True
     assert result.message is None
 
-
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_is_case_and_whitespace_tolerant(
     constants_service,
@@ -695,7 +617,6 @@ async def test_get_navbar_marquee_config_is_case_and_whitespace_tolerant(
     result = await constants_service.get_navbar_marquee_config()
 
     assert result.is_enabled is True
-
 
 @pytest.mark.asyncio
 async def test_get_navbar_marquee_config_logs_and_raises_on_error(

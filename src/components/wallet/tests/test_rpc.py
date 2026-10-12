@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -27,11 +28,11 @@ class TestWalletServiceGRPC:
         """Test successful wallet lookup."""
 
         request = MagicMock()
-        request.partner_ids = [101, 102]
+        request.partner_ids = [UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
 
         wallet_1 = MagicMock(
-            id=1,
-            partner_id=101,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("10110110-1101-1011-0110-110110110110"),
             balance=4502.06,
             frozen_balance=1924.42,
             currency="INR",
@@ -42,8 +43,8 @@ class TestWalletServiceGRPC:
         )
 
         wallet_2 = MagicMock(
-            id=2,
-            partner_id=102,
+            id= UUID("22222222-2222-2222-2222-222222222222"),
+            partner_id= UUID("10210210-2102-1021-0210-210210210210"),
             balance=1000.00,
             frozen_balance=100.00,
             currency="INR",
@@ -71,24 +72,24 @@ class TestWalletServiceGRPC:
 
         assert len(response.wallets) == 2
 
-        assert response.wallets[0].partner_id == 101
+        assert response.wallets[0].partner_id == "10110110-1101-1011-0110-110110110110"
         assert response.wallets[0].balance == 4502.06
         assert response.wallets[0].frozen_balance == 1924.42
         assert response.wallets[0].currency == "INR"
         assert response.wallets[0].is_wallet_enabled is False
 
-        assert response.wallets[1].partner_id == 102
+        assert response.wallets[1].partner_id == "10210210-2102-1021-0210-210210210210"
         assert response.wallets[1].balance == 1000.00
         assert response.wallets[1].frozen_balance == 100.00
         assert response.wallets[1].currency == "INR"
         assert response.wallets[1].is_wallet_enabled is True
 
         self.wallet_service_mock.get_wallets_by_partner_ids.assert_awaited_once_with(
-            partner_ids=[101, 102]
+            partner_ids=[UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
         )
 
         self.logger_mock.info.assert_any_call(
-            "[gRPC]: Fetching wallet details for partner_ids=[101, 102]"
+            "[gRPC]: Fetching wallet details for partner_ids=[10110110-1101-1011-0110-110110110110, 10210210-2102-1021-0210-210210210210]"
         )
 
         self.logger_mock.info.assert_any_call(
@@ -99,7 +100,7 @@ class TestWalletServiceGRPC:
         """Test empty wallet response."""
 
         request = MagicMock()
-        request.partner_ids = [101, 102]
+        request.partner_ids = [UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
 
         self.wallet_service_mock.get_wallets_by_partner_ids.return_value = []
 
@@ -117,7 +118,7 @@ class TestWalletServiceGRPC:
         assert len(response.wallets) == 0
 
         self.wallet_service_mock.get_wallets_by_partner_ids.assert_awaited_once_with(
-            partner_ids=[101, 102]
+            partner_ids=[UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
         )
 
         self.logger_mock.info.assert_any_call(
@@ -128,7 +129,7 @@ class TestWalletServiceGRPC:
         """Test internal error handling."""
 
         request = MagicMock()
-        request.partner_ids = [101, 102]
+        request.partner_ids = [UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
 
         self.wallet_service_mock.get_wallets_by_partner_ids.side_effect = Exception(
             "Database failure"
@@ -149,7 +150,7 @@ class TestWalletServiceGRPC:
         )
 
         self.wallet_service_mock.get_wallets_by_partner_ids.assert_awaited_once_with(
-            partner_ids=[101, 102]
+            partner_ids=[UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
         )
 
         self.logger_mock.error.assert_called_once_with(
@@ -160,11 +161,11 @@ class TestWalletServiceGRPC:
         """Test wallet response when wallet.id is None."""
 
         request = MagicMock()
-        request.partner_ids = [101]
+        request.partner_ids = [UUID("10110110-1101-1011-0110-110110110110")]
 
         wallet = MagicMock(
             id=None,
-            partner_id=101,
+            partner_id= UUID("10110110-1101-1011-0110-110110110110"),
             balance=0.0,
             frozen_balance=0.0,
             currency="INR",
@@ -185,5 +186,5 @@ class TestWalletServiceGRPC:
         )
 
         assert len(response.wallets) == 1
-        assert response.wallets[0].id == 0
-        assert response.wallets[0].partner_id == 101
+        assert response.wallets[0].id == ""
+        assert response.wallets[0].partner_id == "10110110-1101-1011-0110-110110110110"

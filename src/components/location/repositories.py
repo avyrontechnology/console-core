@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, List, Optional, Tuple 
 
@@ -48,7 +49,7 @@ class LocationRepository:
 
     async def get_states_by_country(
         self,
-        country_id: Optional[int],
+        country_id: Optional[UUID],
         search_by: str,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -98,7 +99,7 @@ class LocationRepository:
    
     async def get_cities_by_state(
         self,
-        state_id: Optional[int],
+        state_id: Optional[UUID],
         search_by: str,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -148,7 +149,7 @@ class LocationRepository:
             )
             raise ex
 
-    async def is_country_exists(self, country_id: int) -> bool:
+    async def is_country_exists(self, country_id: UUID) -> bool:
         try:
             async with self.__session_factory() as session:
                 query = select(Countries.id).where(Countries.id == country_id)
@@ -160,7 +161,7 @@ class LocationRepository:
             )
             raise ex
 
-    async def is_state_exists(self, state_id: int) -> bool:
+    async def is_state_exists(self, state_id: UUID) -> bool:
         try:
             async with self.__session_factory() as session:
                 query = select(States.id).where(States.id == state_id)
@@ -172,7 +173,7 @@ class LocationRepository:
             )
             raise ex
 
-    async def get_state_by_id(self, state_id: int) -> States:
+    async def get_state_by_id(self, state_id: UUID) -> States:
         try:
             async with self.__session_factory() as session:
                 query = select(States).where(States.id == state_id)
@@ -184,7 +185,7 @@ class LocationRepository:
             )
             raise ex
 
-    async def get_city_by_id(self, city_id: int) -> Cities:
+    async def get_city_by_id(self, city_id: UUID) -> Cities:
         try:
             async with self.__session_factory() as session:
                 query = select(Cities).where(Cities.id == city_id)

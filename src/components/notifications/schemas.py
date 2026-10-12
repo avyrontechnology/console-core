@@ -1,3 +1,4 @@
+from uuid import UUID
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -13,10 +14,6 @@ class ChannelTypeEnum(str, Enum):
 class NotificationSourceEnum(str, Enum):
     """Sources that are allowed to control notification delivery."""
 
-    MAGLO = "maglo"
-    MAGLO_APP = "maglo_app"
-    BABBLER = "babbler"
-    BABBLER_APP = "babbler_app"
     OBOTAAI = "obotaai"
     TALKO  = "talko"
 
@@ -32,7 +29,7 @@ class NotificationScopeEnum(str, Enum):
     """
     Optional fine-grained notification scopes.
 
-    `all` is the source-wide default, while the Maglo scopes let us control
+    `all` is the source-wide default, while scoped controls let producers control
     single-assignment, bulk-assignment, and followup notifications separately
     without changing the producer payload shape.
     """
@@ -46,7 +43,7 @@ class NotificationScopeEnum(str, Enum):
 class RegisterSubscriptionRequest(BaseModel):
     channel_type: ChannelTypeEnum
     identifier: str
-    service_type: NotificationServiceType = NotificationServiceType.MAGLO
+    service_type: NotificationServiceType = NotificationServiceType.TALKO
     meta_data: Optional[Dict[str, Any]] = None
 
 
@@ -70,7 +67,7 @@ class NotificationPreferenceRequest(BaseModel):
 
 
 class NotificationPreferenceResponse(BaseModel):
-    user_id: int
+    user_id: UUID
     preferences: List[NotificationPreferenceItem]
 
     model_config = ConfigDict(from_attributes=True)
@@ -94,7 +91,7 @@ class CommonNotificationMessage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class NotificationHistoryResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     body: str
     data_payload: Optional[Dict[str, Any]] = None

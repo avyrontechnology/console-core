@@ -1,7 +1,6 @@
 """Containers module."""
 
 from dependency_injector import containers, providers
-from jinja2 import Environment, FileSystemLoader
 
 from src.components.api_key.repositories import ApiKeyRepository
 from src.components.api_key.services import ApiKeyService
@@ -19,8 +18,6 @@ from src.components.default_role_permission.repositories import (
     DefaultRolePermissionRepository,
 )
 from src.components.default_role_permission.services import DefaultRolePermissionService
-from src.components.digital_assets.repositories import DigitalAssetRepository
-from src.components.digital_assets.services import DigitalAssetService
 from src.components.entitlement.repositories import EntitlementRepository
 from src.components.entitlement.services import EntitlementService
 from src.components.grace.repositories import GraceRepository
@@ -59,8 +56,6 @@ from src.components.plan.repositories import PlanRepository
 from src.components.plan.services import PlanService
 from src.components.release_note.repositories import ReleaseNotesRepository
 from src.components.release_note.services import ReleaseNotesService
-from src.components.services import constants as ServiceConstants
-from src.components.services.email_service import EmailService
 from src.components.session_mangement.repositories import UserSessionRepository
 from src.components.session_mangement.services import UserSessionService
 from src.components.user.filter_service import FilterService
@@ -122,7 +117,6 @@ class Container(containers.DeclarativeContainer):
                 "..components.user_metadata.controllers",
                 "..components.user_metadata.repositories",
                 "..components.session_mangement.repositories",
-                "..components.digital_assets.controllers",
                 "..components.release_note.controllers",
                 "..components.db_constants.controllers",
                 "..components.db_constants.repositories",
@@ -174,7 +168,6 @@ class Container(containers.DeclarativeContainer):
                 "..components.notifications.controllers",
                 "..components.grace.tasks",
                 "..components.user.tasks",
-                "..components.oauth_server.controllers",
                 "..components.wallet.tasks",
                 "..components.partner_db_config.controllers"
             ]
@@ -209,16 +202,6 @@ class Container(containers.DeclarativeContainer):
         MongoDatabaseSessionManager, logger=console_service_logger
     )
 
-    digital_asset_repository = providers.Factory(
-        DigitalAssetRepository,
-        session_factory=db.provided.session,
-    )
-
-    digital_asset_service = providers.Factory(
-        DigitalAssetService,
-        digital_asset_repository=digital_asset_repository,
-    )
-
     release_notes_repository = providers.Factory(
         ReleaseNotesRepository,
         session_factory=db.provided.session,
@@ -227,7 +210,6 @@ class Container(containers.DeclarativeContainer):
     release_notes_service = providers.Factory(
         ReleaseNotesService,
         release_notes_repository=release_notes_repository,
-        digital_asset_service=digital_asset_service,
     )
 
     redis_pool = providers.Resource(
@@ -274,38 +256,6 @@ class Container(containers.DeclarativeContainer):
         session_factory=db.provided.session,
     )
 
-    # ── OAuth 2.1 self-hosted server ──────────────────────────────────────
-    # Repository owns the OAuth DB ops; service owns the business logic;
-    # rate limiter guards /oauth/register. Imports are local because the
-    # package is only loaded when the OAuth router is mounted — keeps
-    # non-OAuth deployments from paying the cost.
-    from src.components.oauth_server.rate_limit import (
-        DCRRateLimiter as _OAuthDCRRateLimiter,
-    )
-    from src.components.oauth_server.repositories import (
-        OAuthRepository as _OAuthRepository,
-    )
-    from src.components.oauth_server.service import (
-        OAuthService as _OAuthService,
-    )
-
-    oauth_repository = providers.Factory(
-        _OAuthRepository,
-        session_factory=db.provided.session,
-        oauth_service_logger=console_service_logger,
-    )
-    oauth_rate_limiter = providers.Singleton(
-        _OAuthDCRRateLimiter,
-        cache_helper=cache_helper,
-        console_service_logger=console_service_logger,
-    )
-    oauth_service = providers.Factory(
-        _OAuthService,
-        oauth_repository=oauth_repository,
-        user_repository=user_repository,
-        console_service_logger=console_service_logger,
-    )
-
     partner_meta_data_repository = providers.Factory(
         PartnerMetaDataRepository,
         session_factory=db.provided.session,
@@ -335,16 +285,15 @@ class Container(containers.DeclarativeContainer):
         ConstantsService,
         constants_repository=constants_repository,
         console_service_logger=console_service_logger,
-        audit_log_service=audit_service,
-        digital_asset_service=digital_asset_service,
+        audit_service=audit_service,
     )
+
 
     partner_role_perm_service = providers.Factory(
         PartnerPermissionService,
         console_service_logger=console_service_logger,
         partner_perm_repository=partner_perm_repository,
         audit_service=audit_service,
-        cache_helper=cache_helper,
     )
 
     team_repository = providers.Factory(
@@ -370,8 +319,8 @@ class Container(containers.DeclarativeContainer):
         console_service_logger=console_service_logger,
         partner_service_cache=cache_helper,
         audit_service=audit_service,
-        digital_asset_service=digital_asset_service,
     )
+
 
     address_service = providers.Factory(
         PartnerAddressService,
@@ -453,7 +402,6 @@ class Container(containers.DeclarativeContainer):
         PartnerDBConfigService,
         partner_config_repository=partner_config_repository,
         console_service_logger=console_service_logger,
-        auth_service_cache=cache_helper,
     )
 
     partner_config_service = providers.Factory(
@@ -469,7 +417,6 @@ class Container(containers.DeclarativeContainer):
         console_service_logger=console_service_logger,
         audit_service=audit_service,
         partner_config_service=partner_config_service,
-        cache_helper=cache_helper,
     )
 
     partner_role_repository = providers.Factory(
@@ -484,7 +431,6 @@ class Container(containers.DeclarativeContainer):
         console_service_logger=console_service_logger,
         audit_service=audit_service,
         partner_config_service=partner_config_service,
-        cache_helper=cache_helper,
     )
 
     default_role_permission_repository = providers.Factory(
@@ -499,7 +445,6 @@ class Container(containers.DeclarativeContainer):
         console_service_logger=console_service_logger,
         audit_service=audit_service,
         partner_config_service=partner_config_service,
-        cache_helper=cache_helper,
     )
 
     user_config_repository = providers.Factory(
@@ -522,21 +467,6 @@ class Container(containers.DeclarativeContainer):
         PartnerFilterService,
         partner_repository=partner_repository,
         console_service_logger=console_service_logger,
-    )
-
-    template_env = providers.Singleton(
-        Environment,
-        loader=FileSystemLoader(ServiceConstants.TEMPLATES_PATH),
-        autoescape=False,
-    )
-
-    email_service = providers.Singleton(
-        EmailService,
-        logger=console_service_logger,
-        api_url=ENV.MAILMG_API_URL,
-        channel_key=ENV.MAILMG_CHANNEL_KEY,
-        sender_email=ENV.MAILMG_CLIENT_NAME,
-        template_env=template_env,
     )
 
     api_key_repository = providers.Factory(
@@ -630,7 +560,7 @@ class Container(containers.DeclarativeContainer):
     notification_repository = providers.Factory(
         NotificationRepository,
         session_factory=db.provided.session,
-        maglo_service_logger=console_service_logger,
+        console_service_logger=console_service_logger,
     )
 
     fcm_notification_channel = providers.Singleton(FCMChannel)
@@ -644,7 +574,7 @@ class Container(containers.DeclarativeContainer):
     notification_service = providers.Factory(
         NotificationService,
         notification_repository=notification_repository,
-        maglo_service_logger=console_service_logger,
+        console_service_logger=console_service_logger,
         user_session_service=user_session_service
     )
 

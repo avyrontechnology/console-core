@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, Iterator
 
@@ -31,7 +32,7 @@ class PartnerMetaDataRepository:
         )
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
-    async def is_partner_exists(self, partner_id: int) -> bool:
+    async def is_partner_exists(self, partner_id: UUID) -> bool:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -51,7 +52,7 @@ class PartnerMetaDataRepository:
             )
             raise e
 
-    async def is_partner_meta_data_exists(self, session: AsyncSession, partner_id: int):
+    async def is_partner_meta_data_exists(self, session: AsyncSession, partner_id: UUID):
         self.__console_service_logger.info(
             "Checking if partner meta data already exists or not, partner id: {}".format(
                 partner_id
@@ -65,7 +66,7 @@ class PartnerMetaDataRepository:
         return result.scalars().first() is not None
 
     async def add_partner_metadata_repository(
-        self, partner_id: int, partner_meta_data: PartnerMetadata
+        self, partner_id: UUID, partner_meta_data: PartnerMetadata
     ):
         """
         This function called by partner service function whenever new partner will create
@@ -150,7 +151,7 @@ class PartnerMetaDataRepository:
 
     async def update_partner_meta_data(
         self,
-        partner_id: int,
+        partner_id: UUID,
         update_data: UpdatePartnerMetaData,
     ) -> PartnerMetaData:
         try:
@@ -200,7 +201,7 @@ class PartnerMetaDataRepository:
             raise
 
     async def get_partner_meta_data_by_partner_id(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> PartnerMetaData | None:
         try:
             async with self.__session_factory() as session:

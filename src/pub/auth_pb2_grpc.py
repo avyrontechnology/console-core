@@ -85,16 +85,6 @@ class AuthServiceStub(object):
                 request_serializer=auth__pb2.GetPartnerDetailsRequest.SerializeToString,
                 response_deserializer=auth__pb2.GetPartnerDetailsResponse.FromString,
                 _registered_method=True)
-        self.GetPublisherData = channel.unary_unary(
-                '/auth.AuthService/GetPublisherData',
-                request_serializer=auth__pb2.GetPublisherDataRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetPublisherDataResponse.FromString,
-                _registered_method=True)
-        self.GetAllPublishers = channel.unary_unary(
-                '/auth.AuthService/GetAllPublishers',
-                request_serializer=auth__pb2.GetAllPublishersRequest.SerializeToString,
-                response_deserializer=auth__pb2.GetAllPublishersResponse.FromString,
-                _registered_method=True)
         self.GetActiveUsersByPartnerId = channel.unary_unary(
                 '/auth.AuthService/GetActiveUsersByPartnerId',
                 request_serializer=auth__pb2.GetUserDetailsByPartnerIdRequest.SerializeToString,
@@ -247,20 +237,6 @@ class AuthServiceServicer(object):
 
     def GetPartnerDetails(self, request, context):
         """RPC to get partner details.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetPublisherData(self, request, context):
-        """RPC to get publisher data.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetAllPublishers(self, request, context):
-        """RPC to get all publishers
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -422,16 +398,6 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.GetPartnerDetails,
                     request_deserializer=auth__pb2.GetPartnerDetailsRequest.FromString,
                     response_serializer=auth__pb2.GetPartnerDetailsResponse.SerializeToString,
-            ),
-            'GetPublisherData': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPublisherData,
-                    request_deserializer=auth__pb2.GetPublisherDataRequest.FromString,
-                    response_serializer=auth__pb2.GetPublisherDataResponse.SerializeToString,
-            ),
-            'GetAllPublishers': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetAllPublishers,
-                    request_deserializer=auth__pb2.GetAllPublishersRequest.FromString,
-                    response_serializer=auth__pb2.GetAllPublishersResponse.SerializeToString,
             ),
             'GetActiveUsersByPartnerId': grpc.unary_unary_rpc_method_handler(
                     servicer.GetActiveUsersByPartnerId,
@@ -785,60 +751,6 @@ class AuthService(object):
             '/auth.AuthService/GetPartnerDetails',
             auth__pb2.GetPartnerDetailsRequest.SerializeToString,
             auth__pb2.GetPartnerDetailsResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetPublisherData(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetPublisherData',
-            auth__pb2.GetPublisherDataRequest.SerializeToString,
-            auth__pb2.GetPublisherDataResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetAllPublishers(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/auth.AuthService/GetAllPublishers',
-            auth__pb2.GetAllPublishersRequest.SerializeToString,
-            auth__pb2.GetAllPublishersResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -84,7 +85,7 @@ class PartnerPermissionController:
     @inject
     async def get_prp_by_partner_id(
         request: Request,
-        partner_id: int = Query(..., description="ID of the partner"),
+        partner_id: UUID = Query(..., description="ID of the partner"),
         role_perm_service: PartnerPermissionService = Depends(
             Provide[Container.partner_role_perm_service]
         ),
@@ -132,7 +133,7 @@ class PartnerPermissionController:
     @inject
     async def get_partner_role_permission_by_id(
         request: Request,
-        id: int = Query(..., description="ID of the partner role permission"),
+        id: UUID = Query(..., description="ID of the partner role permission"),
         role_perm_service: PartnerPermissionService = Depends(
             Provide[Container.partner_role_perm_service]
         ),
@@ -176,7 +177,7 @@ class PartnerPermissionController:
     @inject
     async def delete_partner_role_permission(
         request: Request,
-        id: int,
+        id: UUID,
         role_perm_service: PartnerPermissionService = Depends(
             Provide[Container.partner_role_perm_service]
         ),
@@ -216,7 +217,7 @@ class PartnerPermissionController:
     @inject
     async def get_partner_role_permissions_matrix(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         role_perm_service: PartnerPermissionService = Depends(
             Provide[Container.partner_role_perm_service]
         ),

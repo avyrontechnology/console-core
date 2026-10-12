@@ -1,11 +1,13 @@
 """Wallet Repository module."""
 
+from uuid import UUID
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
+from src.components.common.rpc_uuid import uuid_list_str
 from src.components.order.models import Order
 from src.components.wallet.enum import MAX_WALLET_NUMERIC, ServiceName, TransactionType
 from src.components.wallet.errors import (
@@ -26,7 +28,7 @@ class WalletRepository:
         self.__session_factory = session_factory
         self.__logger = logger
 
-    async def get_wallet_by_partner_id(self, partner_id: int) -> Optional[Wallet]:
+    async def get_wallet_by_partner_id(self, partner_id: UUID) -> Optional[Wallet]:
         """
         Fetch wallet record for a given partner.
         """
@@ -53,7 +55,7 @@ class WalletRepository:
         self, partner_ids: list[int]
     ) -> List[Wallet]:
         try:
-            self.__logger.info(f"Fetching wallets for partner_ids={partner_ids}")
+            self.__logger.info(f"Fetching wallets for partner_ids={uuid_list_str(partner_ids)}")
             async with self.__session_factory() as session:
                 result = await session.execute(
                     select(Wallet).where(Wallet.partner_id.in_(partner_ids))
@@ -66,7 +68,7 @@ class WalletRepository:
         
     async def get_wallet_transactions(
         self,
-        wallet_id: int,
+        wallet_id: UUID,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         limit: int = 10,
@@ -165,7 +167,7 @@ class WalletRepository:
             self.__logger.error(f"Database error in get_wallet_transactions: {exc}")
             raise exc
 
-    async def create_wallet(self, partner_id: int) -> Wallet:
+    async def create_wallet(self, partner_id: UUID) -> Wallet:
         """
         Create a wallet for the given partner if not already exists.
 
@@ -223,7 +225,7 @@ class WalletRepository:
 
     async def fetch_transactions(
         self,
-        partner_id: int,
+        partner_id: UUID,
         start_date: int,
         end_date: int,
         service_name: str | None,
@@ -301,8 +303,8 @@ class WalletRepository:
 
     async def perform_wallet_transaction(
         self,
-        current_user_id: int,
-        partner_id: int,
+        current_user_id: UUID,
+        partner_id: UUID,
         transaction_type: TransactionType,
         amount: Decimal,
         service_name: ServiceName,
@@ -445,7 +447,7 @@ class WalletRepository:
         prev_balance: Decimal,
         prev_frozen: Decimal,
         amount: Decimal,
-        partner_id: int,
+        partner_id: UUID,
         debit_from_wallet: Optional[bool]=False,
     ) -> Tuple[Decimal, Decimal]:
         """Route to correct balance calculator based on transaction type."""
@@ -484,7 +486,7 @@ class WalletRepository:
         prev_balance: Decimal,
         prev_frozen: Decimal,
         amount: Decimal,
-        partner_id: int,
+        partner_id: UUID,
     ) -> Tuple[Decimal, Decimal]:
         if amount > prev_balance:
             self.__logger.warning(
@@ -499,7 +501,7 @@ class WalletRepository:
         prev_balance: Decimal,
         prev_frozen: Decimal,
         amount: Decimal,
-        partner_id: int,
+        partner_id: UUID,
     ) -> Tuple[Decimal, Decimal]:
         if amount > prev_balance:
             self.__logger.warning(
@@ -514,7 +516,7 @@ class WalletRepository:
         prev_balance: Decimal,
         prev_frozen: Decimal,
         amount: Decimal,
-        partner_id: int,
+        partner_id: UUID,
     ) -> Tuple[Decimal, Decimal]:
         if amount > prev_frozen:
             self.__logger.warning(
@@ -550,7 +552,7 @@ class WalletRepository:
         prev_balance: Decimal,
         prev_frozen: Decimal,
         amount: Decimal,
-        partner_id: int,
+        partner_id: UUID,
     ) -> Tuple[Decimal, Decimal]:
         if amount > prev_frozen:
             self.__logger.warning(

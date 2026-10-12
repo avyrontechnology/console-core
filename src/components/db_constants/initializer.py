@@ -8,7 +8,6 @@ from src.components.db_constants.models import (
     GlobalMediaConstants,
     MediaConstants,
 )
-from src.components.digital_assets.services import StorageHelper
 
 constant_dict = {}
 media_constants_dict = {}
@@ -172,7 +171,7 @@ class LazyConstantLoader:
         """
 
         if self.model:
-            value = StorageHelper.get_presigned_url(self.key)
+            value = self.key
         else:
             value = self.dictionary.get(self.key, self.default)
 

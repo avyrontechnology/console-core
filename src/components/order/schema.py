@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -20,7 +21,7 @@ class ValidatableSchema(BaseModel):
 
 
 class OrderBase(BaseModel):
-    plan_id: Optional[int] = Field(None, ge=0)
+    plan_id: Optional[UUID] = Field(None)
     add_ons: Optional[Dict[str, int]] = Field(default_factory=dict)
     amount: float
     currency: str = Field(Currency.INDIA, min_length=3, max_length=3)
@@ -102,7 +103,7 @@ class OrderBillingDetailsRequest(BaseModel):
     - Either plan_id or add_ons must be provided
     """
 
-    plan_id: Optional[int] = None
+    plan_id: Optional[UUID] = None
     add_ons: Optional[Dict[str, int]] = Field(default_factory=dict)
     coupon: Optional[str] = None
 
@@ -176,15 +177,11 @@ class ManualOrderCreateRequest(ValidatableSchema):
     __validation_rules__ = {
         "partner_id": {
             "required": True,
-            "type": FieldType.INTEGER,
-            "min": 1,
-            "max": Limits.MAX_INT,
+            "type": FieldType.UUID,
         },
         "plan_id": {
             "required": True,
-            "type": FieldType.INTEGER,
-            "min": 1,
-            "max": Limits.MAX_INT,
+            "type": FieldType.UUID,
         },
         "amount": {
             "required": True,
@@ -249,7 +246,7 @@ class ManualOrderCreateRequest(ValidatableSchema):
 
 
 class OrderResponse(OrderBase):
-    id: int
+    id: UUID
     status: str
     merchant_transaction_id: Optional[str]
     created_at: Optional[int]
@@ -261,7 +258,7 @@ class OrderResponse(OrderBase):
 
 class OrderHistoryItemResponse(BaseModel):
     # Order details
-    order_id: int
+    order_id: UUID
     source: str
     order_status: str
     order_currency: str
@@ -274,10 +271,10 @@ class OrderHistoryItemResponse(BaseModel):
         default=PaymentMethod.GATEWAY,
         description="GATEWAY | DIRECT",
     )
-    original_order_id: Optional[int] = None
+    original_order_id: Optional[UUID] = None
 
     # Partner details
-    partner_id: Optional[int] = None
+    partner_id: Optional[UUID] = None
     partner_name: Optional[str] = None
     partner_email: Optional[str] = None
     partner_phone_number: Optional[str] = None
@@ -288,7 +285,7 @@ class OrderHistoryItemResponse(BaseModel):
     partner_is_active: Optional[bool] = None
 
     # Plan details
-    plan_id: Optional[int] = None
+    plan_id: Optional[UUID] = None
     plan_name: Optional[str] = None
     plan_type: Optional[str] = None
     plan_duration_months: Optional[int] = None
@@ -303,9 +300,9 @@ class OrderHistoryItemResponse(BaseModel):
 
     # Timestamps
     order_created_at: int
-    order_created_by: Optional[int] = None
+    order_created_by: Optional[UUID] = None
     order_updated_at: Optional[int] = None
-    order_updated_by: Optional[int] = None
+    order_updated_by: Optional[UUID] = None
 
     # Entitlement details
     entitlement_start_date: Optional[int] = None

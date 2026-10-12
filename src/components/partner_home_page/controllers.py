@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
@@ -31,8 +32,8 @@ class PartnerHomePageController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(TokenKeys.USER_ID)
-            partner_id: int = current_user.get(TokenKeys.PARTNER)
+            user_id: UUID = current_user.get(TokenKeys.USER_ID)
+            partner_id: UUID = current_user.get(TokenKeys.PARTNER)
             console_service_logger.info(
                 "Fetching partner homepage details for user: {}".format(user_id)
             )
@@ -61,7 +62,7 @@ class PartnerHomePageController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(TokenKeys.USER_ID)
+            current_user_id: UUID = current_user.get(TokenKeys.USER_ID)
             console_service_logger.info("Getting partner dashboard cards")
             dashboard_cards: List[dict] = (
                 await partner_home_page_service.partner_dashboard_cards(current_user_id)

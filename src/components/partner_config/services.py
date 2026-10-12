@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -16,20 +17,17 @@ from src.components.notifications.services import NotificationRepository
 from src.components.partner.models import Partner
 from src.components.partner.repositories import PartnerRepository
 from src.components.partner_config.constants import (
-    MAILMG_BASE_URL,
     PartnerConfigEnum,
     SubscriptionModeEnum,
 )
 from src.components.partner_config.errors import (
     PartnerConfigKeyError,
-    PartnerConfigMailMGError,
     PartnerConfigValidationError,
     PartnerNotFoundError,
 )
 from src.components.partner_config.models import PartnerConfig
 from src.components.partner_config.repositories import PartnerConfigRepository
 from src.components.partner_config.schemas import (
-    EmailConfigUpsertSchema,
     PartnerConfigBase,
     PartnerConfigData,
     PartnerConfigRequest,
@@ -42,8 +40,7 @@ from src.components.user.repositories import UserRepository
 from src.components.user.services import UserService
 from src.components.user_config.constants import UserConfig
 from src.components.user_config.repositories import UserConfigRepository
-from src.components.wallet.errors import WalletAlreadyExistsError
-from src.components.wallet.services import WalletService
+from src.components.wallet.services import WalletService  # noqa: F401 (DI wiring)
 from src.core.environment import ENV
 from src.core.redis import RedisCache
 from src.exceptions import (
@@ -72,7 +69,7 @@ class PartnerConfigService:
     async def create_partner_config(
         self,
         partner_config_data: PartnerConfigRequest,
-        partner_id: int,
+        partner_id: UUID,
     ):
         try:
 
@@ -135,10 +132,10 @@ class PartnerConfigService:
             raise exec
 
     async def get_partner_config_by_key(
-        self, partner_id: int | list[int], key: str
+        self, partner_id: UUID | list[UUID], key: str
     ) -> PartnerConfigResponse | list[PartnerConfigResponse] | None:
         try:
-            is_single = isinstance(partner_id, int)
+            is_single = not isinstance(partner_id, list)
 
             partner_ids = partner_id if isinstance(partner_id, list) else [partner_id]
 
@@ -196,13 +193,11 @@ class PartnerConfigService:
 
     async def update_partner_config(
         self,
-        partner_id: int,
+        partner_id: UUID,
         update_partner_config_data: PartnerConfigData,
         current_user: dict,
         user_service: UserService = Provide["console_service"],
         user_session_service: UserSessionService = Provide["user_session_service"],
-        api_key_service=Depends(Provide["api_key_service"]),
-        wallet_service: WalletService = Depends(Provide["wallet_service"]),
         entitlement_repo: EntitlementRepository = Depends(
             Provide["entitlement_repository"]
         ),
@@ -211,8 +206,8 @@ class PartnerConfigService:
         )
     ) -> List[UpdatePartnerConfigResponse]:
         try:
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             if (
                 partner_id != current_user_partner_id
                 and not await user_service.is_user_internal(current_user_id)
@@ -247,22 +242,6 @@ class PartnerConfigService:
                         "Please reassign all users to default (global) roles first."
                     )
 
-            if update_partner_config_data.is_maglo_enabled:
-                self.__console_service_logger.info(
-                    f"Checking API key for partner {partner_id}"
-                )
-                try:
-                    await api_key_service.get_api_key(None, partner_id)
-                except Exception:
-                    await api_key_service.generated_api_key_while_partner_onboarding(
-                        partner_id
-                    )
-
-                try:
-                    await wallet_service.create_wallet(partner_id)
-                except WalletAlreadyExistsError:
-                    pass
-
             if update_partner_config_data.subscription_mode is not None:
                 active_entitlements: List[Entitlement] = (
                     await entitlement_repo.get_all_active_entitlements(partner_id)
@@ -288,7 +267,7 @@ class PartnerConfigService:
 
             # Logout/Expire session of every user for that partner
             await user_session_service.deactivate_all_sessions_by_partner_id(
-                partner_id, update_partner_config_data.is_maglo_enabled
+                partner_id, None
             )
 
             validated_responses: List = [
@@ -330,7 +309,7 @@ class PartnerConfigService:
 
     async def get_partner_configs_by_partner_id(
         self,
-        partner_id: int,
+        partner_id: UUID,
     ) -> List[PartnerConfigResponse]:
         try:
             self.__console_service_logger.info(
@@ -342,9 +321,7 @@ class PartnerConfigService:
             REQUIRED_KEYS = [
                 PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED,
                 PartnerConfigEnum.IS_OTP_ENABLED,
-                PartnerConfigEnum.IS_BABBLER_ENABLED,
                 PartnerConfigEnum.IS_TALKO_ENABLED,
-                PartnerConfigEnum.IS_MAGLO_ENABLED,
                 PartnerConfigEnum.SEND_USER_CREDENTIALS,
                 PartnerConfigEnum.IS_EMAIL_VERIFICATION_ENABLED,
                 PartnerConfigEnum.IS_PHONE_NUMBER_VERIFICATION_ENABLED,
@@ -356,7 +333,6 @@ class PartnerConfigService:
                 PartnerConfigEnum.SMTP_USERNAME,
                 PartnerConfigEnum.SMTP_PASSWORD,
                 PartnerConfigEnum.FROM_EMAIL,
-                PartnerConfigEnum.IS_MAGLO_APP_ENABLED,
                 PartnerConfigEnum.IS_MAILER_ENABLED,
                 PartnerConfigEnum.IS_GSM_CALLING_ENABLED,
                 PartnerConfigEnum.CAN_VIEW_TASK_MANAGEMENT,
@@ -364,7 +340,6 @@ class PartnerConfigService:
                 PartnerConfigEnum.SUBSCRIPTION_MODE,
                 PartnerConfigEnum.IS_RULE_BASED_ASSIGNMENT_ENABLED,
                 PartnerConfigEnum.CAN_VIEW_PIPELINE_MANAGEMENT,
-                PartnerConfigEnum.IS_COMPLEMENTARY_BABBLER_ENABLED,
                 PartnerConfigEnum.CAN_VIEW_CONTACT,
                 PartnerConfigEnum.CAN_VIEW_ORGANIZATION,
                 PartnerConfigEnum.IS_OBOTAAI_ENABLED,
@@ -385,7 +360,6 @@ class PartnerConfigService:
                 PartnerConfigEnum.IS_TEAM_DATA_PARTITION_ENABLED,
                 PartnerConfigEnum.TEAM_STRICT_HIERARCHY_MODE,
                 PartnerConfigEnum.TEAM_STRICT_HIERARCHY_START_ROLE_ID,
-                PartnerConfigEnum.IS_BABBLER_APP_ENABLED,
                 PartnerConfigEnum.IS_USER_TRACKER_ENABLED,
                 PartnerConfigEnum.CAN_VIEW_PAYMENT_HISTORY,
                 PartnerConfigEnum.IS_REENQUIRY_CHAIN_ENABLED,
@@ -467,7 +441,7 @@ class PartnerConfigService:
 
     async def custom_role_permission_check(
         self,
-        user_id: int,
+        user_id: UUID,
         auth_repo: AuthRepository = Provide["auth_repository"],
         user_service: UserService = Provide["console_service"],
         user_config_repo: UserConfigRepository = Provide["user_config_repository"],
@@ -494,7 +468,7 @@ class PartnerConfigService:
                 "Getting user object to get partner id..."
             )
             user: User = await user_service.get_user_by_id(user_id)
-            partner_id: int = user.partner_id
+            partner_id: UUID = user.partner_id
             self.__console_service_logger.info(
                 "checking the custom role permission value for partner id: {}".format(
                     partner_id
@@ -544,8 +518,8 @@ class PartnerConfigService:
 
     async def team_role_permission_check(
         self,
-        user_id: int,
-        effective_role_id: Optional[int],
+        user_id: UUID,
+        effective_role_id: Optional[UUID],
         auth_repo: AuthRepository = Provide["auth_repository"],
         user_service: UserService = Provide["console_service"],
         user_config_repo: UserConfigRepository = Provide["user_config_repository"],
@@ -577,7 +551,7 @@ class PartnerConfigService:
                 return []
 
             user: User = await user_service.get_user_by_id(user_id)
-            partner_id: int = user.partner_id
+            partner_id: UUID = user.partner_id
 
             default_permissions = (
                 await auth_repo.get_default_role_permissions_by_role_id(
@@ -601,7 +575,7 @@ class PartnerConfigService:
 
             if cfg and getattr(cfg, "value", False) == True:
                 # Partner-custom perms live on the partner-owned copy of the role.
-                resolved_role_id: int = await auth_repo.resolve_role_for_partner(
+                resolved_role_id: UUID = await auth_repo.resolve_role_for_partner(
                     effective_role_id, partner_id
                 )
                 partner_permissions = (
@@ -635,7 +609,7 @@ class PartnerConfigService:
 
     async def role_permission_check(
         self,
-        role_id: int,
+        role_id: UUID,
         auth_repo: AuthRepository = Provide["auth_repository"],
     ) -> list[str]:
         """Configured permission slugs granted to a specific role (no user).
@@ -656,7 +630,7 @@ class PartnerConfigService:
                 permission.slug for permission in default_permissions
             ]
 
-            partner_id: Optional[int] = getattr(role, "partner_id", None)
+            partner_id: Optional[UUID] = getattr(role, "partner_id", None)
             if partner_id is None:
                 # System default role -> default permissions only.
                 return default_permission_list
@@ -692,230 +666,3 @@ class PartnerConfigService:
             )
             raise exec
 
-    async def upsert_email_config(
-        self,
-        current_user: Dict[str, Any],
-        email_config_data: EmailConfigUpsertSchema,
-        partner_repo: PartnerRepository = Provide["partner_repository"],
-    ) -> Dict[str, Any]:
-
-        try:
-            self.__console_service_logger.info(
-                "Starting upsert_email_config for current_user={}".format(current_user)
-            )
-
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-            if not partner_id:
-                self.__console_service_logger.error(
-                    "Partner ID missing in current user context"
-                )
-                raise PartnerNotFoundError("Partner ID missing in current user context")
-
-            payload: Dict[str, Any] = {
-                **email_config_data.model_dump(),
-                "client_partner_id": partner_id,
-            }
-            self.__console_service_logger.info(
-                "Prepared payload for partner_id={}: {}".format(partner_id, payload)
-            )
-
-            # Check existing channel key
-            channel_key: Optional[str] = await self._get_mailmg_partner_channel_key(
-                partner_id
-            )
-            self.__console_service_logger.info(
-                "Existing channel_key for partner_id {}: {}".format(
-                    partner_id, channel_key
-                )
-            )
-
-            if channel_key:
-                # UPDATE FLOW
-                self.__console_service_logger.info(
-                    "Channel key exists, validating update payload for partner_id={}".format(
-                        partner_id
-                    )
-                )
-                message: str = await self._update_mailmg_partner(payload)
-                self.__console_service_logger.info(
-                    "MailMG update response for partner_id {}: {}".format(
-                        partner_id, message
-                    )
-                )
-            else:
-                # CREATE FLOW
-                self.__console_service_logger.info(
-                    "No existing channel key, validating create payload for partner_id={}".format(
-                        partner_id
-                    )
-                )
-                self._validate_create_body(email_config_data)
-                self.__console_service_logger.info(
-                    "Create payload validated, calling _create_mailmg_partner for partner_id={}".format(
-                        partner_id
-                    )
-                )
-                partner: Partner = await partner_repo.get_by_id(partner_id)
-                payload["partner_name"] = partner.name
-                message: str = await self._create_mailmg_partner(payload)
-                self.__console_service_logger.info(
-                    "MailMG create response for partner_id {}: {}".format(
-                        partner_id, message
-                    )
-                )
-
-                # Fetch new channel key
-                channel_key = await self._get_mailmg_partner_channel_key(partner_id)
-                self.__console_service_logger.info(
-                    "Fetched new channel_key for partner_id {}: {}".format(
-                        partner_id, channel_key
-                    )
-                )
-                if not channel_key:
-                    self.__console_service_logger.error(
-                        "MailMG did not return a channel key after creation for partner_id={}".format(
-                            partner_id
-                        )
-                    )
-                    raise PartnerConfigKeyError(partner_id)
-
-                self.__console_service_logger.info(
-                    "Upserting partner config in repository for partner_id={}".format(
-                        partner_id
-                    )
-                )
-                await self.__partner_config_repository.upsert_partner_config(
-                    current_user=current_user,
-                    key=PartnerConfigEnum.EMAIL_CONFIG_KEY.value,
-                    value=channel_key,
-                )
-
-                await self.__console_service_cache.clear_pattern(
-                    prefix=RedisCache.KeysPrefix.CONSOLE,
-                    pattern=CacheKeys.ALL_PARTNER_CONFIGS.format(partner_id),
-                )
-                self.__console_service_logger.info(
-                    "Partner config upserted successfully for partner_id={}".format(
-                        partner_id
-                    )
-                )
-
-            self.__console_service_logger.info(
-                "Upsert email config completed for partner_id={}, returning message and channel_key".format(
-                    partner_id
-                )
-            )
-            return {"message": message, "channel_key": channel_key}
-
-        except Exception as exec:
-            self.__console_service_logger.error(
-                "An unexpected error occured while upsert email config: {}".format(exec)
-            )
-            raise exec
-
-    async def _get_mailmg_partner_channel_key(
-        self, client_partner_id: int
-    ) -> Optional[str]:
-        url = f"{MAILMG_BASE_URL}/partners/partner-channel-key/?client_partner_id={client_partner_id}"
-        self.__console_service_logger.info(
-            "Fetching channel key from URL={}".format(url)
-        )
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.get(
-                    url, headers={"X-Client-Channel-Key": ENV.MAGLO_MAILER_CHANNEL_KEY}
-                )
-            self.__console_service_logger.info(
-                "MailMG GET response for partner_id {}: status_code={}, body={}".format(
-                    client_partner_id, res.status_code, res.text
-                )
-            )
-            if res.status_code == 200:
-                return res.json().get("channel_key")
-            return None
-        except Exception as exc:
-            self.__console_service_logger.error(
-                "Error fetching channel key from MailMG for partner_id {}: {}".format(
-                    client_partner_id, exc
-                )
-            )
-            raise PartnerConfigMailMGError(str(exc))
-
-    async def _create_mailmg_partner(self, payload: dict) -> str:
-        url = f"{MAILMG_BASE_URL}/partners/"
-        self.__console_service_logger.info(
-            "Creating partner in MailMG with URL={}".format(url)
-        )
-        self.__console_service_logger.info("Payload: {}".format(payload))
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.post(
-                    url,
-                    json=payload,
-                    headers={"X-Client-Channel-Key": ENV.MAGLO_MAILER_CHANNEL_KEY},
-                )
-            self.__console_service_logger.info(
-                "MailMG POST response: status_code={}, body={}".format(
-                    res.status_code, res.text
-                )
-            )
-            if res.status_code != 201:
-                raise PartnerConfigMailMGError(
-                    "MailMG creation failed: status_code={} error={}".format(
-                        res.status_code, res.text
-                    )
-                )
-            return res.json().get("message")
-        except Exception as exc:
-            self.__console_service_logger.error(
-                "Exception during MailMG create: {}".format(exc)
-            )
-            raise PartnerConfigMailMGError(str(exc))
-
-    async def _update_mailmg_partner(self, payload: dict) -> str:
-        url = f"{MAILMG_BASE_URL}/partners/update-partner-details/"
-        self.__console_service_logger.info(
-            "Updating partner in MailMG with URL={}".format(url)
-        )
-        self.__console_service_logger.info("Payload: {}".format(payload))
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.put(
-                    url,
-                    json=payload,
-                    headers={"X-Client-Channel-Key": ENV.MAGLO_MAILER_CHANNEL_KEY},
-                )
-            self.__console_service_logger.info(
-                "MailMG PUT response: status_code={}, body={}".format(
-                    res.status_code, res.text
-                )
-            )
-            if res.status_code != 200:
-                raise PartnerConfigMailMGError(
-                    "MailMG update failed: status_code={} error={}".format(
-                        res.status_code, res.text
-                    )
-                )
-            return res.json().get("message")
-        except Exception as exc:
-            self.__console_service_logger.error(
-                "Exception during MailMG update: {}".format(exc)
-            )
-            raise PartnerConfigMailMGError(str(exc))
-
-    def _validate_create_body(self, schema: EmailConfigUpsertSchema):
-        self.__console_service_logger.info(
-            "Validating create payload: {}".format(schema.model_dump())
-        )
-        if not all(
-            [
-                schema.smtp_username,
-                schema.smtp_password,
-                schema.from_email,
-            ]
-        ):
-            self.__console_service_logger.error("Validation failed for create payload")
-            raise PartnerConfigValidationError(
-                "Create requires: smtp_username, smtp_password, from_email"
-            )
-        self.__console_service_logger.info("Create payload validation passed")

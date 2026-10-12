@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -177,7 +178,7 @@ class TeamController:
     @inject
     async def get_team_by_id(
         request: Request,
-        team_id: int,
+        team_id: UUID,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -202,7 +203,7 @@ class TeamController:
     @inject
     async def update_team(
         request: Request,
-        team_id: int,
+        team_id: UUID,
         data: TeamUpdate,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
@@ -231,7 +232,7 @@ class TeamController:
     @inject
     async def delete_team(
         request: Request,
-        team_id: int,
+        team_id: UUID,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -253,7 +254,7 @@ class TeamController:
     @inject
     async def add_team_member(
         request: Request,
-        team_id: int,
+        team_id: UUID,
         data: TeamMemberCreate,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
@@ -282,8 +283,8 @@ class TeamController:
     @inject
     async def update_team_member(
         request: Request,
-        team_id: int,
-        member_user_id: int,
+        team_id: UUID,
+        member_user_id: UUID,
         data: TeamMemberUpdate,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
@@ -314,8 +315,8 @@ class TeamController:
     @inject
     async def remove_team_member(
         request: Request,
-        team_id: int,
-        member_user_id: int,
+        team_id: UUID,
+        member_user_id: UUID,
         team_service: TeamService = Depends(Provide[Container.team_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -340,7 +341,7 @@ class TeamController:
     @inject
     async def get_team_members(
         request: Request,
-        team_id: int,
+        team_id: UUID,
         limit: Optional[int] = Query(
             None, description="number of records per page", ge=1
         ),

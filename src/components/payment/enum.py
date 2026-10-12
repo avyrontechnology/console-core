@@ -1,9 +1,6 @@
 class EntityNameEnum:
     """Represents what the payment is made for."""
 
-    BABBLER_WALLET = "BABBLER_WALLET"
-    BABBLER_PLATFORM_FEE = "BABBLER_PLATFORM_FEE"
-    MAGLO_DIDS = "MAGLO_DIDS"
     PLAN = "PLAN"
 
 

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -27,7 +28,7 @@ class TestTeamRepository:
 
         async def fake_flush() -> None:
             # Simulate the DB assigning the autoincrement id on flush.
-            added["team"].id = 42
+            added["team"].id = UUID("42424242-4242-4242-4242-424242424242")
 
         self.session.add = MagicMock(side_effect=fake_add)
         self.session.flush = AsyncMock(side_effect=fake_flush)
@@ -38,17 +39,17 @@ class TestTeamRepository:
         values = {"name": "Test Team", "slug": "placeholder", "partner_id": 1}
 
         result = await self.team_repository.create_team(
-            values, user_id=9, finalize_slug=finalize_slug
+            values, user_id= UUID("99999999-9999-9999-9999-999999999999"), finalize_slug=finalize_slug
         )
 
         # finalize_slug must observe the id assigned by flush.
         finalize_slug.assert_called_once()
         (called_team,) = finalize_slug.call_args.args
-        assert called_team.id == 42
+        assert called_team.id == UUID("42424242-4242-4242-4242-424242424242")
 
         assert isinstance(result, Team)
         assert result.slug == "final_team_slug_42"
-        assert result.created_by == 9
+        assert result.created_by== UUID("99999999-9999-9999-9999-999999999999")
 
         self.session.flush.assert_awaited_once()
         self.session.commit.assert_awaited_once()
@@ -61,6 +62,6 @@ class TestTeamRepository:
         with pytest.raises(Exception, match="db down"):
             await self.team_repository.create_team(
                 {"name": "X", "slug": "x", "partner_id": 1},
-                user_id=1,
+                user_id= UUID("11111111-1111-1111-1111-111111111111"),
                 finalize_slug=MagicMock(),
             )

@@ -1,1 +1,0 @@
-USER_ALREADY_EXISTS_FOR_PUBLISHER = "A Publisher user already exists for this Partner."

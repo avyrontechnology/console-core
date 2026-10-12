@@ -1,5 +1,6 @@
 """Services module."""
 
+from uuid import UUID
 import copy
 import json
 import re
@@ -14,7 +15,6 @@ import io
 from fastapi.responses import StreamingResponse
 
 
-import httpx
 from dependency_injector.wiring import Provide
 from fastapi import Depends
 from passlib.context import CryptContext  # type: ignore
@@ -56,7 +56,6 @@ from src.components.partner.error import PartnerNotFoundError
 from src.components.partner.models import Partner
 from src.components.partner.repositories import PartnerRepository
 from src.components.partner_config.constants import PartnerConfigEnum
-from src.components.services.email_service import EmailService
 from src.components.session_mangement.services import UserSessionService
 from src.components.team.repositories import TeamRepository
 from src.components.user.constants import (
@@ -109,7 +108,7 @@ class UserService:
 
     async def get_users(
         self,
-        current_user_id: int,
+        current_user_id: UUID,
         limit: int,
         offset: int,
         auth_service=Depends(Provide["auth_service"]),
@@ -157,13 +156,13 @@ class UserService:
             users_data: List[AllUsersDataResponse] = []
             for user in all_users:
                 role_name: Optional[str] = None
-                role_id: Optional[int] = user.role_id
+                role_id: Optional[UUID] = user.role_id
 
                 if role_id:
                     role = await auth_service.get_role_by_id(role_id)
                     role_name: Optional[str] = role.name if role else None
 
-                country_id: Optional[int] = user.country_id
+                country_id: Optional[UUID] = user.country_id
                 country_name: Optional[str] = (
                     user.country.name if user.country else None
                 )
@@ -213,7 +212,7 @@ class UserService:
             self.__console_service_logger.error("Error retriving users.{}".format(e))
             raise
 
-    async def get_user_by_id(self, user_id: int) -> User:
+    async def get_user_by_id(self, user_id: UUID) -> User:
         try:
             self.__console_service_logger.info(
                 "Getting the user by id :{} ".format(user_id)
@@ -233,7 +232,7 @@ class UserService:
     async def delete_user_by_id(
         self,
         request,
-        user_id: int,
+        user_id: UUID,
         user_session_service: UserSessionService = Depends(
             Provide["user_session_service"]
         ),
@@ -249,9 +248,6 @@ class UserService:
             if is_child_users:
                 raise UserException("User has associated child users")
 
-            # Call internal API to handle delete event
-            await self._call_internal_delete_api(request, user_id)
-
             user: User = await self.__repository.delete_by_id(user_id)
             self.__console_service_logger.info("user deleted successfully.")
 
@@ -260,33 +256,6 @@ class UserService:
                 self.__console_service_logger.info(
                     "deactivate user session: {}".format(user_id)
                 )
-
-            cache_patterns: list = [
-                CacheKeys.HOME_PAGE.format(user.partner_id, user_id),
-                CacheKeys.ENLIST_AGENTS.format(user.partner_id),
-                CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-                CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-                CacheKeys.GRPC_GET_PUBLISHER_DATA.format(user.partner_id),
-                CacheKeys.GRPC_GET_USER_ROLE.format(user_id),
-                CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", user.id),
-            ]
-
-            if user.parent_id:
-                ancestor_ids = await auth_repository.get_ancestor_ids(user.parent_id)
-                for ancestor_id in ancestor_ids:
-                    cache_patterns.append(
-                        CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", ancestor_id)
-                    )
-           
-            await self.__console_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO, pattern=cache_patterns
-            )
-
-            # Drop the user from the partner's team payloads maglo caches; a
-            # deleted user may still be listed as a team member otherwise.
-            await self.__console_service_cache.invalidate_partner_teams_cache(
-                user.partner_id
-            )
 
             await self.__console_service_cache.clear_pattern(
                 prefix=RedisCache.KeysPrefix.CONSOLE,
@@ -315,7 +284,7 @@ class UserService:
 
     async def update_user(
         self,
-        user_id: int,
+        user_id: UUID,
         current_user: dict,
         user_data: Contrasts.UpdateUserData,
         location_service: LocationService = Depends(Provide["location_service"]),
@@ -333,8 +302,8 @@ class UserService:
                 user_id, show_inactive_users=True
             )            
             resource_previous_state: User = copy.deepcopy(existing_user)
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             partner_obj: Partner = await partner_service.get_partner_by_id(
                 current_user_partner_id
             )
@@ -407,36 +376,6 @@ class UserService:
             self.__console_service_logger.info(
                 "user updated successfully: {}".format(updated_user)
             )
-
-            cache_patterns: list = [
-                CacheKeys.HOME_PAGE.format(updated_user.partner_id, user_id),
-                CacheKeys.ENLIST_AGENTS.format(updated_user.partner_id),
-                CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-                CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-                CacheKeys.GRPC_GET_USER_ROLE.format(user_id),
-                CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", user_id),
-            ]
-
-            if user_data.is_maglo_publisher:
-                cache_patterns.append(
-                    CacheKeys.GRPC_GET_PUBLISHER_DATA.format(updated_user.partner_id)
-                )
-
-            if user_data.parent_id:
-                ancestor_ids = await auth_repository.get_ancestor_ids(user_data.parent_id)
-                for ancestor_id in ancestor_ids:
-                    cache_patterns.append(
-                        CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", ancestor_id)
-                    )
-
-            await self.__console_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO, pattern=cache_patterns
-            )
-
-            if update_data.get("role_id"):
-                await self.__console_service_cache.invalidate_partner_teams_cache(
-                    updated_user.partner_id
-                )
 
             await self.__console_service_cache.clear_pattern(
                 prefix=RedisCache.KeysPrefix.CONSOLE,
@@ -529,7 +468,7 @@ class UserService:
 
     async def get_users_by_partner_id(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_repository: PartnerRepository = Depends(Provide["partner_repository"]),
     ) -> List[Dict]:
         try:
@@ -579,7 +518,7 @@ class UserService:
 
     async def get_user_details(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> User:
         try:
             self.__console_service_logger.info(
@@ -671,7 +610,7 @@ class UserService:
         return email, phone_number
 
     async def get_user_by_user_id(
-        self, user_id: int, partner_id, show_inactive_users: bool = False
+        self, user_id: UUID, partner_id, show_inactive_users: bool = False
     ) -> Contrasts.GetUserDetailResponse:
         try:
             self.__console_service_logger.info(
@@ -693,7 +632,7 @@ class UserService:
             raise exec
             
     async def get_admin_details_by_partner_id(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> Contrasts.GetUserDetailResponse:
         try:
             self.__console_service_logger.info(
@@ -726,7 +665,7 @@ class UserService:
             )
             raise exec
 
-    async def is_user_internal(self, user_id: int) -> bool:
+    async def is_user_internal(self, user_id: UUID) -> bool:
         user: User = await self.get_user_by_id(user_id)
         if not user.is_internal:
             return False
@@ -745,8 +684,8 @@ class UserService:
                     filter_request.partner_id
                 )
             )
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             filter_request.partner_id = (
                 filter_request.partner_id or current_user_partner_id
             )
@@ -784,7 +723,7 @@ class UserService:
             raise ex
 
     async def get_users_by_user_ids(
-        self, partner_id: int, user_ids: List[int]
+        self, partner_id: UUID, user_ids: List[int]
     ) -> List[User]:
         try:
             self.__console_service_logger.info(
@@ -818,175 +757,15 @@ class UserService:
             )
             raise exec
 
-    async def has_child_users(self, user_id: int) -> bool:
+    async def has_child_users(self, user_id: UUID) -> bool:
         self.__console_service_logger.info(
             f"Attempting to check user has child users: {user_id}"
         )
         result: bool = await self.__repository.has_child_users(user_id)
         return result
 
-    async def _call_internal_delete_api(self, request, user_id: int):
-        maglo_base_url = ENV.MAGLO_BASE_URL
-        api_url = f"{maglo_base_url}/handled_user_delete_event"
-        token = request.headers.get("Authorization")
-        params = {"user_id": user_id}
-
-        self.__console_service_logger.info(
-            f"[DeleteUser] Calling internal API: {api_url} with user_id={user_id}"
-        )
-
-        async with httpx.AsyncClient(timeout=30) as client:
-            headers = {"accept": "application/json", "Authorization": token}
-            response = await client.get(api_url, params=params, headers=headers)
-
-        if response.status_code != 200:
-            self.__console_service_logger.error(
-                f"[DeleteUser] API failed: {response.status_code}, body={response.text}"
-            )
-            raise UserException(
-                f"Failed to process user delete event. Status: {response.status_code}"
-            )
-
-        resp_json = response.json()
-
-        data = resp_json.get("data", {})
-        has_conflict = data.get("has_conflict", False)
-        message = data.get("message", "User conflict detected")
-        if has_conflict:
-            raise UserException(message)
-
-    async def get_otp_for_delete_user(
-        self,
-        email: str,
-        email_service: EmailService = Depends(Provide["email_service"]),
-        auth_repository: AuthRepository = Depends(Provide["auth_repository"]),
-        user_config_service=Depends(Provide["user_config_service"]),
-    ):
-        try:
-            self.__console_service_logger.info(
-                "Attempting to get OTP for inacitve app for user: {}".format(email)
-            )
-            user_details: User = await self.get_user_by_field("email", email)
-            if user_details is None:
-                raise UserNotFoundError(email)
-            config = await user_config_service.get_user_config_by_key(
-                user_details.id, "is_maglo_app_enabled"
-            )
-            if config is None:
-                raise UserException(UserResponseMsg.MAGLO_APP_NOT_ENABLED)
-            if config.value is False:
-                raise UserNotFoundError(email)
-
-            otp_entry = await auth_repository.create_otp(user_details.id, OtpType.EMAIL)
-            body = {
-                "otp": otp_entry.otp,
-                "OTP_TIMEOUT": OtpConstants.OTP_TIMEOUT,
-                "title": "Your Delete Account Code",
-                "subtitle": "Use this 6-digit code to delete account",
-                "footer_note": "If you didn’t try to delete account, ignore this",
-            }
-            email_service.send_email(
-                to_emails=[user_details.email],
-                subject="Your One-Time Code for delete the account",
-                body=body,
-                html_template="otp_template.html",
-                channel_key=ENV.MAILMG_NO_REPLY_CHANNEL_KEY,
-            )
-
-            return UserResponseMsg.OTP_SENT
-        except Exception as ex:
-            self.__console_service_logger.error(
-                "Unexpected error while getting OTP for inactive app: {}".format(
-                    repr(ex)
-                )
-            )
-            raise ex
-
-    async def inactive_app_with_otp(
-        self,
-        email: str,
-        otp: str,
-        user_config_service=Depends(Provide["user_config_service"]),
-        auth_repository: AuthRepository = Depends(Provide["auth_repository"]),
-        user_session_service: UserSessionService = Depends(
-            Provide["user_session_service"]
-        ),
-    ):
-        try:
-            self.__console_service_logger.info(
-                "Attempting to inacitve app for user: {}".format(email)
-            )
-            user_details: User = await self.get_user_by_field("email", email)
-            otp_entry: Union[OTP, None] = await auth_repository.get_active_otp(
-                user_id=user_details.id,
-                otp_type=OtpType.EMAIL,
-                otp=otp,
-            )
-            if not otp_entry:
-                raise UserException("Invalid OTP")
-
-            await user_config_service.update_is_maglo_app_config(
-                user_id=user_details.id, is_maglo_app_enabled=False
-            )
-            await user_session_service.deactivate_user_sessions(
-                user_id=user_details.id, service_name="maglo_app"
-            )
-            otp_entry.is_used = True
-            await auth_repository.update_otp(otp_entry)
-            return UserResponseMsg.ACCOUNT_DELETED
-        except Exception as ex:
-            self.__console_service_logger.error(
-                "Unexpected error during get users by user_ids: {}".format(repr(ex))
-            )
-            raise ex
-
-    async def inactive_app_by_id(
-        self,
-        current_user: dict,
-        user_config_service=Depends(Provide["user_config_service"]),
-        user_session_service: UserSessionService = Depends(
-            Provide["user_session_service"]
-        ),
-    ):
-        try:
-
-            user_id = current_user.get(CurrentUserMap.USER_ID)
-            self.__console_service_logger.info(
-                "Attempting to inactive app for user id: {}".format(user_id)
-            )
-            # Get user by ID
-            user_details: User = await self.get_user_by_field("id", user_id)
-            if not user_details:
-                raise UserException("User not found")
-
-            config = await user_config_service.get_user_config_by_key(
-                user_details.id, "is_maglo_app_enabled"
-            )
-            if config is None:
-                raise UserException(UserResponseMsg.MAGLO_APP_NOT_ENABLED)
-            if config.value is False:
-                raise UserNotFoundError(user_details.email)
-
-            # Disable maglo app
-            await user_config_service.update_is_maglo_app_config(
-                user_id=user_details.id, is_maglo_app_enabled=False
-            )
-
-            # Deactivate sessions
-            await user_session_service.deactivate_user_sessions(
-                user_id=user_details.id, service_name="maglo_app"
-            )
-
-            return UserResponseMsg.ACCOUNT_DELETED
-
-        except Exception as ex:
-            self.__console_service_logger.error(
-                "Unexpected error during inactive_app_by_id: {}".format(repr(ex))
-            )
-            raise ex
-
     async def toggle_walkthrough_key_activation(
-        self, user_id: int, update_data: WalkthroughUpdateRequest
+        self, user_id: UUID, update_data: WalkthroughUpdateRequest
     ) -> None:
         try:
             self.__console_service_logger.info(
@@ -999,18 +778,6 @@ class UserService:
 
             result: User = await self.__repository.toggle_walkthrough_key_activation(
                 user_id, **update_data
-            )
-
-            cache_patterns: list = [
-                CacheKeys.HOME_PAGE.format(result.partner_id, user_id),
-                CacheKeys.ENLIST_AGENTS.format(result.partner_id),
-                CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-                CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-                CacheKeys.GRPC_GET_USER_ROLE.format(user_id),
-            ]
-
-            await self.__console_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO, pattern=cache_patterns
             )
 
             await self.__console_service_cache.clear_pattern(
@@ -1026,7 +793,7 @@ class UserService:
             )
             raise exec
 
-    async def resolve_user_walkthrough_key(self, user_id: int, partner_id: int) -> None:
+    async def resolve_user_walkthrough_key(self, user_id: UUID, partner_id: UUID) -> None:
         try:
             self.__console_service_logger.error(
                 "Attempting to resolve user walkthrough key by user_id: {}".format(
@@ -1075,7 +842,7 @@ class UserService:
 
     async def get_agent_details_by_IVR(
         self,
-        partner_id: int,
+        partner_id: UUID,
         ivr_phone: str,
         api_key: str,
         apiKeyRepository: ApiKeyRepository = Depends(Provide["api_key_repository"]),
@@ -1148,7 +915,7 @@ class UserService:
     async def bulk_create(
         self,
         request: BulkUserCreateRequest,
-        requesting_partner_id: int,
+        requesting_partner_id: UUID,
     ):
         """
         Create all users in a single atomic DB transaction.
@@ -1157,7 +924,7 @@ class UserService:
             request: Fully validated BulkUserCreateRequest.
             requesting_partner_id: partner_id from the X-Partner-Id header —
                 every user in the batch must carry this same partner_id
-                (Maglo injects it; this is a defence-in-depth check).
+                (Server injects it; this is a defence-in-depth check).
 
         Raises:
             ValueError: Validation failures (duplicate email/phone, bad role, etc.)
@@ -1184,7 +951,7 @@ class UserService:
 
                     # Resolve parent_id from already-created users in this batch
                     parent_seq = parent_map.get(user_entry.sequence)
-                    parent_id: Optional[int] = None
+                    parent_id: Optional[UUID] = None
                     if parent_seq is not None:
                         parent_id = seq_to_user_id.get(parent_seq)
                         if parent_id is None:
@@ -1326,7 +1093,7 @@ class UserService:
         session: Any,
         entry: BulkUserEntry,
         hashed_password: str,
-        parent_id: Optional[int],
+        parent_id: Optional[UUID],
     ) -> int:
         """
         Insert a single User row within the active session/transaction.
@@ -1362,7 +1129,7 @@ class UserService:
 
     async def get_bulk_upload_feature_flags(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_config_service = Provide["partner_config_service"],
     ) -> dict:
         teams_cfg = await partner_config_service.get_partner_config_by_key(
@@ -1392,7 +1159,7 @@ class UserService:
     async def download_bulk_upload_reference_file(
         self, current_user: dict
     ) -> list[str]:
-        partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
         flags: dict = await self.get_bulk_upload_feature_flags(partner_id)
         headers: list[str] = build_bulk_upload_headers(flags)

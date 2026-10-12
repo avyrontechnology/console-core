@@ -1,12 +1,10 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
-from typing import Dict, List
 
 from src.components.common.response import (
     SuccessResponse,
     InternalServerErrorResponse,
 )
-from src.components.common.constants import MagloAppConfig, BabblerAppConfig
 from src.components.db_constants.schema import NavbarMarqueeResponseSchema
 from src.components.db_constants.services import ConstantsService
 from src.core.container import Container
@@ -16,34 +14,6 @@ from src.loggers.console_service_logger import ConsoleServiceLogger
 class AppConfigController:
 
     app_config_router = APIRouter(prefix="/app-config", tags=["App Config"])
-
-    @app_config_router.get("")
-    async def get_app_config():
-        """
-        Returns grouped app configuration for Maglo App and Babbler Chatbot.
-        Constants-based implementation. No DB, no service.
-        """
-        try:
-            maglo_app_config: Dict[str, object] = {
-                "maglo_android_latest_version": MagloAppConfig.ANDROID_LATEST_VERSION,
-                "maglo_ios_latest_version": MagloAppConfig.IOS_LATEST_VERSION
-            }
-
-            babbler_chatbot_config: Dict[str, object] = {
-                "babbler_android_latest_version": BabblerAppConfig.ANDROID_LATEST_VERSION,
-                "babbler_ios_latest_version": BabblerAppConfig.IOS_LATEST_VERSION
-            }
-
-            return SuccessResponse(
-                data={
-                    "maglo_app_config": [maglo_app_config],
-                    "babbler_chatbot_config": [babbler_chatbot_config],
-                },
-                message="App configuration fetched successfully",
-            )
-
-        except Exception:
-            return InternalServerErrorResponse()
 
     @app_config_router.get(
         "/navbar-marquee", response_model=NavbarMarqueeResponseSchema

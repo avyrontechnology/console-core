@@ -23,10 +23,6 @@ class PermissionGenerator:
 
         if self.app_name == "console":
             source = PermissionCategories.CONSOLE_PERMISSIONS
-        elif self.app_name == "maglo":
-            source = PermissionCategories.MAGLO_PERMISSIONS
-        elif self.app_name == "babbler":
-            source = PermissionCategories.BABBLER_PERMISSIONS
         elif self.app_name == "talko":
             source = PermissionCategories.TALKO_PERMISSIONS
         elif self.app_name == "obotaai":

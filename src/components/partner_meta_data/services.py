@@ -1,3 +1,4 @@
+from uuid import UUID
 import copy
 import json
 from typing import Iterator, Union
@@ -38,7 +39,7 @@ class PartnerMetaDataServices:
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
         self.__audit_service: AuditService = audit_service
 
-    async def is_partner_exists(self, partner_id: int) -> bool:
+    async def is_partner_exists(self, partner_id: UUID) -> bool:
         try:
             return await self.__partner_meta_data_repository.is_partner_exists(
                 partner_id
@@ -51,7 +52,7 @@ class PartnerMetaDataServices:
 
     async def create_partner_metadata(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_meta_data: PartnerMetadata,
     ):
         try:
@@ -103,7 +104,7 @@ class PartnerMetaDataServices:
             raise ex
 
     async def update_partner_meta_data(
-        self, partner_id: int, update_data: UpdatePartnerMetaData
+        self, partner_id: UUID, update_data: UpdatePartnerMetaData
     ) -> PartnerMetaData:
         try:
             # Checking if partner exists or not
@@ -193,7 +194,7 @@ class PartnerMetaDataServices:
             raise
 
     async def get_partner_meta_data_by_partner_id(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> Union[PartnerMetaData, None]:
         try:
             self.__console_service_logger.info(
@@ -226,7 +227,7 @@ class PartnerMetaDataServices:
 
     async def get_partner_plan_details(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
@@ -265,21 +266,12 @@ class PartnerMetaDataServices:
                 services_enabled_dict = {}
 
             service_info = PartnerPlanDetailsResponse(
-                is_maglo_service_enabled=services_enabled_dict.get(
-                    "is_maglo_enabled", False
-                ),
                 is_talko_service_enabled=services_enabled_dict.get(
                     "is_talko_enabled", False
-                ),
-                is_babbler_service_enabled=services_enabled_dict.get(
-                    "is_babbler_enabled", False
                 ),
                 can_create_deals=services_enabled_dict.get("can_create_deals", False),
                 can_add_workflow=services_enabled_dict.get("can_add_workflow", False),
                 can_view_workflow=services_enabled_dict.get("can_view_workflow", False),
-                is_maglo_app_enabled=services_enabled_dict.get(
-                    "is_maglo_app_enabled", False
-                ),
                 is_mailer_enabled=services_enabled_dict.get("is_mailer_enabled", False),
                 is_gsm_calling_enabled=services_enabled_dict.get(
                     "is_gsm_calling_enabled", False
@@ -296,9 +288,6 @@ class PartnerMetaDataServices:
                 ),
                 can_view_pipeline_management=services_enabled_dict.get(
                     "can_view_pipeline_management", False
-                ),
-                is_complementary_babbler_enabled=services_enabled_dict.get(
-                    "is_complementary_babbler_enabled", False
                 ),
                 can_view_contact=services_enabled_dict.get("can_view_contact", False),
                 can_view_organization=services_enabled_dict.get(
@@ -333,17 +322,11 @@ class PartnerMetaDataServices:
                 is_assignee_sync_enabled=services_enabled_dict.get("is_assignee_sync_enabled", False),
             )
             if (
-                meta_data.maglo_trail_expiry_time
-                and meta_data.maglo_trail_expiry_time > DateTimeUtil.get_current_time()
+                meta_data.talko_trail_expiry_time
+                and meta_data.talko_trail_expiry_time > DateTimeUtil.get_current_time()
             ):
-                service_info.is_maglo_service_free_trial_enabled = True
-            if (
-                meta_data.maglo_app_trail_expiry_time
-                and meta_data.maglo_app_trail_expiry_time
-                > DateTimeUtil.get_current_time()
-            ):
-                service_info.is_maglo_app_free_trial_enabled = True
-            
+                service_info.is_talko_service_free_trial_enabled = True
+
             return service_info
 
         except Exception as exc:
@@ -376,20 +359,20 @@ class PartnerMetaDataServices:
 
             # Start with default False for all partners
             partner_meta_map = {
-                pid: {"meta": None, "is_maglo_free_trial_enabled": False}
+                pid: {"meta": None, "is_talko_free_trial_enabled": False}
                 for pid in partner_ids
             }
 
             # Fill real values where metadata exists
             for meta in meta_data_list:
                 is_free_trial_enabled = (
-                    meta.maglo_trail_expiry_time is not None
-                    and meta.maglo_trail_expiry_time > current_time
+                    meta.talko_trail_expiry_time is not None
+                    and meta.talko_trail_expiry_time > current_time
                 )
 
                 partner_meta_map[meta.partner_id] = {
                     "meta": meta,
-                    "is_maglo_free_trial_enabled": is_free_trial_enabled,
+                    "is_talko_free_trial_enabled": is_free_trial_enabled,
                 }
 
             return partner_meta_map

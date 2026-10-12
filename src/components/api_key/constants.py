@@ -9,7 +9,7 @@ class ExceptionMessages:
     USER_CONTEXT_ONLY_USER_ID: str = (
         "user_context may only contain 'user_id'; unexpected key(s): {}"
     )
-    INVALID_USER_ID_IN_CONTEXT: str = "user_context.user_id must be an integer"
+    INVALID_USER_ID_IN_CONTEXT: str = "user_context.user_id must be a valid UUID"
     USER_CONTEXT_USER_NOT_FOUND: str = (
         "user_context.user_id {} is not a valid user for this partner"
     )

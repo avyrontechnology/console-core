@@ -4,8 +4,6 @@ class DefaultConstants:
     DEFAULT_IS_GST_ENABLED: bool = False
 
     # In currency subunits, e.g., 1000 paisa = 10.00 rs
-    DEFAULT_BABBLER_PLATFORM_FEE: int = 0
-    DEFAULT_SERVICE_BOARD_ADD_ON_PRICE: int = 0
 
     DEFAULT_ENTITLEMENT_START_DATE_UPDATE_WINDOW_HOURS: int = 24
     DEFAULT_ENT_START_DATE_UPDATE_MAX_COUNT: int = 2

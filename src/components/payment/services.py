@@ -1,3 +1,4 @@
+from uuid import UUID
 import asyncio
 from typing import Any, Dict, List, Optional
 
@@ -47,7 +48,7 @@ class PaymentService:
                 "Initiating payment for partner_id={}".format(payload.partner_id)
             )
 
-            user_id: int = user_context.get("user_id")
+            user_id: UUID = user_context.get("user_id")
 
             notes: Dict[str, Any] = {
                 "partner_id": payload.partner_id,
@@ -337,7 +338,7 @@ class PaymentService:
 
     async def get_payment_history_by_partner(
         self,
-        partner_id: int,
+        partner_id: UUID,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> tuple[List[Payment], int]:

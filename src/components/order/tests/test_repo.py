@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -34,12 +35,12 @@ class TestOrderRepository:
     # -------------------------------------------------------------------------
 
     def _make_mock_order(
-        self, order_id=1, partner_id=1, partner=None, plan=None, payment=None
+        self, order_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), partner=None, plan=None, payment=None
     ):
         mock_order = MagicMock(spec=Order)
         mock_order.id = order_id
         mock_order.partner_id = partner_id
-        mock_order.plan_id = 1
+        mock_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_order.add_ons = []
         mock_order.amount = 1000
         mock_order.currency = "INR"
@@ -48,9 +49,9 @@ class TestOrderRepository:
         mock_order.duration = 30
         mock_order.source = "web"
         mock_order.created_at = datetime(2024, 1, 1)
-        mock_order.created_by = 1
+        mock_order.created_by= UUID("11111111-1111-1111-1111-111111111111")
         mock_order.updated_at = datetime(2024, 1, 1)
-        mock_order.updated_by = 1
+        mock_order.updated_by= UUID("11111111-1111-1111-1111-111111111111")
         mock_order.partner = partner
         mock_order.plan = plan
         mock_order.payment = payment
@@ -89,27 +90,27 @@ class TestOrderRepository:
 
     async def test_initiate_order_success(self):
         mock_order_data = MagicMock(
-            plan_id=1, add_ons=["A"], amount=500, currency="INR"
+            plan_id= UUID("11111111-1111-1111-1111-111111111111"), add_ons=["A"], amount=500, currency="INR"
         )
         self.session.add = MagicMock()
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
         order = await self.order_repo.initiate_order(
-            mock_order_data, user_id=10, partner_id=99, duration=30
+            mock_order_data, user_id= UUID("10101010-1010-1010-1010-101010101010"), partner_id= UUID("99999999-9999-9999-9999-999999999999"), duration=30
         )
         self.session.add.assert_called_once()
         self.session.commit.assert_awaited_once()
         assert isinstance(order, Order)
 
     async def test_initiate_order_with_order_type(self):
-        mock_order_data = MagicMock(plan_id=1, add_ons=[], amount=500, currency="INR")
+        mock_order_data = MagicMock(plan_id= UUID("11111111-1111-1111-1111-111111111111"), add_ons=[], amount=500, currency="INR")
         self.session.add = MagicMock()
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
         order = await self.order_repo.initiate_order(
             mock_order_data,
-            user_id=10,
-            partner_id=99,
+            user_id= UUID("10101010-1010-1010-1010-101010101010"),
+            partner_id= UUID("99999999-9999-9999-9999-999999999999"),
             duration=30,
             order_type=OrderType.RENEWAL,
         )
@@ -119,13 +120,13 @@ class TestOrderRepository:
         assert call_kwargs.is_manually_created is False
 
     async def test_initiate_order_failure(self):
-        mock_order_data = MagicMock(plan_id=1, add_ons=[], amount=500, currency="INR")
+        mock_order_data = MagicMock(plan_id= UUID("11111111-1111-1111-1111-111111111111"), add_ons=[], amount=500, currency="INR")
         self.session.add = MagicMock()
         self.session.commit = AsyncMock(side_effect=Exception("DB failure"))
         self.session.rollback = AsyncMock()
         with pytest.raises(Exception):
             await self.order_repo.initiate_order(
-                mock_order_data, user_id=10, partner_id=99, duration=30
+                mock_order_data, user_id= UUID("10101010-1010-1010-1010-101010101010"), partner_id= UUID("99999999-9999-9999-9999-999999999999"), duration=30
             )
         self.session.rollback.assert_awaited_once()
 
@@ -138,13 +139,13 @@ class TestOrderRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
         order = await self.order_repo.create_manual_order(
-            partner_id=1,
-            plan_id=2,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            plan_id= UUID("22222222-2222-2222-2222-222222222222"),
             add_ons={},
             amount=5000,
             currency="INR",
             duration_days=30,
-            created_by=99,
+            created_by= UUID("99999999-9999-9999-9999-999999999999"),
             order_type=OrderType.FRESH,
             payment_method=PaymentMethod.DIRECT,
         )
@@ -161,20 +162,20 @@ class TestOrderRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
         await self.order_repo.create_manual_order(
-            partner_id=1,
-            plan_id=2,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            plan_id= UUID("22222222-2222-2222-2222-222222222222"),
             add_ons={},
             amount=5000,
             currency="INR",
             duration_days=30,
-            created_by=99,
+            created_by= UUID("99999999-9999-9999-9999-999999999999"),
             order_type=OrderType.RENEWAL,
             payment_method=PaymentMethod.GATEWAY,
-            original_order_id=77,
+            original_order_id= UUID("77777777-7777-7777-7777-777777777777"),
         )
         constructed = self.session.add.call_args[0][0]
         assert constructed.order_type == OrderType.RENEWAL
-        assert constructed.original_order_id == 77
+        assert constructed.original_order_id== UUID("77777777-7777-7777-7777-777777777777")
 
     async def test_create_manual_order_failure_rolls_back(self):
         self.session.add = MagicMock()
@@ -182,13 +183,13 @@ class TestOrderRepository:
         self.session.rollback = AsyncMock()
         with pytest.raises(Exception, match="insert fail"):
             await self.order_repo.create_manual_order(
-                partner_id=1,
-                plan_id=2,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+                plan_id= UUID("22222222-2222-2222-2222-222222222222"),
                 add_ons={},
                 amount=100,
                 currency="INR",
                 duration_days=30,
-                created_by=1,
+                created_by= UUID("11111111-1111-1111-1111-111111111111"),
             )
         self.session.rollback.assert_awaited_once()
 
@@ -205,7 +206,7 @@ class TestOrderRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
         updated = await self.order_repo.update_order(
-            101, {"amount": 999, "currency": "USD"}, user_id=22
+            101, {"amount": 999, "currency": "USD"}, user_id= UUID("22222222-2222-2222-2222-222222222222")
         )
         assert updated == mock_order
         assert mock_order.amount == 999
@@ -215,7 +216,7 @@ class TestOrderRepository:
         mock_result.scalars.return_value.first.return_value = None
         self.session.execute = AsyncMock(return_value=mock_result)
         with pytest.raises(OrderNotFoundError):
-            await self.order_repo.update_order(555, {"status": "X"}, user_id=1)
+            await self.order_repo.update_order(555, {"status": "X"}, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_order_failure(self):
         mock_order = MagicMock(spec=Order)
@@ -225,7 +226,7 @@ class TestOrderRepository:
         self.session.commit = AsyncMock(side_effect=Exception("commit fail"))
         self.session.rollback = AsyncMock()
         with pytest.raises(Exception):
-            await self.order_repo.update_order(10, {"amount": 123}, user_id=1)
+            await self.order_repo.update_order(10, {"amount": 123}, user_id= UUID("11111111-1111-1111-1111-111111111111"))
         self.session.rollback.assert_awaited_once()
 
     # -------------------------------------------------------------------------
@@ -246,7 +247,7 @@ class TestOrderRepository:
         self.session.commit = AsyncMock()
 
         updated = await self.order_repo.update_order_if_not_finalized(
-            101, {"status": PaymentStatusEnum.SUCCESS}, user_id=22
+            101, {"status": PaymentStatusEnum.SUCCESS}, user_id= UUID("22222222-2222-2222-2222-222222222222")
         )
 
         assert updated == mock_order
@@ -263,7 +264,7 @@ class TestOrderRepository:
         self.session.commit = AsyncMock()
 
         updated = await self.order_repo.update_order_if_not_finalized(
-            101, {"status": PaymentStatusEnum.SUCCESS}, user_id=22
+            101, {"status": PaymentStatusEnum.SUCCESS}, user_id= UUID("22222222-2222-2222-2222-222222222222")
         )
 
         assert updated is None
@@ -276,7 +277,7 @@ class TestOrderRepository:
 
         with pytest.raises(Exception):
             await self.order_repo.update_order_if_not_finalized(
-                101, {"status": PaymentStatusEnum.SUCCESS}, user_id=22
+                101, {"status": PaymentStatusEnum.SUCCESS}, user_id= UUID("22222222-2222-2222-2222-222222222222")
             )
 
         self.session.rollback.assert_awaited_once()
@@ -366,7 +367,7 @@ class TestOrderRepository:
     async def test_get_order_history_with_partner_ids_filter(self):
         mock_order = self._make_mock_order()
         order_data_list, total_count = await self._run_order_history(
-            {"partner_ids": [1, 2]}, [mock_order]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]}, [mock_order]
         )
         assert total_count == 1
 
@@ -485,8 +486,8 @@ class TestOrderRepository:
 
     async def test_get_order_history_no_filters(self):
         mock_order = self._make_mock_order(
-            order_id=3,
-            partner_id=3,
+            order_id= UUID("33333333-3333-3333-3333-333333333333"),
+            partner_id= UUID("33333333-3333-3333-3333-333333333333"),
             partner=MagicMock(spec=Partner),
             plan=MagicMock(spec=Plan),
             payment=MagicMock(spec=Payment),
@@ -573,7 +574,7 @@ class TestOrderRepository:
         mock_partner.addresses = [mock_billing]
         mock_order = self._make_mock_order(partner=mock_partner)
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [1]}, [mock_order]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order]
         )
         assert order_data_list[0]["partner"]["city"] == "Mumbai"
 
@@ -593,7 +594,7 @@ class TestOrderRepository:
         mock_partner.addresses = [mock_addr]
         mock_order = self._make_mock_order(partner=mock_partner)
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [1]}, [mock_order]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order]
         )
         assert order_data_list[0]["partner"]["city"] == "Pune"
 
@@ -613,7 +614,7 @@ class TestOrderRepository:
         mock_partner.addresses = [mock_addr]
         mock_order = self._make_mock_order(partner=mock_partner)
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [1]}, [mock_order]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order]
         )
         assert order_data_list[0]["partner"]["city"] == "Nagpur"
 
@@ -626,7 +627,7 @@ class TestOrderRepository:
         mock_partner.addresses = []
         mock_order = self._make_mock_order(partner=mock_partner)
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [1]}, [mock_order]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order]
         )
         assert order_data_list[0]["partner"]["city"] is None
 
@@ -637,7 +638,7 @@ class TestOrderRepository:
     async def test_map_entitlement_is_active_true(self):
         fixed_now = datetime(2024, 5, 15).timestamp() * 1000
         mock_ent = MagicMock(spec=Entitlement)
-        mock_ent.order_id = 1
+        mock_ent.order_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_ent.start_date = datetime(2024, 5, 1).timestamp() * 1000
         mock_ent.end_date = datetime(2024, 5, 31).timestamp() * 1000
         mock_ent.is_active = True
@@ -647,26 +648,26 @@ class TestOrderRepository:
             return_value=fixed_now,
         ):
             order_data_list, _ = await self._run_order_history(
-                {"partner_ids": [1]}, [mock_order], entitlements=[mock_ent]
+                {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order], entitlements=[mock_ent]
             )
         assert order_data_list[0]["entitlement"]["is_active"] is True
 
     async def test_map_entitlement_end_date_none(self):
         mock_ent = MagicMock(spec=Entitlement)
-        mock_ent.order_id = 1
+        mock_ent.order_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_ent.start_date = datetime(2024, 5, 1).timestamp() * 1000
         mock_ent.end_date = None
         mock_ent.is_active = True
         mock_order = self._make_mock_order()
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [1]}, [mock_order], entitlements=[mock_ent]
+            {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order], entitlements=[mock_ent]
         )
         assert order_data_list[0]["entitlement"]["is_active"] is False
 
     async def test_map_entitlement_is_active_false_on_model(self):
         fixed_now = datetime(2024, 5, 15).timestamp() * 1000
         mock_ent = MagicMock(spec=Entitlement)
-        mock_ent.order_id = 1
+        mock_ent.order_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_ent.start_date = datetime(2024, 5, 1).timestamp() * 1000
         mock_ent.end_date = datetime(2024, 5, 31).timestamp() * 1000
         mock_ent.is_active = False
@@ -676,27 +677,27 @@ class TestOrderRepository:
             return_value=fixed_now,
         ):
             order_data_list, _ = await self._run_order_history(
-                {"partner_ids": [1]}, [mock_order], entitlements=[mock_ent]
+                {"partner_ids": [UUID("11111111-1111-1111-1111-111111111111")]}, [mock_order], entitlements=[mock_ent]
             )
         assert order_data_list[0]["entitlement"]["is_active"] is False
 
     async def test_map_admin_user_with_location(self):
         mock_order = self._make_mock_order(
-            order_id=20,
-            partner_id=6,
+            order_id= UUID("20202020-2020-2020-2020-202020202020"),
+            partner_id= UUID("66666666-6666-6666-6666-666666666666"),
             partner=MagicMock(spec=Partner),
             plan=MagicMock(spec=Plan),
             payment=MagicMock(spec=Payment),
         )
         mock_admin = MagicMock(spec=User)
-        mock_admin.partner_id = 6
+        mock_admin.partner_id= UUID("66666666-6666-6666-6666-666666666666")
         mock_admin.email = "admin@p.com"
         mock_admin.phone_number = "+91"
         mock_admin.country = None
         mock_admin.state = None
         mock_admin.city = None
         order_data_list, _ = await self._run_order_history(
-            {"partner_ids": [6]}, [mock_order], admin_users=[mock_admin]
+            {"partner_ids": [UUID("66666666-6666-6666-6666-666666666666")]}, [mock_order], admin_users=[mock_admin]
         )
         assert order_data_list[0]["admin_user"]["country"] is None
 

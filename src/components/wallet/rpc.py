@@ -4,6 +4,7 @@ from grpc import StatusCode
 from grpc_interceptor.exceptions import GrpcException
 
 from src.core.container import Container
+from src.components.common.rpc_uuid import parse_uuid_list, uuid_list_str, uuid_str
 from src.components.wallet.services import WalletService
 from src.pub.partner_wallet_pb2 import (
     GetWalletsByPartnerIdsRequest,
@@ -26,11 +27,11 @@ class WalletServiceGRPC(WalletRPCService):
             Provide[Container.wallet_service]
         ),
     ):
-        partner_ids = list(request.partner_ids)
+        partner_ids = parse_uuid_list(request.partner_ids, "partner_ids")
 
         try:
             self.__logger.info(
-                f"[gRPC]: Fetching wallet details for partner_ids={partner_ids}"
+                f"[gRPC]: Fetching wallet details for partner_ids={uuid_list_str(partner_ids)}"
             )
 
             wallets = await wallet_service.get_wallets_by_partner_ids(
@@ -40,8 +41,8 @@ class WalletServiceGRPC(WalletRPCService):
             response = GetWalletsByPartnerIdsResponse(
                 wallets=[
                     WalletRPCResponse(
-                        id=wallet.id or 0,
-                        partner_id=wallet.partner_id,
+                        id=uuid_str(wallet.id),
+                        partner_id=uuid_str(wallet.partner_id),
                         balance=wallet.balance,
                         frozen_balance=wallet.frozen_balance,
                         currency=wallet.currency,

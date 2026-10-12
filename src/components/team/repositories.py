@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -24,7 +25,7 @@ class TeamRepository:
 
     # ----------------------------- lookups -------------------------------- #
 
-    async def get_partner(self, partner_id: int) -> Optional[Partner]:
+    async def get_partner(self, partner_id: UUID) -> Optional[Partner]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -41,7 +42,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_user(self, user_id: int) -> Optional[User]:
+    async def get_user(self, user_id: UUID) -> Optional[User]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -58,7 +59,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def is_role_in_partner_catalog(self, role_id: int, partner_id: int) -> bool:
+    async def is_role_in_partner_catalog(self, role_id: UUID, partner_id: UUID) -> bool:
         """A role is usable by a partner if it is the partner's own custom role
         or a shared default role (``partner_id IS NULL``)."""
         try:
@@ -81,7 +82,7 @@ class TeamRepository:
             raise exc
 
     async def get_team_by_id(
-        self, team_id: int, partner_id: Optional[int] = None
+        self, team_id: UUID, partner_id: Optional[UUID] = None
     ) -> Optional[Team]:
         try:
             async with self.__session_factory() as session:
@@ -96,7 +97,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_teams_by_partner(self, partner_id: int) -> List[Team]:
+    async def get_teams_by_partner(self, partner_id: UUID) -> List[Team]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -116,7 +117,7 @@ class TeamRepository:
 
     async def list_teams_paginated(
         self,
-        partner_id: int,
+        partner_id: UUID,
         search_by: Optional[str] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -198,13 +199,13 @@ class TeamRepository:
             raise exc
 
     async def get_teams_for_partner_users(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> List[Dict[str, Any]]:
         """Team memberships for every (active, non-deleted) user of *partner_id*,
         for the "user associated teams" endpoint. A LEFT JOIN keeps users with
         zero team memberships in the result (their team fields come back
         ``None``), so every partner user is represented, matching the
-        equivalent maglo user/service-board endpoint's behavior.
+        equivalent user/service-board endpoint behavior.
         """
         try:
             async with self.__session_factory() as session:
@@ -268,13 +269,13 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_parent_chain_ids(self, team_id: int) -> List[int]:
+    async def get_parent_chain_ids(self, team_id: UUID) -> List[int]:
         """Return the ids of all ancestors of ``team_id`` (walking parent links)."""
         try:
             async with self.__session_factory() as session:
                 ancestors: List[int] = []
                 seen: set = set()
-                current_id: Optional[int] = team_id
+                current_id: Optional[UUID] = team_id
                 while current_id is not None and current_id not in seen:
                     seen.add(current_id)
                     result = await session.execute(
@@ -297,7 +298,7 @@ class TeamRepository:
     async def create_team(
         self,
         values: Dict[str, Any],
-        user_id: int,
+        user_id: UUID,
         finalize_slug: Callable[[Team], str],
     ) -> Team:
         """``values["slug"]`` must already hold a NOT-NULL-safe placeholder
@@ -322,7 +323,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def update_team(self, team_id: int, values: Dict[str, Any], user_id: int) -> Team:
+    async def update_team(self, team_id: UUID, values: Dict[str, Any], user_id: UUID) -> Team:
         try:
             async with self.__session_factory() as session:
                 values = {**values, "updated_by": user_id}
@@ -338,7 +339,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def soft_delete_team(self, team_id: int, user_id: int) -> None:
+    async def soft_delete_team(self, team_id: UUID, user_id: UUID) -> None:
         try:
             async with self.__session_factory() as session:
                 await session.execute(
@@ -355,7 +356,7 @@ class TeamRepository:
 
     # ----------------------------- membership ----------------------------- #
 
-    async def get_member(self, team_id: int, user_id: int) -> Optional[TeamMember]:
+    async def get_member(self, team_id: UUID, user_id: UUID) -> Optional[TeamMember]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -375,10 +376,10 @@ class TeamRepository:
 
     async def add_member(
         self,
-        team_id: int,
-        user_id: int,
-        role_id: Optional[int],
-        created_by: int,
+        team_id: UUID,
+        user_id: UUID,
+        role_id: Optional[UUID],
+        created_by: UUID,
     ) -> TeamMember:
         try:
             async with self.__session_factory() as session:
@@ -400,7 +401,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def remove_member(self, team_id: int, user_id: int) -> bool:
+    async def remove_member(self, team_id: UUID, user_id: UUID) -> bool:
         try:
             async with self.__session_factory() as session:
                 member = await session.execute(
@@ -424,7 +425,7 @@ class TeamRepository:
             raise exc
 
     async def update_member_role(
-        self, team_id: int, user_id: int, role_id: Optional[int]
+        self, team_id: UUID, user_id: UUID, role_id: Optional[UUID]
     ) -> Optional[TeamMember]:
         try:
             async with self.__session_factory() as session:
@@ -450,7 +451,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_members(self, team_id: int) -> List[TeamMember]:
+    async def get_members(self, team_id: UUID) -> List[TeamMember]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -465,7 +466,7 @@ class TeamRepository:
 
     async def get_members_paginated(
         self,
-        team_id: int,
+        team_id: UUID,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> Tuple[List[Dict[str, Any]], int]:
@@ -518,7 +519,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_user_teams(self, user_id: int) -> List[Team]:
+    async def get_user_teams(self, user_id: UUID) -> List[Team]:
         try:
             async with self.__session_factory() as session:
                 result = await session.execute(
@@ -537,7 +538,7 @@ class TeamRepository:
             )
             raise exc
 
-    async def get_teams_for_user(self, user_id: int) -> List[Dict[str, Any]]:
+    async def get_teams_for_user(self, user_id: UUID) -> List[Dict[str, Any]]:
         """Active teams for a single user, including the user's role_id and
         role_name in each team (role fields are None if role_id is unset)."""
         try:

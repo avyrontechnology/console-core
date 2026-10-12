@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta
 
 import jwt
@@ -42,7 +43,11 @@ class AuthUtility:
         self, data: dict, expires_delta: timedelta = None
     ) -> str:
         self.__user_logger.info("Creating access token")
-        to_encode = data.copy()
+        # UUIDs are not JSON-serializable: normalize to str at the boundary.
+        to_encode = {
+            k: (str(v) if isinstance(v, uuid.UUID) else v)
+            for k, v in data.copy().items()
+        }
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:

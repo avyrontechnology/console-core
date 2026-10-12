@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -45,18 +46,18 @@ class TestEntitlementServiceComplete:
 
         # Mock plan (modules & limits by service)
         self.plan = Plan(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Basic",
-            modules=["console.mod1", "console.mod2", "babbler.m1"],
-            limits={"console.limit1": 10, "babbler.limit1": 5},
+            modules=["console.mod1", "console.mod2", "talko.m1"],
+            limits={"console.limit1": 10, "talko.limit1": 5},
         )
 
         # Mock order
         self.order = Order(
-            id=100,
-            partner_id=500,
+            id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             plan=self.plan,
-            plan_id=1,
+            plan_id= UUID("11111111-1111-1111-1111-111111111111"),
             add_ons={"console.addon1": 5},
             duration=30,
         )
@@ -64,21 +65,21 @@ class TestEntitlementServiceComplete:
     async def test_upsert_entitlement_creates_new(self, monkeypatch):
         monkeypatch.setattr(
             "src.components.plan.utils.PlanUtils.split_modules_by_service",
-            lambda modules: {"console": ["mod1"], "babbler": ["m1"]},
+            lambda modules: {"console": ["mod1"], "talko": ["m1"]},
         )
         monkeypatch.setattr(
             "src.components.plan.utils.PlanUtils.split_limits_by_service",
-            lambda limits: {"console": {"limit1": 10}, "babbler": {"limit1": 5}},
+            lambda limits: {"console": {"limit1": 10}, "talko": {"limit1": 5}},
         )
 
         self.repo.get_active_entitlement.return_value = None
 
-        created_ent = Entitlement(id=1)
+        created_ent = Entitlement(id= UUID("11111111-1111-1111-1111-111111111111"))
         self.repo.create_entitlement.return_value = created_ent
 
         self.order.duration = 6
 
-        result = await self.service.upsert_entitlement(self.order, user_id=11)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert len(result) == 2
         self.repo.create_entitlement.assert_awaited()
@@ -94,13 +95,13 @@ class TestEntitlementServiceComplete:
             lambda limits: {"console": {"limit1": 10}},
         )
 
-        existing = Entitlement(id=99, modules=["modX"], limits={"limit1": 5})
+        existing = Entitlement(id= UUID("99999999-9999-9999-9999-999999999999"), modules=["modX"], limits={"limit1": 5})
         self.repo.get_active_entitlement.return_value = existing
         self.repo.update_entitlement.return_value = existing
 
         self.order.duration = 3
 
-        result = await self.service.upsert_entitlement(self.order, user_id=10)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("10101010-1010-1010-1010-101010101010"))
 
         assert result == [existing]
         self.repo.update_entitlement.assert_awaited_once()
@@ -127,7 +128,7 @@ class TestEntitlementServiceComplete:
 
     async def test_update_entitlement_flow(self):
         existing = Entitlement(
-            id=50, modules=["m1"], limits={"l1": 5}, service_name="console"
+            id= UUID("50505050-5050-5050-5050-505050505050"), modules=["m1"], limits={"l1": 5}, service_name="console"
         )
 
         self.repo.update_entitlement.return_value = existing
@@ -136,8 +137,8 @@ class TestEntitlementServiceComplete:
             existing=existing,
             service_modules=["m2"],
             service_limits={"l1": 3},
-            user_id=7,
-            partner_id=500,
+            user_id= UUID("77777777-7777-7777-7777-777777777777"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
         )
 
         self.repo.update_entitlement.assert_awaited_once()
@@ -154,7 +155,7 @@ class TestEntitlementServiceComplete:
         self.logger.info.assert_called()
 
     async def test_create_entitlement_flow(self):
-        ent = Entitlement(id=123)
+        ent = Entitlement(id= UUID("12312312-3123-1231-2312-312312312312"))
         self.repo.create_entitlement.return_value = ent
 
         self.order.duration = 12
@@ -164,7 +165,7 @@ class TestEntitlementServiceComplete:
             service_name="console",
             service_modules=["m1"],
             service_limits={"l1": 5},
-            user_id=77,
+            user_id= UUID("77777777-7777-7777-7777-777777777777"),
         )
 
         call = self.repo.create_entitlement.call_args[0][0]
@@ -174,7 +175,7 @@ class TestEntitlementServiceComplete:
         assert call.service_name == "console"
         assert call.modules == ["m1"]
         assert call.limits == {"l1": 5}
-        assert call.created_by == 77
+        assert call.created_by== UUID("77777777-7777-7777-7777-777777777777")
 
         assert result == ent
         self.logger.info.assert_called()
@@ -214,7 +215,7 @@ class TestEntitlementServiceComplete:
             lambda limits: {},
         )
 
-        result = await self.service.upsert_entitlement(self.order, user_id=11)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result == []
         self.logger.warning.assert_called()
@@ -233,10 +234,10 @@ class TestEntitlementServiceComplete:
 
         self.order.plan_id = None
         self.repo.get_active_entitlement.return_value = None
-        created_ent = Entitlement(id=1)
+        created_ent = Entitlement(id= UUID("11111111-1111-1111-1111-111111111111"))
         self.repo.create_entitlement.return_value = created_ent
 
-        result = await self.service.upsert_entitlement(self.order, user_id=11)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert len(result) == 1
 
@@ -253,10 +254,10 @@ class TestEntitlementServiceComplete:
 
         self.order.add_ons = None
         self.repo.get_active_entitlement.return_value = None
-        created_ent = Entitlement(id=1)
+        created_ent = Entitlement(id= UUID("11111111-1111-1111-1111-111111111111"))
         self.repo.create_entitlement.return_value = created_ent
 
-        result = await self.service.upsert_entitlement(self.order, user_id=11)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert len(result) == 1
 
@@ -264,15 +265,15 @@ class TestEntitlementServiceComplete:
         """Test when some services are created and some are updated"""
         monkeypatch.setattr(
             "src.components.plan.utils.PlanUtils.split_modules_by_service",
-            lambda modules: {"console": ["mod1"], "babbler": ["m1"]},
+            lambda modules: {"console": ["mod1"], "talko": ["m1"]},
         )
         monkeypatch.setattr(
             "src.components.plan.utils.PlanUtils.split_limits_by_service",
-            lambda limits: {"console": {"limit1": 10}, "babbler": {"limit1": 5}},
+            lambda limits: {"console": {"limit1": 10}, "talko": {"limit1": 5}},
         )
 
-        # Mock: console exists, babbler doesn't
-        existing_console = Entitlement(id=99, modules=["modX"], limits={"limit1": 5})
+        # Mock: console exists, talko doesn't
+        existing_console = Entitlement(id= UUID("99999999-9999-9999-9999-999999999999"), modules=["modX"], limits={"limit1": 5})
 
         async def mock_get_active(partner_id, service_name):
             if service_name == "console":
@@ -282,10 +283,10 @@ class TestEntitlementServiceComplete:
         self.repo.get_active_entitlement.side_effect = mock_get_active
         self.repo.update_entitlement.return_value = existing_console
 
-        created_babbler = Entitlement(id=100)
-        self.repo.create_entitlement.return_value = created_babbler
+        created_talko = Entitlement(id= UUID("10010010-0100-1001-0010-010010010010"))
+        self.repo.create_entitlement.return_value = created_talko
 
-        result = await self.service.upsert_entitlement(self.order, user_id=11)
+        result = await self.service.upsert_entitlement(self.order, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert len(result) == 2
         self.repo.update_entitlement.assert_awaited_once()
@@ -295,11 +296,11 @@ class TestEntitlementServiceComplete:
     async def test_update_entitlement_with_existing_order_id(self):
         """Test updating entitlement that has an existing order_id"""
         existing = Entitlement(
-            id=50,
+            id= UUID("50505050-5050-5050-5050-505050505050"),
             modules=["m1"],
             limits={"l1": 5},
             service_name="console",
-            order_id=99,
+            order_id= UUID("99999999-9999-9999-9999-999999999999"),
             additional_info={"previous_order_ids": []},
         )
 
@@ -309,8 +310,8 @@ class TestEntitlementServiceComplete:
             existing=existing,
             service_modules=["m2"],
             service_limits={"l1": 3},
-            user_id=7,
-            partner_id=500,
+            user_id= UUID("77777777-7777-7777-7777-777777777777"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
         )
 
         # Verify previous_order_ids was updated
@@ -321,12 +322,12 @@ class TestEntitlementServiceComplete:
     async def test_update_entitlement_order_id_already_in_previous(self):
         """Test when order_id is already in previous_order_ids"""
         existing = Entitlement(
-            id=50,
+            id= UUID("50505050-5050-5050-5050-505050505050"),
             modules=["m1"],
             limits={"l1": 5},
             service_name="console",
-            order_id=99,
-            additional_info={"previous_order_ids": [99]},
+            order_id= UUID("99999999-9999-9999-9999-999999999999"),
+            additional_info={"previous_order_ids": [UUID("99999999-9999-9999-9999-999999999999")]},
         )
 
         self.repo.update_entitlement.return_value = existing
@@ -335,8 +336,8 @@ class TestEntitlementServiceComplete:
             existing=existing,
             service_modules=["m2"],
             service_limits={"l1": 3},
-            user_id=7,
-            partner_id=500,
+            user_id= UUID("77777777-7777-7777-7777-777777777777"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
         )
 
         assert result == existing
@@ -344,11 +345,11 @@ class TestEntitlementServiceComplete:
     async def test_update_entitlement_no_additional_info(self):
         """Test updating entitlement with no additional_info"""
         existing = Entitlement(
-            id=50,
+            id= UUID("50505050-5050-5050-5050-505050505050"),
             modules=["m1"],
             limits={"l1": 5},
             service_name="console",
-            order_id=99,
+            order_id= UUID("99999999-9999-9999-9999-999999999999"),
             additional_info=None,
         )
 
@@ -358,8 +359,8 @@ class TestEntitlementServiceComplete:
             existing=existing,
             service_modules=["m2"],
             service_limits={"l1": 3},
-            user_id=7,
-            partner_id=500,
+            user_id= UUID("77777777-7777-7777-7777-777777777777"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
         )
 
         assert result == existing
@@ -463,30 +464,30 @@ class TestEntitlementServiceComplete:
         )
 
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date=current_time,
             created_at=current_time - (1000 * 60 * 60 * 2),
             start_date_update_count=0,
             additional_info={},  # empty dict = fresh
-            order=Order(id=100, duration=30, partner_id=500),
+            order=Order(id= UUID("10010010-0100-1001-0010-010010010010"), duration=30, partner_id= UUID("50050050-0500-5005-0050-050050050050")),
         )
 
         # FIX: use get_entitlements_by_order_id and return a list
         self.repo.get_entitlements_by_order_id = AsyncMock(return_value=[entitlement])
 
         updated_entitlement = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=new_start_date,
             start_date_update_count=1,
         )
@@ -520,30 +521,30 @@ class TestEntitlementServiceComplete:
         )
 
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 5}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,  # matches current_user partner_id
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),  # matches current_user partner_id
             start_date=current_time,
             created_at=current_time - (1000 * 60 * 60 * 2),
             start_date_update_count=0,
             additional_info={},
-            order=Order(id=100, duration=30, partner_id=500),
+            order=Order(id= UUID("10010010-0100-1001-0010-010010010010"), duration=30, partner_id= UUID("50050050-0500-5005-0050-050050050050")),
         )
 
         # FIX: use get_entitlements_by_order_id and return a list
         self.repo.get_entitlements_by_order_id = AsyncMock(return_value=[entitlement])
 
         updated_entitlement = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=new_start_date,
             start_date_update_count=1,
         )
@@ -565,9 +566,9 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
@@ -589,7 +590,7 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
         current_user = {"user_id": 1, "partner_id": 999}  # Different partner_id
 
@@ -598,9 +599,9 @@ class TestEntitlementServiceComplete:
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,  # Different from user's partner_id
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),  # Different from user's partner_id
             additional_info={},
         )
 
@@ -620,19 +621,19 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
-            additional_info={"previous_order_ids": [50, 75]},  # not fresh
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
+            additional_info={"previous_order_ids": [UUID("50505050-5050-5050-5050-505050505050"), UUID("75757575-7575-7575-7575-757575757575")]},  # not fresh
         )
 
         # FIX: use get_entitlements_by_order_id and return a list
@@ -656,18 +657,18 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date_update_count=3,  # already at max
             additional_info={},
         )
@@ -698,18 +699,18 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date_update_count=0,
             created_at=current_time - (1000 * 60 * 60 * 48),  # 48 hours ago
             additional_info={},
@@ -746,18 +747,18 @@ class TestEntitlementServiceComplete:
         )
 
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=future_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=future_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date=future_date,  # same as payload
             start_date_update_count=0,
             created_at=current_time - (1000 * 60 * 60 * 2),
@@ -784,9 +785,9 @@ class TestEntitlementServiceComplete:
             (datetime.now(timezone.utc) + relativedelta(days=7)).timestamp() * 1000
         )
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         # FIX: use get_entitlements_by_order_id
         self.repo.get_entitlements_by_order_id = AsyncMock(
@@ -819,30 +820,30 @@ class TestEntitlementServiceComplete:
         )
 
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date=current_time,
             created_at=current_time - (1000 * 60 * 60 * 2),
             start_date_update_count=0,
             additional_info=None,  # None - service handles via `or {}`
-            order=Order(id=100, duration=30, partner_id=500),
+            order=Order(id= UUID("10010010-0100-1001-0010-010010010010"), duration=30, partner_id= UUID("50050050-0500-5005-0050-050050050050")),
         )
 
         # FIX: use get_entitlements_by_order_id and return a list
         self.repo.get_entitlements_by_order_id = AsyncMock(return_value=[entitlement])
 
         updated_entitlement = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=new_start_date,
             start_date_update_count=1,
         )
@@ -875,30 +876,30 @@ class TestEntitlementServiceComplete:
         )
 
         payload = UpdateEntitlementStartDateRequest(
-            order_id=100, start_date=new_start_date
+            order_id= UUID("10010010-0100-1001-0010-010010010010"), start_date=new_start_date
         )
-        current_user = {"user_id": 1, "partner_id": 500}
+        current_user = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "partner_id": UUID("50050050-0500-5005-0050-050050050050")}
 
         self.auth_repo.get_role_by_user_id = AsyncMock(
             return_value={RoleDictKeys.HIERARCHY: 0}
         )
 
         entitlement = Entitlement(
-            id=1,
-            order_id=100,
-            partner_id=500,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            order_id= UUID("10010010-0100-1001-0010-010010010010"),
+            partner_id= UUID("50050050-0500-5005-0050-050050050050"),
             start_date=current_time,
             created_at=current_time - (1000 * 60 * 60 * 2),
             start_date_update_count=None,  # None - service handles via `or 0`
             additional_info={},
-            order=Order(id=100, duration=30, partner_id=500),
+            order=Order(id= UUID("10010010-0100-1001-0010-010010010010"), duration=30, partner_id= UUID("50050050-0500-5005-0050-050050050050")),
         )
 
         # FIX: use get_entitlements_by_order_id and return a list
         self.repo.get_entitlements_by_order_id = AsyncMock(return_value=[entitlement])
 
         updated_entitlement = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=new_start_date,
             start_date_update_count=1,
         )
@@ -941,8 +942,8 @@ class TestSubscriptionStatus:
         result = await self.service.get_subscription_status(1, self.grace_repo)
 
         assert result[Platform.CONSOLE]["status"] == ServiceSubscriptionStatus.SUSPENDED
-        assert result[Platform.MAGLO]["status"] == ServiceSubscriptionStatus.SUSPENDED
-        assert result[Platform.BABBLER]["status"] == ServiceSubscriptionStatus.SUSPENDED
+        assert result[Platform.OBOTAAI]["status"] == ServiceSubscriptionStatus.SUSPENDED
+        assert result[Platform.OBOTAAI]["status"] == ServiceSubscriptionStatus.SUSPENDED
 
     # ─────────────────────────────────────────────────────────────
     # CANCELED
@@ -950,7 +951,7 @@ class TestSubscriptionStatus:
 
     async def test_canceled_status(self):
         ent = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             service_name=Platform.CONSOLE,
             is_manually_deactivated=True,
             start_date=self.now,
@@ -970,13 +971,13 @@ class TestSubscriptionStatus:
 
     async def test_active_status(self):
         ent = Entitlement(
-            id=2,
+            id= UUID("22222222-2222-2222-2222-222222222222"),
             service_name=Platform.CONSOLE,
             is_active=True,
             is_manually_deactivated=False,
             start_date=self.now - 10000,
             end_date=self.now + 10000,
-            order_id=10,
+            order_id= UUID("10101010-1010-1010-1010-101010101010"),
         )
 
         self.repo.get_all_entitlements_for_partner.return_value = [ent]
@@ -992,14 +993,14 @@ class TestSubscriptionStatus:
 
     async def test_grace_status(self):
         ent = Entitlement(
-            id=3,
+            id= UUID("33333333-3333-3333-3333-333333333333"),
             service_name=Platform.CONSOLE,
             is_active=False,
             end_date=self.now - 10000,
         )
 
         grace = GracePeriod(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             granted_days=5,
             start_date=self.now - 10000,
             end_date=self.now + 10000,
@@ -1021,11 +1022,11 @@ class TestSubscriptionStatus:
 
     async def test_pending_activation(self):
         ent = Entitlement(
-            id=4,
+            id= UUID("44444444-4444-4444-4444-444444444444"),
             service_name=Platform.CONSOLE,
             start_date=self.now + 10000,
             end_date=self.now + 20000,
-            order_id=99,
+            order_id= UUID("99999999-9999-9999-9999-999999999999"),
         )
 
         self.repo.get_all_entitlements_for_partner.return_value = []
@@ -1046,7 +1047,7 @@ class TestSubscriptionStatus:
 
     async def test_suspended_fallback(self):
         ent = Entitlement(
-            id=5,
+            id= UUID("55555555-5555-5555-5555-555555555555"),
             service_name=Platform.CONSOLE,
             is_active=False,
             end_date=self.now - 10000,
@@ -1067,7 +1068,7 @@ class TestSubscriptionStatus:
 
     async def test_multiple_services(self):
         ent1 = Entitlement(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             service_name=Platform.CONSOLE,
             is_active=True,
             start_date=self.now - 10000,
@@ -1075,8 +1076,8 @@ class TestSubscriptionStatus:
         )
 
         ent2 = Entitlement(
-            id=2,
-            service_name=Platform.BABBLER,
+            id= UUID("22222222-2222-2222-2222-222222222222"),
+            service_name=Platform.OBOTAAI,
             is_manually_deactivated=True,
         )
 
@@ -1086,7 +1087,7 @@ class TestSubscriptionStatus:
         result = await self.service.get_subscription_status(1, self.grace_repo)
 
         assert result[Platform.CONSOLE]["status"] == ServiceSubscriptionStatus.ACTIVE
-        assert result[Platform.BABBLER]["status"] == ServiceSubscriptionStatus.CANCELED
+        assert result[Platform.OBOTAAI]["status"] == ServiceSubscriptionStatus.CANCELED
 
     # ─────────────────────────────────────────────────────────────
     # LAST EXPIRED ENTITLEMENT
@@ -1094,12 +1095,12 @@ class TestSubscriptionStatus:
 
     def test_find_last_expired(self):
         ents = [
-            Entitlement(id=1, end_date=self.now - 20000),
-            Entitlement(id=2, end_date=self.now - 10000),
+            Entitlement(id= UUID("11111111-1111-1111-1111-111111111111"), end_date=self.now - 20000),
+            Entitlement(id= UUID("22222222-2222-2222-2222-222222222222"), end_date=self.now - 10000),
         ]
 
         result = self.service._find_last_expired_entitlement(ents, self.now)
-        assert result.id == 2
+        assert result.id == UUID("22222222-2222-2222-2222-222222222222")
 
     # ─────────────────────────────────────────────────────────────
     # BUILD STATUS DICT

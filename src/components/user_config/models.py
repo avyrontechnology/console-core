@@ -1,7 +1,8 @@
 from copy import deepcopy
 
-from sqlalchemy import Boolean, Column, Integer, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSON
+import uuid
+from sqlalchemy import Boolean, Column, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from src.components.common.datetime import DateTimeUtil
 from src.components.database.base_model import MetaData
 
@@ -9,7 +10,7 @@ from src.components.database.base_model import MetaData
 class UserConfig(MetaData):
     __tablename__ = "console_user_config"
 
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     key = Column(String(255), nullable=False, index=True)
     value = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True)

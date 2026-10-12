@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -25,7 +26,7 @@ class TestDispatchNotificationTask:
         self.sub = MagicMock()
         self.sub.channel_type = "FCM"
         self.sub.identifier = "token123"
-        self.sub.user_id = 1
+        self.sub.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # -----------------------------
         # Channel handler
@@ -56,7 +57,7 @@ class TestDispatchNotificationTask:
     def _run_task(
         self,
         *,
-        service_type="maglo",
+        service_type="talko",
         subscriptions=None,
         channel_send_return="SUCCESS",
         channel_send_side_effect=None,
@@ -148,11 +149,11 @@ class TestDispatchNotificationTask:
             )
 
             dispatch_notification_task.run(
-                1,
+                UUID("11111111-1111-1111-1111-111111111111"),
                 "Hello",
                 "World",
                 {"key": "value"},
-                "maglo",
+                "talko",
                 "LEAD_ASSIGNED",
                 service_type,
                 self.channel_factory,
@@ -173,7 +174,7 @@ class TestDispatchNotificationTask:
     def _assert_save_history_calls(self, notification_service, service_type):
         assert notification_service.save_notification_history.await_args_list == [
             call(
-                user_id=1,
+                user_id= UUID("11111111-1111-1111-1111-111111111111"),
                 title="Hello",
                 body="World",
                 data={"key": "value"},
@@ -214,18 +215,18 @@ class TestDispatchNotificationTask:
         self._assert_save_history_calls(notification_service, service_type)
 
         notification_service.should_send_notification.assert_awaited_once_with(
-            user_id=1,
-            source="maglo",
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            source="talko",
             event_name="LEAD_ASSIGNED",
         )
 
         notification_service.get_active_user_subscriptions.assert_awaited_once_with(
-            1,
+            UUID("11111111-1111-1111-1111-111111111111"),
             service_type,
         )
 
         notification_service.has_active_session_for_push.assert_awaited_once_with(
-            1,
+            UUID("11111111-1111-1111-1111-111111111111"),
             service_type,
         )
 
@@ -251,17 +252,17 @@ class TestDispatchNotificationTask:
         sub1 = MagicMock()
         sub1.channel_type = "FCM"
         sub1.identifier = "token1"
-        sub1.user_id = 1
+        sub1.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         sub2 = MagicMock()
         sub2.channel_type = "FCM"
         sub2.identifier = "token2"
-        sub2.user_id = 1
+        sub2.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         sub3 = MagicMock()
         sub3.channel_type = "FCM"
         sub3.identifier = "token3"
-        sub3.user_id = 1
+        sub3.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         (
             logger,
@@ -278,7 +279,7 @@ class TestDispatchNotificationTask:
         self._assert_save_history_calls(notification_service, service_type)
 
         notification_service.get_active_user_subscriptions.assert_awaited_once_with(
-            1,
+            UUID("11111111-1111-1111-1111-111111111111"),
             service_type,
         )
 
@@ -319,7 +320,7 @@ class TestDispatchNotificationTask:
         )
 
         logger.info.assert_any_call(
-            "Dispatching notification to user 1"
+            "Dispatching notification to user 11111111-1111-1111-1111-111111111111"
         )
 
     # ============================================================
@@ -412,7 +413,7 @@ class TestDispatchNotificationTask:
         self._assert_save_history_calls(notification_service, service_type)
 
         notification_service.get_active_user_subscriptions.assert_awaited_once_with(
-            1,
+            UUID("11111111-1111-1111-1111-111111111111"),
             service_type,
         )
 
@@ -422,7 +423,7 @@ class TestDispatchNotificationTask:
         channel_handler.send.assert_not_called()
 
         logger.info.assert_any_call(
-            f"No active devices to push to for user 1 "
+            f"No active devices to push to for user 11111111-1111-1111-1111-111111111111 "
             f"services {service_type}. Saved to history only."
         )
 
@@ -430,7 +431,7 @@ class TestDispatchNotificationTask:
         sub = MagicMock()
         sub.channel_type = "FCM"
         sub.identifier = "token1"
-        sub.user_id = 1
+        sub.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         (
             logger,
@@ -450,7 +451,7 @@ class TestDispatchNotificationTask:
         channel_handler.send.assert_not_called()
 
         logger.info.assert_any_call(
-            "maglo notifications for LEAD_ASSIGNED disabled for user 1"
+            "talko notifications for LEAD_ASSIGNED disabled for user 11111111-1111-1111-1111-111111111111"
         )
 
     def test_dispatch_disabled_ten_subscriptions_skips_history_and_delivery(self):
@@ -459,7 +460,7 @@ class TestDispatchNotificationTask:
             sub = MagicMock()
             sub.channel_type = "FCM"
             sub.identifier = f"token{index}"
-            sub.user_id = 1
+            sub.user_id= UUID("11111111-1111-1111-1111-111111111111")
             subscriptions.append(sub)
 
         (
@@ -514,7 +515,7 @@ class TestDispatchNotificationTask:
 
         assert notification_service.save_notification_history.await_args_list == [
             call(
-                user_id=1,
+                user_id= UUID("11111111-1111-1111-1111-111111111111"),
                 title="Hello",
                 body="World",
                 data={"key": "value"},
@@ -523,19 +524,19 @@ class TestDispatchNotificationTask:
         ]
 
         notification_service.get_active_user_subscriptions.assert_awaited_once_with(
-            1,
+            UUID("11111111-1111-1111-1111-111111111111"),
             service_type,
         )
 
         assert notification_service.has_active_session_for_push.await_args_list == [
-            call(1, service_type)
+            call(UUID("11111111-1111-1111-1111-111111111111"), service_type)
         ]
 
         channel_factory.get_channel.assert_not_called()
         channel_handler.send.assert_not_called()
 
         logger.info.assert_any_call(
-            f"Session expired before delivery — skipping push for user 1, "
+            f"Session expired before delivery — skipping push for user 11111111-1111-1111-1111-111111111111, "
             f"service {service_type}."
         )
 
@@ -556,7 +557,7 @@ class TestDispatchNotificationTask:
         )
 
         assert any(
-            f"Failed to dispatch notifications for user 1, "
+            f"Failed to dispatch notifications for user 11111111-1111-1111-1111-111111111111, "
             f"service {service_type}: db down" in str(call)
             for call in logger.error.call_args_list
         )
@@ -565,10 +566,10 @@ class TestDispatchNotificationTask:
         channel_factory.get_channel.assert_not_called()
 
     # ============================================================
-    # BABBLER
+    # TALKO
     # ============================================================
 
-    def test_dispatch_babbler_service_type(self):
+    def test_dispatch_talko_service_type(self):
         (
             logger,
             notification_service,
@@ -577,26 +578,26 @@ class TestDispatchNotificationTask:
             sub,
             service_type,
         ) = self._run_task(
-            service_type="babbler",
+            service_type="talko",
             channel_send_return="SUCCESS",
         )
 
-        assert service_type == NotificationServiceType.BABBLER
+        assert service_type == NotificationServiceType.TALKO
 
         self._assert_save_history_calls(
             notification_service,
-            NotificationServiceType.BABBLER,
+            NotificationServiceType.TALKO,
         )
 
         notification_service.should_send_notification.assert_awaited_once_with(
-            user_id=1,
-            source="maglo",
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            source="talko",
             event_name="LEAD_ASSIGNED",
         )
 
         notification_service.get_active_user_subscriptions.assert_awaited_once_with(
-            1,
-            NotificationServiceType.BABBLER,
+            UUID("11111111-1111-1111-1111-111111111111"),
+            NotificationServiceType.TALKO,
         )
 
         channel_handler.send.assert_called_once_with(
@@ -604,13 +605,13 @@ class TestDispatchNotificationTask:
             title="Hello",
             body="World",
             data={"key": "value"},
-            service_type=NotificationServiceType.BABBLER,
+            service_type=NotificationServiceType.TALKO,
         )
 
         logger.info.assert_any_call(
             f"Notification sent successfully via "
             f"{sub.channel_type} to {sub.identifier} "
-            f"for service {NotificationServiceType.BABBLER}"
+            f"for service {NotificationServiceType.TALKO}"
         )
 
     # ============================================================
@@ -648,9 +649,9 @@ class TestDispatchNotificationTask:
                 "Hello",
                 "World",
                 {"key": "value"},
-                "maglo",
+                "talko",
                 "LEAD_ASSIGNED",
-                "maglo",
+                "talko",
                 self.channel_factory,
                 self.notification_service,
             )
@@ -682,7 +683,7 @@ class TestDispatchNotificationTask:
         self._assert_save_history_calls(notification_service, service_type)
 
         assert any(
-            f"Failed to dispatch notifications for user 1, "
+            f"Failed to dispatch notifications for user 11111111-1111-1111-1111-111111111111, "
             f"service {service_type}: subscription db down" in str(call)
             for call in logger.error.call_args_list
         )
@@ -697,12 +698,12 @@ class TestDispatchNotificationTask:
         sub1 = MagicMock()
         sub1.channel_type = "FCM"
         sub1.identifier = "token1"
-        sub1.user_id = 1
+        sub1.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         sub2 = MagicMock()
         sub2.channel_type = "FCM"
         sub2.identifier = "token2"
-        sub2.user_id = 1
+        sub2.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self._run_task(
             subscriptions=[sub1, sub2],
@@ -711,7 +712,7 @@ class TestDispatchNotificationTask:
 
         self._assert_save_history_calls(
             self.notification_service,
-            NotificationServiceType.MAGLO,
+            NotificationServiceType.TALKO,
         )
 
         assert self.channel_factory.get_channel.call_count == 2
@@ -730,12 +731,12 @@ class TestDispatchNotificationTask:
         sub1 = MagicMock()
         sub1.channel_type = "FCM"
         sub1.identifier = "token1"
-        sub1.user_id = 1
+        sub1.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         sub2 = MagicMock()
         sub2.channel_type = "FCM"
         sub2.identifier = "token2"
-        sub2.user_id = 1
+        sub2.user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.notification_service.get_active_user_subscriptions = AsyncMock(
             return_value=[sub1, sub2]
@@ -776,9 +777,9 @@ class TestDispatchNotificationTask:
                 "Hello",
                 "World",
                 {"key": "value"},
-                "maglo",
+                "talko",
                 "LEAD_ASSIGNED",
-                "maglo",
+                "talko",
                 self.channel_factory,
                 self.notification_service,
             )
@@ -792,7 +793,7 @@ class TestDispatchNotificationTask:
 
         self.logger.info.assert_any_call(
             "Notification sent successfully via FCM to token2 "
-            "for service NotificationServiceType.MAGLO"
+            "for service NotificationServiceType.TALKO"
         )
 
     # ============================================================
@@ -852,9 +853,9 @@ class TestDispatchNotificationTask:
                 "Hello",
                 "World",
                 {"key": "value"},
-                "maglo",
+                "talko",
                 "LEAD_ASSIGNED",
-                "maglo",
+                "talko",
                 self.channel_factory,
                 self.notification_service,
             )

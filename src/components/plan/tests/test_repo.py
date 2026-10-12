@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,6 +10,16 @@ from src.components.plan.models import Plan
 from src.components.plan.repositories import PlanRepository
 from src.components.plan.schema import PlanBase, PlanUpdate
 from src.components.wallet.enum import Currency
+
+
+TEST_MAPPER = {"console": {"Dashboard": {"Chat": {"endpoints": [], "flags": []}}}}
+
+
+@pytest.fixture
+def mapper(monkeypatch):
+    monkeypatch.setattr(
+        "src.components.plan.schema.SERVICE_FEATURE_MAPPER", TEST_MAPPER
+    )
 
 
 @pytest.mark.asyncio
@@ -26,7 +37,7 @@ class TestPlanRepository:
     # -------------------------------------------------------------------------
     # create_plan
     # -------------------------------------------------------------------------
-    async def test_create_plan_success_standard(self):
+    async def test_create_plan_success_standard(self, mapper):
         """Should create a STANDARD plan successfully."""
         plan_data = PlanBase(
             name="Premium Plan",
@@ -35,11 +46,11 @@ class TestPlanRepository:
             duration=1,
             discount_percentage=10.0,
             currency=Currency.INDIA,
-            modules=["maglo:Performance_Overview"],
+            modules=["console:Chat"],
             plan_type=PlanType.STANDARD,
             tag="premium",
             hierarchy=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         # Mock no existing wallet plan
@@ -59,7 +70,7 @@ class TestPlanRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
-        plan = await self.plan_repo.create_plan(plan_data, user_id=1)
+        plan = await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.session.add.assert_called_once()
         self.session.commit.assert_awaited_once()
@@ -67,7 +78,7 @@ class TestPlanRepository:
         assert plan.name == "Premium Plan"
         assert plan.plan_type == PlanType.STANDARD
 
-    async def test_create_plan_success_wallet(self):
+    async def test_create_plan_success_wallet(self, mapper):
         """Should create a WALLET plan successfully when no active wallet exists."""
         plan_data = PlanBase(
             name="Wallet Plan",
@@ -75,7 +86,7 @@ class TestPlanRepository:
             tag="wallet",
             hierarchy=2,
             duration=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         # Mock no existing wallet plan
@@ -97,7 +108,7 @@ class TestPlanRepository:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
-        plan = await self.plan_repo.create_plan(plan_data, user_id=1)
+        plan = await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.session.add.assert_called_once()
         self.session.commit.assert_awaited_once()
@@ -111,7 +122,7 @@ class TestPlanRepository:
             tag="wallet",
             hierarchy=3,
             duration=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         existing_wallet = MagicMock(spec=Plan)
@@ -125,7 +136,7 @@ class TestPlanRepository:
         with pytest.raises(
             WalletPlanExistsError, match="active wallet plan already exists"
         ):
-            await self.plan_repo.create_plan(plan_data, user_id=1)
+            await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_create_plan_hierarchy_already_exists(self):
         """Should raise error when hierarchy already exists."""
@@ -136,7 +147,7 @@ class TestPlanRepository:
             tag="test",
             hierarchy=5,
             duration=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         existing_plan = MagicMock(spec=Plan)
@@ -150,9 +161,9 @@ class TestPlanRepository:
         self.session.execute = AsyncMock(return_value=hierarchy_result)
 
         with pytest.raises(PlanHierarchyExistsError):
-            await self.plan_repo.create_plan(plan_data, user_id=1)
+            await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
-    async def test_create_plan_integrity_error(self):
+    async def test_create_plan_integrity_error(self, mapper):
         """Should handle IntegrityError and rollback."""
         plan_data = PlanBase(
             name="Test Plan",
@@ -161,7 +172,7 @@ class TestPlanRepository:
             tag="test",
             hierarchy=7,
             duration=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         # Mock all checks pass
@@ -177,7 +188,7 @@ class TestPlanRepository:
         self.session.rollback = AsyncMock()
 
         with pytest.raises(IntegrityError):
-            await self.plan_repo.create_plan(plan_data, user_id=1)
+            await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.session.rollback.assert_awaited_once()
 
@@ -190,13 +201,13 @@ class TestPlanRepository:
             tag="test",
             duration=1,
             hierarchy=8,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
 
         with pytest.raises(Exception, match="Unexpected error"):
-            await self.plan_repo.create_plan(plan_data, user_id=1)
+            await self.plan_repo.create_plan(plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     # -------------------------------------------------------------------------
     # get_plan_by_id
@@ -204,7 +215,7 @@ class TestPlanRepository:
     async def test_get_plan_by_id_success(self):
         """Should retrieve plan by ID successfully."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.id = 1
+        mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
         mock_plan.name = "Test Plan"
 
         mock_result = MagicMock()
@@ -215,12 +226,12 @@ class TestPlanRepository:
         plan = await self.plan_repo.get_plan_by_id(1)
 
         assert plan == mock_plan
-        assert plan.id == 1
+        assert plan.id == UUID("11111111-1111-1111-1111-111111111111")
 
     async def test_get_plan_by_id_active_only(self):
         """Should retrieve only active plan when active_only=True."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.id = 1
+        mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
         mock_plan.is_active = True
 
         mock_result = MagicMock()
@@ -235,15 +246,15 @@ class TestPlanRepository:
     async def test_get_plan_by_id_with_partner_purchased(self):
         """Should check purchase status when partner_id provided."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.id = 1
+        mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock entitlements
         entitlement_result = MagicMock()
-        entitlement_result.fetchall.return_value = [(10,)]  # order_id = 10
+        entitlement_result.fetchall.return_value = [(10,)]  # order_id= UUID("10101010-1010-1010-1010-101010101010")
 
         # Mock orders
         order_result = MagicMock()
-        order_result.fetchall.return_value = [(1,)]  # plan_id = 1
+        order_result.fetchall.return_value = [(UUID("11111111-1111-1111-1111-111111111111"),)]  # plan_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_plan
@@ -252,14 +263,14 @@ class TestPlanRepository:
             side_effect=[mock_result, entitlement_result, order_result]
         )
 
-        plan = await self.plan_repo.get_plan_by_id(1, partner_id=100)
+        plan = await self.plan_repo.get_plan_by_id(UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10010010-0100-1001-0010-010010010010"))
 
         assert plan.is_purchased is True
 
     async def test_get_plan_by_id_with_partner_not_purchased(self):
         """Should mark as not purchased when partner hasn't purchased."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.id = 1
+        mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock no active entitlements
         entitlement_result = MagicMock()
@@ -270,7 +281,7 @@ class TestPlanRepository:
 
         self.session.execute = AsyncMock(side_effect=[mock_result, entitlement_result])
 
-        plan = await self.plan_repo.get_plan_by_id(1, partner_id=100)
+        plan = await self.plan_repo.get_plan_by_id(UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10010010-0100-1001-0010-010010010010"))
 
         assert plan.is_purchased is False
 
@@ -316,14 +327,14 @@ class TestPlanRepository:
     async def test_get_active_plans_with_service_filter(self):
         """Should filter plans by service_name."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.service_name = Platform.MAGLO
+        mock_plan.service_name = Platform.CONSOLE
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_plan]
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        plans = await self.plan_repo.get_active_plans(service_name=Platform.MAGLO)
+        plans = await self.plan_repo.get_active_plans(service_name=Platform.CONSOLE)
 
         assert len(plans) == 1
 
@@ -344,7 +355,7 @@ class TestPlanRepository:
     async def test_get_active_plans_with_partner_id(self):
         """Should check purchase status when partner_id provided."""
         mock_plan = MagicMock(spec=Plan)
-        mock_plan.id = 1
+        mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
 
         plans_result = MagicMock()
         plans_result.scalars.return_value.all.return_value = [mock_plan]
@@ -355,13 +366,13 @@ class TestPlanRepository:
 
         # Mock orders
         order_result = MagicMock()
-        order_result.fetchall.return_value = [(1,)]
+        order_result.fetchall.return_value = [(UUID("11111111-1111-1111-1111-111111111111"),)]
 
         self.session.execute = AsyncMock(
             side_effect=[plans_result, entitlement_result, order_result]
         )
 
-        plans = await self.plan_repo.get_active_plans(partner_id=100)
+        plans = await self.plan_repo.get_active_plans(partner_id= UUID("10010010-0100-1001-0010-010010010010"))
 
         assert plans[0].is_purchased is True
 
@@ -395,7 +406,7 @@ class TestPlanRepository:
             self.session.expunge = MagicMock()
 
             plan_data = PlanUpdate(name="New Name")
-            result = await self.plan_repo.update_plan(1, plan_data, user_id=1)
+            result = await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result == updated_plan
             self.session.commit.assert_awaited_once()
@@ -405,7 +416,7 @@ class TestPlanRepository:
         """Should return None when plan not found."""
         with patch.object(self.plan_repo, "get_plan_by_id", return_value=None):
             plan_data = PlanUpdate(name="New Name")
-            result = await self.plan_repo.update_plan(999, plan_data, user_id=1)
+            result = await self.plan_repo.update_plan(999, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result is None
 
@@ -416,7 +427,7 @@ class TestPlanRepository:
 
         with patch.object(self.plan_repo, "get_plan_by_id", return_value=existing_plan):
             plan_data = PlanUpdate()  # No fields
-            result = await self.plan_repo.update_plan(1, plan_data, user_id=1)
+            result = await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result == existing_plan
 
@@ -439,7 +450,7 @@ class TestPlanRepository:
             plan_data = PlanUpdate(plan_type=PlanType.WALLET)
 
             with pytest.raises(WalletPlanExistsError):
-                await self.plan_repo.update_plan(1, plan_data, user_id=1)
+                await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_plan_activate_wallet_when_one_exists(self):
         """Should raise error when activating WALLET plan but one exists."""
@@ -459,7 +470,7 @@ class TestPlanRepository:
             plan_data = PlanUpdate(is_active=True)
 
             with pytest.raises(WalletPlanExistsError):
-                await self.plan_repo.update_plan(1, plan_data, user_id=1)
+                await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_plan_hierarchy_conflict(self):
         """Should raise error when updating to existing hierarchy."""
@@ -480,7 +491,7 @@ class TestPlanRepository:
             plan_data = PlanUpdate(hierarchy=10)
 
             with pytest.raises(PlanHierarchyExistsError):
-                await self.plan_repo.update_plan(1, plan_data, user_id=1)
+                await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_plan_integrity_error(self):
         """Should raise IntegrityError and log error."""
@@ -494,7 +505,7 @@ class TestPlanRepository:
             plan_data = PlanUpdate(name="New Name")
 
             with pytest.raises(IntegrityError):
-                await self.plan_repo.update_plan(1, plan_data, user_id=1)
+                await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_plan_unexpected_error(self):
         """Should handle unexpected errors."""
@@ -507,7 +518,7 @@ class TestPlanRepository:
             plan_data = PlanUpdate(name="New Name")
 
             with pytest.raises(Exception, match="Unexpected error"):
-                await self.plan_repo.update_plan(1, plan_data, user_id=1)
+                await self.plan_repo.update_plan(1, plan_data, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     # -------------------------------------------------------------------------
     # delete_plan
@@ -525,7 +536,7 @@ class TestPlanRepository:
             self.session.execute = AsyncMock(return_value=mock_result)
             self.session.commit = AsyncMock()
 
-            result = await self.plan_repo.delete_plan(1, user_id=1)
+            result = await self.plan_repo.delete_plan(1, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result is True
             self.session.commit.assert_awaited_once()
@@ -533,7 +544,7 @@ class TestPlanRepository:
     async def test_delete_plan_not_found(self):
         """Should return False when plan not found."""
         with patch.object(self.plan_repo, "get_plan_by_id", return_value=None):
-            result = await self.plan_repo.delete_plan(999, user_id=1)
+            result = await self.plan_repo.delete_plan(999, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result is False
 
@@ -544,7 +555,7 @@ class TestPlanRepository:
         existing_plan.is_active = False
 
         with patch.object(self.plan_repo, "get_plan_by_id", return_value=existing_plan):
-            result = await self.plan_repo.delete_plan(1, user_id=1)
+            result = await self.plan_repo.delete_plan(1, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result is False
 
@@ -561,7 +572,7 @@ class TestPlanRepository:
             self.session.execute = AsyncMock(return_value=mock_result)
             self.session.commit = AsyncMock()
 
-            result = await self.plan_repo.delete_plan(1, user_id=1)
+            result = await self.plan_repo.delete_plan(1, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
             assert result is False
 
@@ -575,7 +586,7 @@ class TestPlanRepository:
             self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
             with pytest.raises(Exception, match="DB error"):
-                await self.plan_repo.delete_plan(1, user_id=1)
+                await self.plan_repo.delete_plan(1, user_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     # -------------------------------------------------------------------------
     # _check_purchase_status (helper method)
@@ -599,7 +610,7 @@ class TestPlanRepository:
         self.session.execute = AsyncMock(side_effect=[entitlement_result, order_result])
 
         result = await self.plan_repo._check_purchase_status(
-            self.session, [plan1, plan2], partner_id=100
+            self.session, [plan1, plan2], partner_id= UUID("10010010-0100-1001-0010-010010010010")
         )
 
         assert result[0].is_purchased is True
@@ -628,7 +639,7 @@ class TestPlanRepository:
         self.session.execute = AsyncMock(return_value=entitlement_result)
 
         result = await self.plan_repo._check_purchase_status(
-            self.session, [plan], partner_id=100
+            self.session, [plan], partner_id= UUID("10010010-0100-1001-0010-010010010010")
         )
 
         assert result[0].is_purchased is False

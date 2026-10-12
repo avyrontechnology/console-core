@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide
@@ -116,7 +117,7 @@ class UserConfigService:
             raise exec
 
     async def get_user_config_by_key(
-        self, user_id: int, key: str
+        self, user_id: UUID, key: str
     ) -> UserConfigResponse:
         try:
             self.__console_service_logger.info(
@@ -156,7 +157,7 @@ class UserConfigService:
 
     async def update_user_config(
         self,
-        partner_id: int,
+        partner_id: UUID,
         user_ids: List[int],
         update_user_config_data: UserConfigData,
         current_user: dict,
@@ -164,8 +165,8 @@ class UserConfigService:
         user_session_service: UserSessionService = Depends(Provide["user_session_service"])
     ) -> List[UpdateUserConfigResponse]:
         try:
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             if (
                 current_user_partner_id != partner_id
@@ -217,11 +218,6 @@ class UserConfigService:
                     prefix=RedisCache.KeysPrefix.CONSOLE,
                     pattern=cache_patterns,
                 )
-
-                await self.__console_service_cache.clear_pattern(
-                    prefix=RedisCache.KeysPrefix.MAGLO,
-                    pattern=CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-                )
             services_to_deactivate = self._extract_disabled_services(update_user_config_data)
             if services_to_deactivate:
                 await user_session_service.deactivate_user_sessions(
@@ -250,7 +246,7 @@ class UserConfigService:
 
     async def get_user_configs_by_user_id(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> List[UserConfigResponse]:
         try:
             self.__console_service_logger.info(
@@ -259,29 +255,18 @@ class UserConfigService:
 
             REQUIRED_KEYS = [
                 UserConfigEnum.IS_SUPER_ADMIN,
-                UserConfigEnum.IS_MAGLO_ENABLED,
-                UserConfigEnum.IS_BABBLER_ENABLED,
                 UserConfigEnum.IS_TALKO_ENABLED,
-                UserConfigEnum.IS_MAGLO_APP_ENABLED,
                 UserConfigEnum.IS_GSM_CALLING_ENABLED,
                 UserConfigEnum.IS_MEETING_LOG_ENABLED,
                 UserConfigEnum.CAN_VIEW_CONTACT,
                 UserConfigEnum.CAN_VIEW_ORGANIZATION,
                 UserConfigEnum.IS_OBOTAAI_ENABLED,
                 UserConfigEnum.ENABLE_DIALER,
-                UserConfigEnum.IS_BABBLER_APP_ENABLED,
                 UserConfigEnum.CAN_VIEW_PRODUCTS,
                 UserConfigEnum.CAN_VIEW_INVENTORY,
                 # Notification preferences are included here so the legacy
                 # user-config listing stays aligned with the new notification
                 # preference API and still surfaces user-level state.
-                UserConfigEnum.NOTIFICATION_MAGLO,
-                UserConfigEnum.NOTIFICATION_MAGLO_LEAD_ASSIGNED,
-                UserConfigEnum.NOTIFICATION_MAGLO_BULK_LEAD_ASSIGNED,
-                UserConfigEnum.NOTIFICATION_MAGLO_FOLLOWUP,
-                UserConfigEnum.NOTIFICATION_MAGLO_APP,
-                UserConfigEnum.NOTIFICATION_BABBLER,
-                UserConfigEnum.NOTIFICATION_BABBLER_APP,
                 UserConfigEnum.NOTIFICATION_TALKO,
                 UserConfigEnum.NOTIFICATION_WHATSAPP,
                 UserConfigEnum.NOTIFICATION_OBOTAAI,
@@ -341,57 +326,14 @@ class UserConfigService:
             )
             raise exec
 
-    async def update_is_maglo_app_config(
-        self, user_id: int, is_maglo_app_enabled: Optional[bool]
-    ) -> UserConfigResponse:
-        KEY = "is_maglo_app_enabled"
-
-        try:
-            self.__console_service_logger.info(
-                f"Trying to update '{KEY}' for user id: {user_id}"
-            )
-
-            updated_data = (
-                await self.__user_config_repository.update_is_maglo_app_config(
-                    user_id=user_id, is_maglo_app_enabled=is_maglo_app_enabled
-                )
-            )
-
-            # Prepare service-level response
-            response = UserConfigResponse(
-                id=updated_data.id,
-                user_id=updated_data.user_id,
-                key=updated_data.key,
-                value=updated_data.value,
-                history=updated_data.history[-5:] if updated_data.history else None,
-                created_at=updated_data.created_at,
-            )
-
-            self.__console_service_logger.info(
-                f"'{KEY}' updated successfully for user id: {user_id}"
-            )
-
-            return response
-
-        except Exception as exec:
-            self.__console_service_logger.error(
-                f"Unexpected error while updating '{KEY}' for user id {user_id}: {exec}"
-            )
-            raise exec
-
     async def validate_config_values(
         self,
-        partner_id: int,
+        partner_id: UUID,
         update_user_config_data: UserConfigData,
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
     ):
-        if update_user_config_data.is_maglo_app_enabled:
-            result = await partner_config_service.get_partner_config_by_key(partner_id=partner_id, key="is_maglo_app_enabled")
-            if not result or result.value != True:
-                raise UserConfigException("Maglo App is not enabled.")
-        
         if update_user_config_data.is_meeting_log_enabled:
             result = await partner_config_service.get_partner_config_by_key(
                 partner_id=partner_id, key=UserConfigEnum.IS_MEETING_LOG_ENABLED
@@ -405,12 +347,8 @@ class UserConfigService:
     def _extract_disabled_services(self, dto: UserConfigData) -> list[str]:
         services = []
         USER_CONFIG_TO_SERVICE = {
-            "is_maglo_enabled": ServiceNames.MAGLO.value,
-            "is_maglo_app_enabled": ServiceNames.MAGLO_APP.value,
-            "is_babbler_enabled": ServiceNames.BABBLER.value,
             "is_talko_enabled": ServiceNames.TALKO.value,
             "is_obotaai_enabled": ServiceNames.OBOTAAI.value,
-            "is_babbler_app_enabled": ServiceNames.BABBLER_APP.value,
         }
         for field, service in USER_CONFIG_TO_SERVICE.items():
             value = getattr(dto, field, None)

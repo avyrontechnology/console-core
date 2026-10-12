@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from src.components.api_key.services import ApiKeyService
@@ -23,12 +24,12 @@ class TestApiKeyService:
         self.auth_service_mock = AsyncMock()
         # Permission catalog used by scope validation.
         self.auth_service_mock.get_all_permission.return_value = [
-            MagicMock(slug="maglo:get_leads"),
-            MagicMock(slug="maglo:list_leads"),
+            MagicMock(slug="talko:get_leads"),
+            MagicMock(slug="talko:list_leads"),
         ]
         self.user_repository_mock = AsyncMock()
         # get_user_by_user_id succeeds (valid user) unless a test overrides it.
-        self.user_repository_mock.get_user_by_user_id.return_value = MagicMock(id=1)
+        self.user_repository_mock.get_user_by_user_id.return_value = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"))
         self.api_key_service = ApiKeyService(
             api_key_repository=self.api_key_repository_mock,
             console_service_logger=self.logger_mock,
@@ -38,19 +39,19 @@ class TestApiKeyService:
         )
 
         self.current_user = {
-            CurrentUserMap.USER_ID: 1,
-            CurrentUserMap.PARTNER_ID: 10,
+            CurrentUserMap.USER_ID: UUID("11111111-1111-1111-1111-111111111111"),
+            CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010"),
             "name": "Api Key User",
         }
 
         self.api_key_response = ApiKeyResponse(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             key="abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx1234yzab5678cdef9012",
             description="Partner API key",
-            scopes=["maglo:get_leads"],
+            scopes=["talko:get_leads"],
             user_context={"user_id": 1},
             is_active=True,
-            partner_id=10,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
         )
         self.cache_helper_mock.get_cache.return_value = None
 
@@ -62,8 +63,8 @@ class TestApiKeyService:
         result = await self.api_key_service.generate_api_key(self.current_user)
 
         assert isinstance(result, ApiKeyResponse)
-        assert result.partner_id == 10
-        self.logger_mock.info.assert_called_with("Attempting to generate api key for partner: 10")
+        assert result.partner_id== UUID("10101010-1010-1010-1010-101010101010")
+        self.logger_mock.info.assert_called_with("Attempting to generate api key for partner: 10101010-1010-1010-1010-101010101010")
 
     async def test_generate_api_key_exception(self):
         self.api_key_repository_mock.generate_api_key.side_effect = Exception("DB error")
@@ -82,7 +83,7 @@ class TestApiKeyService:
 
         assert isinstance(result, ApiKeyResponse)
         self.logger_mock.info.assert_any_call("Attempting to validate API key: abcd1234...")
-        self.logger_mock.info.assert_any_call("API key validated successfully for partner_id: 10")
+        self.logger_mock.info.assert_any_call("API key validated successfully for partner_id: 10101010-1010-1010-1010-101010101010")
 
     async def test_validate_api_key_invalid(self):
         self.api_key_repository_mock.validate_api_key.return_value = None
@@ -106,83 +107,83 @@ class TestApiKeyService:
 
     async def test_get_api_key_success(self):
         self.api_key_repository_mock.get_active_api_key.return_value = self.api_key_response
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 10}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010")}
         auth_service = AsyncMock()
-        result = await self.api_key_service.get_api_key(current_user=current_user,partner_id=10, auth_service=auth_service)
+        result = await self.api_key_service.get_api_key(current_user=current_user,partner_id= UUID("10101010-1010-1010-1010-101010101010"), auth_service=auth_service)
 
         assert isinstance(result, ApiKeyResponse)
-        assert result.scopes == ["maglo:get_leads"]
+        assert result.scopes == ["talko:get_leads"]
         self.cache_helper_mock.get_cache.assert_awaited_once_with(
-            key=RedisKeys.PARTNER_API_KEY.format(10)
+            key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010"))
         )
-        self.api_key_repository_mock.get_active_api_key.assert_awaited_once_with(10)
+        self.api_key_repository_mock.get_active_api_key.assert_awaited_once_with(UUID("10101010-1010-1010-1010-101010101010"))
         self.cache_helper_mock.set_cache.assert_awaited_once_with(
-            key=RedisKeys.PARTNER_API_KEY.format(10),
+            key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010")),
             value=self.api_key_response.dict(),
             ttl=RedisTTL.ONE_WEEK,
         )
-        self.logger_mock.info.assert_any_call("Fetching active API key for partner_id: 10")
+        self.logger_mock.info.assert_any_call("Fetching active API key for partner_id: 10101010-1010-1010-1010-101010101010")
 
     async def test_get_api_key_success_by_super_admin(self):
         self.api_key_repository_mock.get_active_api_key.return_value = self.api_key_response
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 200}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("20020020-2002-2002-2002-200200200200")}
         auth_service = AsyncMock()
         auth_service.get_role_by_user_id.return_value = {"hierarchy": 0}
-        result = await self.api_key_service.get_api_key(current_user=current_user,partner_id=10, auth_service=auth_service)
+        result = await self.api_key_service.get_api_key(current_user=current_user,partner_id= UUID("10101010-1010-1010-1010-101010101010"), auth_service=auth_service)
 
         assert isinstance(result, ApiKeyResponse)
-        auth_service.get_role_by_user_id.assert_awaited_once_with(12)
+        auth_service.get_role_by_user_id.assert_awaited_once_with(UUID("12121212-1212-1212-1212-121212121212"))
       
     async def test_get_api_key_success_from_cache(self):
         self.cache_helper_mock.get_cache.return_value = self.api_key_response.dict()
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 10}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010")}
         auth_service = AsyncMock()
 
         result = await self.api_key_service.get_api_key(
             current_user=current_user,
-            partner_id=10,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             auth_service=auth_service,
         )
 
         assert isinstance(result, ApiKeyResponse)
         assert result == self.api_key_response
         self.cache_helper_mock.get_cache.assert_awaited_once_with(
-            key=RedisKeys.PARTNER_API_KEY.format(10)
+            key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010"))
         )
         self.api_key_repository_mock.get_active_api_key.assert_not_awaited()
         self.cache_helper_mock.set_cache.assert_not_awaited()
 
     async def test_get_api_key_not_found(self):
         self.api_key_repository_mock.get_active_api_key.return_value = None
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 10}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010")}
         auth_service = AsyncMock()
         with pytest.raises(ApiKeyNotFoundError):
-            await self.api_key_service.get_api_key(current_user=current_user, partner_id=10, auth_service=auth_service)
+            await self.api_key_service.get_api_key(current_user=current_user, partner_id= UUID("10101010-1010-1010-1010-101010101010"), auth_service=auth_service)
 
-        self.logger_mock.warning.assert_called_with("No active API key found for partner_id: 10")
+        self.logger_mock.warning.assert_called_with("No active API key found for partner_id: 10101010-1010-1010-1010-101010101010")
 
     async def test_get_api_key_exception(self):
         self.api_key_repository_mock.get_active_api_key.side_effect = Exception("DB error")
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 10}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010")}
         auth_service = AsyncMock()
         with pytest.raises(Exception, match=r".*DB error.*"):
-            await self.api_key_service.get_api_key(current_user=current_user, partner_id=10, auth_service=auth_service)
+            await self.api_key_service.get_api_key(current_user=current_user, partner_id= UUID("10101010-1010-1010-1010-101010101010"), auth_service=auth_service)
 
         self.cache_helper_mock.get_cache.assert_awaited_once_with(
-            key=RedisKeys.PARTNER_API_KEY.format(10)
+            key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010"))
         )
-        self.api_key_repository_mock.get_active_api_key.assert_awaited_once_with(10)
+        self.api_key_repository_mock.get_active_api_key.assert_awaited_once_with(UUID("10101010-1010-1010-1010-101010101010"))
         self.logger_mock.error.assert_called_with(
-            "Unexpected error fetching API key for partner_id=10: DB error"
+            "Unexpected error fetching API key for partner_id=10101010-1010-1010-1010-101010101010: DB error"
         )
 
     async def test_get_api_key_partner_not_found(self):
         self.api_key_repository_mock.get_active_api_key.side_effect = Exception("DB error")
-        current_user = {CurrentUserMap.USER_ID: 12, CurrentUserMap.PARTNER_ID: 100}
+        current_user = {CurrentUserMap.USER_ID: UUID("12121212-1212-1212-1212-121212121212"), CurrentUserMap.PARTNER_ID: UUID("10010010-1001-1001-1001-100100100100")}
         auth_service = AsyncMock()
         auth_service.get_role_by_user_id.return_value = {"hierarchy": 1}
-        with pytest.raises(PartnerNotFoundError, match=r".*Partner not found, id: 10*"):
-            await self.api_key_service.get_api_key(current_user=current_user, partner_id=10, auth_service=auth_service)
+        with pytest.raises(PartnerNotFoundError, match=r".*Partner not found, id: 10101010-1010-1010-1010-101010101010*"):
+            await self.api_key_service.get_api_key(current_user=current_user, partner_id= UUID("10101010-1010-1010-1010-101010101010"), auth_service=auth_service)
 
 
     # -------------------- re_generate_api_key --------------------
@@ -203,7 +204,7 @@ class TestApiKeyService:
             await self.api_key_service.re_generate_api_key(self.current_user)
 
         self.logger_mock.error.assert_called_with(
-            "Unexpected error generating API key for partner: 10, Error: DB error"
+            "Unexpected error generating API key for partner: 10101010-1010-1010-1010-101010101010, Error: DB error"
         )
 
     # -------------------- inactivate_api_key --------------------
@@ -211,24 +212,24 @@ class TestApiKeyService:
     async def test_inactivate_api_key_success(self):
         self.api_key_repository_mock.inactivate_api_key.return_value = True
 
-        result = await self.api_key_service.inactivate_api_key(10, self.current_user)
+        result = await self.api_key_service.inactivate_api_key(UUID("10101010-1010-1010-1010-101010101010"), self.current_user)
 
         assert result == ApiKeyResponseMessage.API_KEY_IN_ACTIVIATED
         self.logger_mock.info.assert_any_call(
-            "Attempting to inactivate API key for partner_id=10 by user_id=1"
+            "Attempting to inactivate API key for partner_id=10101010-1010-1010-1010-101010101010 by user_id=11111111-1111-1111-1111-111111111111"
         )
         self.logger_mock.info.assert_any_call(
-            "API key successfully inactivated for partner_id: 10 by user_id: 1"
+            "API key successfully inactivated for partner_id: 10101010-1010-1010-1010-101010101010 by user_id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_inactivate_api_key_not_found(self):
         self.api_key_repository_mock.inactivate_api_key.return_value = None
 
         with pytest.raises(ApiKeyNotFoundError):
-            await self.api_key_service.inactivate_api_key(10, self.current_user)
+            await self.api_key_service.inactivate_api_key(UUID("10101010-1010-1010-1010-101010101010"), self.current_user)
 
         self.logger_mock.warning.assert_called_with(
-            "No active API key found or already inactive for partner_id=10"
+            "No active API key found or already inactive for partner_id=10101010-1010-1010-1010-101010101010"
         )
 
     async def test_inactivate_api_key_exception(self):
@@ -248,20 +249,20 @@ class TestApiKeyService:
         self.api_key_repository_mock.generate_api_key.return_value = self.api_key_response
 
         await self.api_key_service.re_generate_api_key(
-            self.current_user, scopes=["maglo:get_leads", "maglo:list_leads"]
+            self.current_user, scopes=["talko:get_leads", "talko:list_leads"]
         )
 
         # scopes validated against the catalog, and user_context auto-derived
         # from the generating user (strictly {"user_id": <int>}).
         self.auth_service_mock.get_all_permission.assert_awaited_once()
         _, kwargs = self.api_key_repository_mock.generate_api_key.call_args
-        assert kwargs["scopes"] == ["maglo:get_leads", "maglo:list_leads"]
-        assert kwargs["user_context"] == {"user_id": 1}
+        assert kwargs["scopes"] == ["talko:get_leads", "talko:list_leads"]
+        assert kwargs["user_context"] == {"user_id": "11111111-1111-1111-1111-111111111111"}
 
     async def test_re_generate_api_key_rejects_unknown_scope(self):
-        with pytest.raises(ApiKeyException, match=r".*maglo:bogus.*"):
+        with pytest.raises(ApiKeyException, match=r".*talko:bogus.*"):
             await self.api_key_service.re_generate_api_key(
-                self.current_user, scopes=["maglo:get_leads", "maglo:bogus"]
+                self.current_user, scopes=["talko:get_leads", "talko:bogus"]
             )
         self.api_key_repository_mock.generate_api_key.assert_not_awaited()
 
@@ -272,20 +273,20 @@ class TestApiKeyService:
 
         result = await self.api_key_service.update_api_key_metadata(
             current_user=self.current_user,
-            partner_id=10,
-            scopes=["maglo:list_leads"],
-            user_context={"user_id": 1},
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
+            scopes=["talko:list_leads"],
+            user_context={"user_id": UUID("11111111-1111-1111-1111-111111111111")},
         )
 
         assert isinstance(result, ApiKeyResponse)
         self.api_key_repository_mock.update_active_api_key_metadata.assert_awaited_once_with(
-            partner_id=10,
-            current_user_id=1,
-            scopes=["maglo:list_leads"],
-            user_context={"user_id": 1},
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
+            current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            scopes=["talko:list_leads"],
+            user_context={"user_id": "11111111-1111-1111-1111-111111111111"},
         )
         self.cache_helper_mock.delete_cache.assert_awaited_once_with(
-            key=RedisKeys.PARTNER_API_KEY.format(10)
+            key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010"))
         )
 
     async def test_update_api_key_metadata_no_active_key(self):
@@ -294,8 +295,8 @@ class TestApiKeyService:
         with pytest.raises(ApiKeyNotFoundError):
             await self.api_key_service.update_api_key_metadata(
                 current_user=self.current_user,
-                partner_id=10,
-                scopes=["maglo:list_leads"],
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"),
+                scopes=["talko:list_leads"],
             )
 
     # -------------------- user_context validation --------------------
@@ -308,7 +309,7 @@ class TestApiKeyService:
         self.api_key_repository_mock.generate_api_key.assert_not_awaited()
 
     async def test_user_context_rejects_non_int_user_id(self):
-        with pytest.raises(ApiKeyException, match=r".*must be an integer.*"):
+        with pytest.raises(ApiKeyException, match=r".*must be a valid UUID.*"):
             await self.api_key_service.re_generate_api_key(
                 self.current_user, user_context={"user_id": "5"}
             )
@@ -316,10 +317,10 @@ class TestApiKeyService:
     async def test_user_context_rejects_unknown_user(self):
         from src.components.user.errors import UserNotFoundError
 
-        self.user_repository_mock.get_user_by_user_id.side_effect = UserNotFoundError(99)
+        self.user_repository_mock.get_user_by_user_id.side_effect = UserNotFoundError(UUID("99999999-9999-9999-9999-999999999999"))
         with pytest.raises(ApiKeyException, match=r".*not a valid user.*"):
             await self.api_key_service.re_generate_api_key(
-                self.current_user, user_context={"user_id": 99}
+                self.current_user, user_context={"user_id": UUID("99999999-9999-9999-9999-999999999999")}
             )
 
     async def test_user_context_accepts_valid_user_id(self):
@@ -327,9 +328,9 @@ class TestApiKeyService:
         self.api_key_repository_mock.generate_api_key.return_value = self.api_key_response
 
         await self.api_key_service.re_generate_api_key(
-            self.current_user, user_context={"user_id": 1}
+            self.current_user, user_context={"user_id": UUID("11111111-1111-1111-1111-111111111111")}
         )
 
-        self.user_repository_mock.get_user_by_user_id.assert_awaited_once_with(1, 10)
+        self.user_repository_mock.get_user_by_user_id.assert_awaited_once_with(UUID("11111111-1111-1111-1111-111111111111"), UUID("10101010-1010-1010-1010-101010101010"))
         _, kwargs = self.api_key_repository_mock.generate_api_key.call_args
-        assert kwargs["user_context"] == {"user_id": 1}
+        assert kwargs["user_context"] == {"user_id": "11111111-1111-1111-1111-111111111111"}

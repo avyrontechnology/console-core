@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, List, Optional, Set
 
 from dependency_injector.wiring import Provide, inject
@@ -52,7 +53,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             created_plan: Plan = await plan_service.create_plan(plan_data, user_id)
             logger.info(f"Controller: create_plan succeeded id={created_plan.id}")
@@ -129,9 +130,9 @@ class PlanController:
                     )
                 )
 
-            partner_id: Optional[int] = None
+            partner_id: Optional[UUID] = None
             if hasattr(request.state, "user") and request.state.user:
-                partner_id: int = request.state.user.get("partner_id")
+                partner_id: UUID = request.state.user.get("partner_id")
                 logger.info(
                     f"Controller: get_active_plans authenticated request partner_id={partner_id}"
                 )
@@ -158,7 +159,7 @@ class PlanController:
     @permission_check(PermissionDependency)
     async def get_plan_by_id(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -189,7 +190,7 @@ class PlanController:
     @permission_check(PermissionDependency)
     async def update_plan(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_data: PlanUpdate,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
@@ -200,7 +201,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             updated_plan: Plan = await plan_service.update_plan(
                 plan_id, plan_data, user_id
@@ -241,7 +242,7 @@ class PlanController:
     @permission_check(PermissionDependency)
     async def delete_plan(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -251,7 +252,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             await plan_service.delete_plan(plan_id, user_id)
             logger.info(f"Controller: delete_plan succeeded id={plan_id}")

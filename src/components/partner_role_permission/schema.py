@@ -1,17 +1,18 @@
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
 class PartnerPermissionData(BaseModel):
-    role_id: int
-    permission_id: int
-    partner_id: int
+    role_id: UUID
+    permission_id: UUID
+    partner_id: UUID
 
 
 class PartnerRolePermissionResponse(BaseModel):
-    id: int
-    partner_id: int
-    permission_id: int
-    role_id: int
+    id: UUID
+    partner_id: UUID
+    permission_id: UUID
+    role_id: UUID
 
     model_config = ConfigDict(
         from_attributes=True,

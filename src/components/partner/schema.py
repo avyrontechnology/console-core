@@ -1,3 +1,4 @@
+from uuid import UUID
 import re
 from typing import Any, Dict, List, Optional
 
@@ -23,7 +24,6 @@ class BasePartnerData(BaseModel):
     cin_no: Optional[str] = None
     active_license: Optional[int] = 3
     description: Optional[str] = Field(default=None, max_length=256)
-    is_maglo_publisher: Optional[bool] = False
     is_free_trail_enabled: Optional[bool] = False
     is_email_verification_enabled: Optional[bool] = False
     is_phone_number_verification_enabled: Optional[bool] = False
@@ -71,10 +71,8 @@ class PartnerResponse(BaseModel):
     is_active: Optional[bool] = None
     is_partner_paid: bool | None = None
     is_free_trial_enabled: bool | None = None
-    active_maglo_users: int | None = 0
-    active_babbler_users: int | None = 0
     active_talko_users: int | None = 0
-    id: int
+    id: UUID
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -88,7 +86,7 @@ class PartnerCreateResponse(BaseModel):
     cin_no: Optional[str] = None
     active_license: Optional[int] = 0
     description: Optional[str] = None
-    id: int
+    id: UUID
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -101,7 +99,7 @@ class PartnerProfileResponse(BaseModel):
 
 
 class ChangePartnerStatusRequest(BaseModel):
-    partner_id: int
+    partner_id: UUID
     status: Optional[str] = None
     is_feedback_enabled: Optional[bool] = None
 
@@ -133,7 +131,7 @@ class ChangePartnerStatusRequest(BaseModel):
 
 
 class ChangePartnerStatusResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     partner_status: str
     is_feedback_enabled: bool
@@ -195,12 +193,9 @@ class PartnerDetails(BaseModel):
 
 
 class PartnerMetaDataDetails(BaseModel):
-    is_maglo_free_trial_enabled: Optional[bool] = False
     is_talko_free_trial__enabled: Optional[bool] = False
-    is_babbler_free_trial__enabled: Optional[bool] = False
     is_email_verification_enabled: Optional[bool] = True
     is_phone_number_verification_enabled: Optional[bool] = False
-    is_maglo_app_free_trail_enabled: Optional[bool] = False
     subscription_mode: Optional[str] = SubscriptionModeEnum.SELF_SERVED.value
 
     model_config = ConfigDict(extra="allow")
@@ -344,6 +339,6 @@ class TogglePartnerActivationResponse(BaseModel):
 
 
 class ApiKeyOnboarding(BaseModel):
-    partner_id: int
+    partner_id: UUID
     is_active: bool
-    created_by: Optional[int] = None
+    created_by: Optional[UUID] = None

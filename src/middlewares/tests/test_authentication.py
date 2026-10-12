@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -76,9 +77,9 @@ async def mock_console_service_logger():
 
 
 @pytest.mark.asyncio
-async def test_excluded_path(auth_middleware, mock_request, mock_call_next):
+async def test_excluded_path(auth_middleware, mock_request, mock_call_next, mock_console_service_logger):
     mock_request.url.path = "/console-service/v1/do_login"
-    response = await auth_middleware.dispatch(mock_request, mock_call_next)
+    response = await auth_middleware.dispatch(mock_request, mock_call_next, console_service_logger=mock_console_service_logger)
     assert response == mock_call_next.return_value
     mock_call_next.assert_called_once_with(mock_request)
 
@@ -256,10 +257,10 @@ async def test_api_key_success_flow():
     mock_call_next = AsyncMock(return_value="OK")
 
     # Mock API Key service return object
-    mock_api_key_details = MagicMock(is_active=True, partner_id=123)
+    mock_api_key_details = MagicMock(is_active=True, partner_id= UUID("12312312-3123-1231-2312-312312312312"))
 
     # Mock system admin user
-    mock_admin_user = MagicMock(id=999, role_id=7)
+    mock_admin_user = MagicMock(id= UUID("99999999-9999-9999-9999-999999999999"), role_id= UUID("77777777-7777-7777-7777-777777777777"))
 
     middleware = AuthMiddleware(app=MagicMock())
 
@@ -294,7 +295,7 @@ async def test_api_key_success_flow():
     mock_call_next.assert_awaited_once()
 
     assert response == "OK"
-    assert mock_request.state.user == {"user_id": 999, "partner_id": 123, "role_id": 7}
+    assert mock_request.state.user == {"user_id": UUID("99999999-9999-9999-9999-999999999999"), "partner_id": UUID("12312312-3123-1231-2312-312312312312"), "role_id": UUID("77777777-7777-7777-7777-777777777777")}
 
 
 @pytest.mark.asyncio
@@ -336,7 +337,7 @@ async def test_api_key_inactive_branch():
 
     middleware = AuthMiddleware(app=MagicMock())
 
-    api_key_details = MagicMock(is_active=False, partner_id=777)
+    api_key_details = MagicMock(is_active=False, partner_id= UUID("77777777-7777-7777-7777-777777777777"))
 
     api_key_service = MagicMock()
     api_key_service.validate_api_key = AsyncMock(return_value=api_key_details)
@@ -367,7 +368,7 @@ async def test_api_key_system_admin_missing_branch():
 
     middleware = AuthMiddleware(app=MagicMock())
 
-    api_key_details = MagicMock(is_active=True, partner_id=999)
+    api_key_details = MagicMock(is_active=True, partner_id= UUID("99999999-9999-9999-9999-999999999999"))
 
     api_key_service = MagicMock()
     api_key_service.validate_api_key = AsyncMock(return_value=api_key_details)

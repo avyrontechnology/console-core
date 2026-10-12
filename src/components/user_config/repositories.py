@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import AsyncIterator, Callable, List, Union, Optional
 
@@ -57,7 +58,7 @@ class UserConfigRepository:
             raise exec
 
     async def get_user_config_by_key(
-        self, user_id: int, key: str
+        self, user_id: UUID, key: str
     ) -> UserConfig | Exception:
         try:
             async with self.__session_factory() as session:
@@ -131,7 +132,7 @@ class UserConfigRepository:
             )
             raise exec
 
-    async def get_user_configs_by_user_id(self, user_id: int):
+    async def get_user_configs_by_user_id(self, user_id: UUID):
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -157,55 +158,3 @@ class UserConfigRepository:
                 )
             )
             raise exec
-
-
-
-    async def update_is_maglo_app_config(
-        self,
-        user_id: int,
-        is_maglo_app_enabled: Optional[bool]
-    ) -> UserConfig:
-        """
-        Update only the `is_maglo_app_enabled` user config for a given user_id.
-        Creates a new config if not already present.
-        """
-        KEY = "is_maglo_app_enabled"
-
-        try:
-            async with self.__session_factory() as session:
-                self.__console_service_logger.info(
-                    f"Updating '{KEY}' for user_id: {user_id}"
-                )
-
-                # Fetch the existing config
-                query = select(UserConfig).where(
-                    UserConfig.user_id == user_id,
-                    UserConfig.key == KEY
-                )
-                result = await session.execute(query)
-                config: Optional[UserConfig] = result.scalar_one_or_none()
-
-                if config:
-                    # Update existing config
-                    old_value = config.value
-                    config.update_history(old_value, is_maglo_app_enabled)
-                    config.value = is_maglo_app_enabled
-
-                else:
-                    # Create new config
-                    config = UserConfig(
-                        user_id=user_id,
-                        key=KEY,
-                        value=is_maglo_app_enabled,
-                    )
-                    session.add(config)
-
-                await session.commit()
-                await session.refresh(config)
-
-                return config
-        except Exception as exc:
-            self.__console_service_logger.error(
-                f"Unexpected error while updating {KEY} for user_id {user_id}: {exc}"
-            )
-            raise exc

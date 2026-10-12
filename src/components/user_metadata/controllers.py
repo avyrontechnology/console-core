@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
@@ -92,7 +93,7 @@ class UserMetadataController:
     @inject
     async def get_user_metadata_by_user_id(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         user_metadata_service: UserMetadataService = Depends(
             Provide[Container.user_metadata_service]
         ),
@@ -133,7 +134,7 @@ class UserMetadataController:
     @inject
     async def add_user_metadata(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         user_metadata: CreateUserMetaDataSchema,
         user_metadata_service: UserMetadataService = Depends(
             Provide[Container.user_metadata_service]
@@ -179,7 +180,7 @@ class UserMetadataController:
     @inject
     async def update_user_metadata(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         user_metadata: UpdateUserMetadataSchema,
         user_metadata_service: UserMetadataService = Depends(
             Provide[Container.user_metadata_service]
@@ -227,7 +228,7 @@ class UserMetadataController:
     @inject
     async def delete_user_metadata(
         request: Request,
-        user_id: int,
+        user_id: UUID,
         user_metadata_service: UserMetadataService = Depends(
             Provide[Container.user_metadata_service]
         ),

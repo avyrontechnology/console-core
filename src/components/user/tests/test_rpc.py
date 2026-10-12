@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from grpc import StatusCode
@@ -26,13 +27,13 @@ class TestUserServiceGRPC:
     async def test_get_partner_user_details_by_hierarchy_success(self):
         # Arrange
         request = MagicMock()
-        request.partner_id = 101
+        request.partner_id= UUID("10110110-1101-1011-0110-110110110110")
         request.role_hierarchy_level = 1
 
         # Fake user objects with attributes like Pydantic/ORM models
         fake_users = [
-            SimpleNamespace(user_id=1, email="alice@example.com", name="Alice", role="admin"),
-            SimpleNamespace(user_id=2, email="bob@example.com", name="Bob", role="manager"),
+            SimpleNamespace(user_id= UUID("11111111-1111-1111-1111-111111111111"), email="alice@example.com", name="Alice", role="admin"),
+            SimpleNamespace(user_id= UUID("22222222-2222-2222-2222-222222222222"), email="bob@example.com", name="Bob", role="manager"),
         ]
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = fake_users
 
@@ -51,16 +52,16 @@ class TestUserServiceGRPC:
         assert response.users_details[1].role == "manager"
 
         self.logger_mock.info.assert_called_once_with(
-            "[gRPC]: Attempting to get user details by hierarchy: 1, for partner: 101"
+            "[gRPC]: Attempting to get user details by hierarchy: 1, for partner: 10110110-1101-1011-0110-110110110110"
         )
         self.user_service_mock.get_admin_credentials_by_hierarchy.assert_awaited_once_with(
-            user_hierarchy=1, partner_id=101
+            user_hierarchy=1, partner_id= UUID("10110110-1101-1011-0110-110110110110")
         )
 
     async def test_get_partner_user_details_by_hierarchy_empty_result(self):
         # Arrange
         request = MagicMock()
-        request.partner_id = 202
+        request.partner_id= UUID("20220220-2202-2022-0220-220220220220")
         request.role_hierarchy_level = 3
 
         self.user_service_mock.get_admin_credentials_by_hierarchy.return_value = []
@@ -76,13 +77,13 @@ class TestUserServiceGRPC:
         assert isinstance(response, GetPartnerUserDetailsByHierarchyResponse)
         assert len(response.users_details) == 0
         self.logger_mock.info.assert_called_once_with(
-            "[gRPC]: Attempting to get user details by hierarchy: 3, for partner: 202"
+            "[gRPC]: Attempting to get user details by hierarchy: 3, for partner: 20220220-2202-2022-0220-220220220220"
         )
 
     async def test_get_partner_user_details_by_hierarchy_exception(self):
         # Arrange
         request = MagicMock()
-        request.partner_id = 303
+        request.partner_id= UUID("30330330-3303-3033-0330-330330330330")
         request.role_hierarchy_level = 2
 
         self.user_service_mock.get_admin_credentials_by_hierarchy.side_effect = Exception(
@@ -100,17 +101,17 @@ class TestUserServiceGRPC:
         assert exc_info.value.status_code == StatusCode.INTERNAL
 
         self.logger_mock.error.assert_called_once_with(
-            "[gRPC]: Error occurred while get users details by hierarchy: 2 for partner: 303. error: Database failure"
+            "[gRPC]: Error occurred while get users details by hierarchy: 2 for partner: 30330330-3303-3033-0330-330330330330. error: Database failure"
         )
 
     async def test_get_users_availability_status_success(self):
         # Arrange
         request = MagicMock()
-        request.user_ids = [1, 2]
+        request.user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         fake_users_status = [
-            SimpleNamespace(user_id=1, current_status="Active"),
-            SimpleNamespace(user_id=2, current_status="Offline"),
+            SimpleNamespace(user_id= UUID("11111111-1111-1111-1111-111111111111"), current_status="Active"),
+            SimpleNamespace(user_id= UUID("22222222-2222-2222-2222-222222222222"), current_status="Offline"),
         ]
         self.user_service_mock.get_users_availability_status.return_value = fake_users_status
 
@@ -125,20 +126,20 @@ class TestUserServiceGRPC:
         assert isinstance(response, GetUsersAvailabilityStatusResponse)
         assert len(response.users_availability_status) == 2
         assert isinstance(response.users_availability_status[0], UserAvailabilityStatus)
-        assert response.users_availability_status[0].user_id == 1
+        assert response.users_availability_status[0].user_id == "11111111-1111-1111-1111-111111111111"
         assert response.users_availability_status[0].current_status == "Active"
-        assert response.users_availability_status[1].user_id == 2
+        assert response.users_availability_status[1].user_id == "22222222-2222-2222-2222-222222222222"
         assert response.users_availability_status[1].current_status == "Offline"
 
         self.logger_mock.info.assert_called_once_with(
-            "[gRPC]: Attempting to get current status for user_ids: [1, 2]"
+            "[gRPC]: Attempting to get current status for user_ids: [11111111-1111-1111-1111-111111111111, 22222222-2222-2222-2222-222222222222]"
         )
-        self.user_service_mock.get_users_availability_status.assert_awaited_once_with([1, 2])
+        self.user_service_mock.get_users_availability_status.assert_awaited_once_with([UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")])
 
     async def test_get_users_availability_status_empty_result(self):
         # Arrange
         request = MagicMock()
-        request.user_ids = [3]
+        request.user_ids = [UUID("33333333-3333-3333-3333-333333333333")]
 
         self.user_service_mock.get_users_availability_status.return_value = []
 
@@ -156,7 +157,7 @@ class TestUserServiceGRPC:
     async def test_get_users_availability_status_exception(self):
         # Arrange
         request = MagicMock()
-        request.user_ids = [4]
+        request.user_ids = [UUID("44444444-4444-4444-4444-444444444444")]
 
         self.user_service_mock.get_users_availability_status.side_effect = Exception(
             "Database failure"
@@ -173,5 +174,5 @@ class TestUserServiceGRPC:
         assert exc_info.value.status_code == StatusCode.INTERNAL
 
         self.logger_mock.error.assert_called_once_with(
-            "[gRPC]: Error occurred while getting current status for user_ids: [4]. error: Database failure"
+            "[gRPC]: Error occurred while getting current status for user_ids: [44444444-4444-4444-4444-444444444444]. error: Database failure"
         )

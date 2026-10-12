@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -183,8 +184,8 @@ class TestUserTrackerService:
     async def test_get_user_availability_status_success(self):
         """Test successfully getting user availability status"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         current_status = "Active"
         custom_statuses_data = {
             "uuid1": {"display_id": "custom_1", "name": "Meeting", "status_icon": "📅"},
@@ -217,8 +218,8 @@ class TestUserTrackerService:
         """Test getting user availability status when no custom statuses exist —
         standard statuses fall back to their system-wide default icon color."""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         current_status = "Active"
 
         self.repository.get_user_current_status.return_value = (current_status, None)
@@ -240,8 +241,8 @@ class TestUserTrackerService:
     async def test_get_user_availability_status_custom_status_uses_own_icon_override(self):
         """A user's own icon override for their current custom status takes
         precedence over the partner-wide default icon set by an Admin."""
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         custom_statuses_data = {
             "uuid1": {"display_id": "custom_1", "name": "Meeting", "status_icon": "#000000"},
         }
@@ -258,8 +259,8 @@ class TestUserTrackerService:
     @pytest.mark.asyncio
     async def test_get_user_availability_status_custom_status_falls_back_to_default_icon(self):
         """Without a personal override, the partner-wide default icon is shown."""
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         custom_statuses_data = {
             "uuid1": {"display_id": "custom_1", "name": "Meeting", "status_icon": "#000000"},
         }
@@ -275,8 +276,8 @@ class TestUserTrackerService:
     async def test_get_user_availability_status_user_not_found(self):
         """Test when user is not found"""
         # Arrange
-        user_id = 999
-        partner_id = 100
+        user_id= UUID("99999999-9999-9999-9999-999999999999")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         self.repository.get_user_current_status.side_effect = UserTrackerNotFoundError(user_id)
 
@@ -291,8 +292,8 @@ class TestUserTrackerService:
     async def test_get_user_availability_status_generic_error(self):
         """Test generic error handling"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         self.repository.get_user_current_status.side_effect = Exception("Unexpected error")
 
@@ -310,8 +311,8 @@ class TestUserTrackerService:
     async def test_update_user_status_success_fixed_status(self):
         """Test successfully updating to a fixed status"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "On Break"
         previous_status = "Active"
         custom_statuses_data = {
@@ -340,8 +341,8 @@ class TestUserTrackerService:
     async def test_update_user_status_success_custom_status(self):
         """Test successfully updating to a custom status"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Meeting"  # Custom status
         previous_status = "Active"
         custom_statuses_data = {
@@ -369,8 +370,8 @@ class TestUserTrackerService:
         fixed default icon instead.
         """
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Active"
         previous_status = "Away"
         custom_statuses_data = {}
@@ -398,8 +399,8 @@ class TestUserTrackerService:
         and must NOT mutate the shared partner-wide custom status catalog.
         """
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Meeting"
         previous_status = "Active"
         custom_statuses_data = {
@@ -430,8 +431,8 @@ class TestUserTrackerService:
         """Without an explicit status_icon, the response carries the partner-wide
         default icon, and no per-user override is persisted."""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Meeting"
         previous_status = "Active"
         custom_statuses_data = {
@@ -457,8 +458,8 @@ class TestUserTrackerService:
     async def test_update_user_status_with_whitespace(self):
         """Test updating with status containing whitespace"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "  On Break  "  # With whitespace
         cleaned_status = "On Break"
         previous_status = "Active"
@@ -482,8 +483,8 @@ class TestUserTrackerService:
     async def test_update_user_status_validation_error_empty(self):
         """Test validation error with empty status"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         invalid_status = ""
 
         # Act & Assert
@@ -497,8 +498,8 @@ class TestUserTrackerService:
     async def test_update_user_status_validation_error_too_short(self):
         """Test validation error with status too short"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         invalid_status = "A"  # Too short
 
         # Act & Assert
@@ -509,8 +510,8 @@ class TestUserTrackerService:
     async def test_update_user_status_validation_error_too_long(self):
         """Test validation error with status too long"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         invalid_status = "A" * (UserTrackerValidation.STATUS_MAX_LENGTH + 1)
 
         # Act & Assert
@@ -521,8 +522,8 @@ class TestUserTrackerService:
     async def test_update_user_status_invalid_status_not_in_lists(self):
         """Test when status is not in allowed list"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Invalid Status"
         custom_statuses_data = {}  # No custom statuses
         active_map = {}
@@ -543,8 +544,8 @@ class TestUserTrackerService:
     async def test_update_user_status_user_not_found(self):
         """Test when user is not found during update"""
         # Arrange
-        user_id = 999
-        partner_id = 100
+        user_id= UUID("99999999-9999-9999-9999-999999999999")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Active"
         custom_statuses_data = {}
         active_map = {}
@@ -561,8 +562,8 @@ class TestUserTrackerService:
     async def test_update_user_status_generic_error(self):
         """Test generic error during update"""
         # Arrange
-        user_id = 1
-        partner_id = 100
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         new_status = "Active"
         custom_statuses_data = {}
         active_map = {}
@@ -615,8 +616,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_edit_only(self):
         """Test editing existing custom statuses"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="Updated Meeting")}
         add_statuses = []
 
@@ -650,8 +651,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_edit_icon_only(self):
         """Test updating only the status_icon of an existing custom status (name untouched)"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(status_icon="🎯")}
         add_statuses = []
 
@@ -681,8 +682,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_soft_delete(self):
         """Test soft deleting a custom status"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="")}  # Empty name means soft delete
         add_statuses = []
 
@@ -710,8 +711,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_add_only(self):
         """Test adding new custom statuses"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [
             CustomStatusAddItem(name="New Status", status_icon="🆕"),
@@ -749,8 +750,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_edit_and_add(self):
         """Test both editing and adding custom statuses"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="Updated Meeting")}
         add_statuses = [CustomStatusAddItem(name="Brand New")]
 
@@ -782,8 +783,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_display_id_not_found(self):
         """Test editing a non-existent display_id"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_999": CustomStatusEditItem(name="New Name")}  # Doesn't exist
         add_statuses = []
 
@@ -805,8 +806,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_fixed_status_conflict_edit(self):
         """Test trying to rename a custom status to a fixed status name"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="Active")}  # Active is a fixed status
         add_statuses = []
 
@@ -828,8 +829,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_fixed_status_conflict_add(self):
         """Test trying to add a custom status with fixed status name"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [CustomStatusAddItem(name="Busy")]  # Busy is a fixed status
 
@@ -849,8 +850,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_duplicate_in_add(self):
         """Test adding duplicate statuses in same request"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [
             CustomStatusAddItem(name="Meeting"),
@@ -871,8 +872,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_duplicate_with_existing(self):
         """Test adding a status that already exists"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [CustomStatusAddItem(name="Meeting")]  # Already exists
 
@@ -894,8 +895,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_duplicate_case_insensitive(self):
         """Test adding a status that already exists with different case"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [CustomStatusAddItem(name="MEETING")]  # Already exists but different case
 
@@ -917,8 +918,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_validation_error_on_add(self):
         """Test validation error when adding invalid status"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [CustomStatusAddItem(name="A")]  # Too short
 
@@ -938,8 +939,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_validation_error_on_edit(self):
         """Test validation error when editing to invalid status"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="A")}  # Too short
         add_statuses = []
 
@@ -961,8 +962,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_generic_error(self):
         """Test generic error during custom status update"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = [CustomStatusAddItem(name="New Status")]
 
@@ -982,8 +983,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_rename_same_name_allowed(self):
         """Test renaming to the same name (case-insensitive) is allowed"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="Meeting")}  # Same name
         add_statuses = []
 
@@ -1009,8 +1010,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_rename_different_case_same_name(self):
         """Test renaming with different case but same text is allowed"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="MEETING")}  # Different case
         add_statuses = []
 
@@ -1036,8 +1037,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_empty_edit_and_add(self):
         """Test with empty edit and add lists"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {}
         add_statuses = []
 
@@ -1061,8 +1062,8 @@ class TestUserTrackerService:
     async def test_update_custom_statuses_with_whitespace_in_names(self):
         """Test handling whitespace in status names"""
         # Arrange
-        partner_id = 100
-        updated_by = 1
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        updated_by= UUID("11111111-1111-1111-1111-111111111111")
         edit_statuses = {"custom_1": CustomStatusEditItem(name="  Updated Meeting  ")}  # With whitespace
         add_statuses = [CustomStatusAddItem(name="  New Status  ")]  # With whitespace
 

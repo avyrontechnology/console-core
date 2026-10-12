@@ -65,7 +65,7 @@ class NotificationController:
         Update the current user's notification preferences.
 
         The stored state is reused by every service that publishes to the common queue.
-        When `scope` is sent for Maglo, the update targets just that notification
+        When `scope` is sent, the update targets just that notification
         family (single assign, bulk assign, or followup) instead of the whole source.
         """
         try:
@@ -118,7 +118,7 @@ class NotificationController:
     @inject
     async def unsubscribe_from_notifications(
         request: Request,
-        service_type: NotificationServiceType = Query(NotificationServiceType.MAGLO),
+        service_type: NotificationServiceType = Query(NotificationServiceType.TALKO),
         identifier: str = Query(..., description="The device token (FCM) or URL to deactivate"),
         notification_service: NotificationService = Depends(Provide[Container.notification_service]),
         logger: CeleryLogger = Depends(Provide[Container.console_service_logger]),
@@ -144,7 +144,7 @@ class NotificationController:
     @inject
     async def get_notification_history(
         request: Request,
-        service_type: NotificationServiceType = Query(NotificationServiceType.MAGLO),
+        service_type: NotificationServiceType = Query(NotificationServiceType.TALKO),
         limit: int = Query(50, ge=1, le=100),
         offset: int = Query(0, ge=0),
         state:Optional[str] = Query(None),
@@ -160,7 +160,7 @@ class NotificationController:
     @inject
     async def get_unread_notifications_count(
         request: Request,
-        service_type: NotificationServiceType = Query(NotificationServiceType.MAGLO),
+        service_type: NotificationServiceType = Query(NotificationServiceType.TALKO),
         notification_service: NotificationService = Depends(Provide[Container.notification_service])
     ):
         """Gets the number to display on the red badge over the bell icon."""

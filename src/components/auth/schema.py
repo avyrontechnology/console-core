@@ -1,3 +1,4 @@
+from uuid import UUID
 import re
 from dataclasses import dataclass
 from typing import List, Optional, Any
@@ -27,13 +28,12 @@ class UserBase(BaseModel):
     email: EmailStr
     designation: Optional[str] = None
     phone_number: str
-    parent_id: Optional[int] = None
-    partner_id: Optional[int] = None
-    role_id: Optional[int] = None
-    country_id: Optional[int] = None
-    state_id: Optional[int] = None
-    city_id: Optional[int] = None
-    is_maglo_publisher: Optional[bool] = False
+    parent_id: Optional[UUID] = None
+    partner_id: Optional[UUID] = None
+    role_id: Optional[UUID] = None
+    country_id: Optional[UUID] = None
+    state_id: Optional[UUID] = None
+    city_id: Optional[UUID] = None
     alternate_phone_number: Optional[str] = None
     cloud_agent_number: Optional[str] = None
 
@@ -61,12 +61,12 @@ class UserBase(BaseModel):
 class UserData(UserBase):
     phone_number: str
     alternate_phone_number: Optional[str] = None
-    partner_id: int
+    partner_id: UUID
     password: str = Field(..., min_length=8)
-    team_id: Optional[int] = None
+    team_id: Optional[UUID] = None
     # Optional per-team role override for the new team membership; ignored
     # unless team_id is also set. When omitted, the user's default role applies.
-    team_role_id: Optional[int] = None
+    team_role_id: Optional[UUID] = None
 
     @field_validator("password")
     def validate_password(cls, password: str) -> str:
@@ -133,16 +133,12 @@ class LoginData(BaseModel):
                         "For email verification, 'send_mail_otp' must be True."
                     )
 
-            # If credential is phone → only WhatsApp OTP allowed
+            # If credential is phone → WhatsApp OTP was the only channel,
+            # removed. Fail closed with a clear message.
             else:
-                if self.send_mail_otp:
-                    raise ValueError(
-                        "Cannot send email OTP for phone credentials. Use 'send_whatsapp_otp=True' instead."
-                    )
-                if not self.send_whatsapp_otp:
-                    raise ValueError(
-                        "For phone verification, 'send_whatsapp_otp' must be True."
-                    )
+                raise ValueError(
+                    "Phone verification is unavailable (WhatsApp channel removed)."
+                )
 
             # Password should not be required in verification mode
             self.password = None
@@ -174,11 +170,11 @@ class PermissionData(BaseModel):
 class UserDataResponse(UserBase):
     phone_number: Optional[str] = None
     is_internal: Optional[bool] = False
-    updated_by: Optional[int] = None
+    updated_by: Optional[UUID] = None
     is_walkthrough_completed: Optional[bool] = False
     current_status: Optional[str] = None
     is_active: Optional[bool] = None
-    id: int
+    id: UUID
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -195,16 +191,16 @@ class TokenResponse(BaseModel):
 
 
 class RoleResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     slug: str
     hierarchy: Optional[int] = None
     description: Optional[str] = None
     is_active: bool
     is_deleted: bool
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
-    deleted_by: Optional[int] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
+    deleted_by: Optional[UUID] = None
     is_internal: Optional[bool] = False
 
     model_config = ConfigDict(
@@ -213,7 +209,7 @@ class RoleResponse(BaseModel):
 
 
 class PermissionResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     description: Optional[str] = None
     slug: str
@@ -221,9 +217,9 @@ class PermissionResponse(BaseModel):
     display_text: Optional[str] = None
     is_active: bool
     is_deleted: bool
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
-    deleted_by: Optional[int] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
+    deleted_by: Optional[UUID] = None
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -246,7 +242,7 @@ class ResetPasswordRequest(BaseModel):
 class AllUsersDataResponse(UserBase):
     phone_number: Optional[str] = None
     alternate_phone_number: Optional[str] = None
-    id: int
+    id: UUID
     country_name: Optional[str] = None
     role_name: Optional[str] = None
     parent_name: Optional[str] = None
@@ -277,7 +273,7 @@ class UpdatePermissionRquest(BaseModel):
 
 
 class UpdatePermissionResponse(BaseModel):
-    id: int
+    id: UUID
     title: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None
@@ -299,11 +295,11 @@ class RolePermissionCombined:
     created_at: int
     description: str
     display_text: str
-    permission_id: int
+    permission_id: UUID
 
 
 class UserNewResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     email: str
     phone_number: str

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import uuid
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.auth.constant import OtpConstants, OtpType
 from src.components.database.base_model import MetaData
@@ -31,9 +33,9 @@ class Permission(MetaData):
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
 
-    deleted_by = Column(Integer, ForeignKey(User.id))  # FK
-    created_by = Column(Integer, ForeignKey(User.id))  # FK
-    updated_by = Column(Integer, ForeignKey(User.id))  # FK
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
+    created_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
+    updated_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
 
     # Define relationships with the User model
     created_user = relationship("User", foreign_keys=[created_by])
@@ -49,7 +51,7 @@ class Role(MetaData):
     # NULL => system default role (shared by every partner). A non-null
     # partner_id is a partner-defined custom role.
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -61,7 +63,7 @@ class Role(MetaData):
     # creation. NULL for system default roles. SET NULL on base removal so a
     # base role can be deleted without blocking (roles are soft-deleted anyway).
     base_role_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_role.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
@@ -71,9 +73,9 @@ class Role(MetaData):
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
 
-    created_by = Column(Integer, ForeignKey(User.id))  # FK
-    updated_by = Column(Integer, ForeignKey(User.id))  # FK
-    deleted_by = Column(Integer, ForeignKey(User.id))  # FK
+    created_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
+    updated_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey(User.id))  # FK
 
     # Define relationships with the User model
     created_user = relationship("User", foreign_keys=[created_by])
@@ -109,7 +111,7 @@ class OTP(MetaData):
     __tablename__ = "console_otp"
 
     user_id = Column(
-        Integer, ForeignKey("console_users.id"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("console_users.id"), nullable=False, index=True
     )
     otp = Column(String(6), nullable=False, index=True)
     otp_type = Column(Enum(OtpType), nullable=False)

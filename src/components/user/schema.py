@@ -1,3 +1,4 @@
+from uuid import UUID
 import re
 from typing import Any, Dict, List, Optional, Set
 
@@ -26,18 +27,15 @@ class Contrasts:
         email: Optional[EmailStr] = None
         designation: Optional[str] = None
         phone_number: Optional[str] = None
-        parent_id: Optional[int] = None
-        partner_id: Optional[int] = None
-        role_id: Optional[int] = None
-        country_id: Optional[int] = None
-        state_id: Optional[int] = None
-        city_id: Optional[int] = None
-        is_maglo_publisher: Optional[bool] = None
+        parent_id: Optional[UUID] = None
+        partner_id: Optional[UUID] = None
+        role_id: Optional[UUID] = None
+        country_id: Optional[UUID] = None
+        state_id: Optional[UUID] = None
+        city_id: Optional[UUID] = None
         is_active: Optional[bool] = None
         is_internal: Optional[bool] = False
-        is_maglo_enabled: Optional[bool] = False
         is_talko_enabled: Optional[bool] = False
-        is_babbler_enabled: Optional[bool] = False
         cloud_agent_number: Optional[str] = None
         current_status: Optional[str] = Field(
             default=None, max_length=UserTrackerValidation.STATUS_MAX_LENGTH
@@ -86,7 +84,7 @@ class Contrasts:
             return value
         
     class ParentUserResponse(BaseModel):
-        id: int
+        id: UUID
         name: str
         designation: Optional[str] = None
         email: Optional[str] = None
@@ -96,7 +94,7 @@ class Contrasts:
         )
 
     class GetUserDetailResponse(BaseModel):
-        id: int
+        id: UUID
         name: str
         email: Optional[str] = None
         designation: Optional[str] = None
@@ -115,7 +113,7 @@ class UserRoleCombinedResponse(BaseModel):
     """Schema for combined user and role information."""
 
     # User fields
-    id: int
+    id: UUID
     name: Optional[str] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None
@@ -124,12 +122,12 @@ class UserRoleCombinedResponse(BaseModel):
     description: Optional[str] = None
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
-    updated_by: Optional[int] = None
-    country_id: Optional[int] = None
-    state_id: Optional[int] = None
-    city_id: Optional[int] = None
+    updated_by: Optional[UUID] = None
+    country_id: Optional[UUID] = None
+    state_id: Optional[UUID] = None
+    city_id: Optional[UUID] = None
     country_name: Optional[str] = None
-    parent_id: Optional[int] = None
+    parent_id: Optional[UUID] = None
     parent_name: Optional[str] = None
 
     # Availability (user tracker status, stored on console_users)
@@ -137,14 +135,14 @@ class UserRoleCombinedResponse(BaseModel):
     current_status_icon: Optional[str] = None
 
     # Role fields
-    role_id: int
+    role_id: UUID
     role_name: str
     role_description: Optional[str] = None
     role_is_active: bool
     role_created_at: Optional[int] = None
 
     # Partner reference (for isolation)
-    partner_id: int
+    partner_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -195,7 +193,7 @@ def _validate_filter_entry(entry: Any) -> None:
 class UserRoleFilterRequest(BaseModel):
     """Schema for filtering combined user-role data."""
 
-    partner_id: Optional[int] = None
+    partner_id: Optional[UUID] = None
 
     filters: Optional[List[Dict[str, Any]]] = Field(
         default=[],
@@ -290,8 +288,8 @@ class BulkUserEntry(BaseModel):
     A single user in the internal bulk-create payload.
 
     ``sequence`` is a positive integer unique within the batch — same
-    convention as journey_config status/substatus sequences in Maglo.
-    ``partner_id`` is injected server-side by Maglo; never supplied by
+    convention as journey_config status/substatus sequences.
+    ``partner_id`` is injected server-side; never supplied by
     the end user.  ``parent_id`` is forbidden — use ``parent_sequence``.
     """
 
@@ -300,12 +298,12 @@ class BulkUserEntry(BaseModel):
     email: EmailStr
     phone_number: str
     password: str
-    role_id: int
-    partner_id: int
+    role_id: UUID
+    partner_id: UUID
     designation: Optional[str] = None
-    country_id: Optional[int] = None
-    state_id: Optional[int] = None
-    city_id: Optional[int] = None
+    country_id: Optional[UUID] = None
+    state_id: Optional[UUID] = None
+    city_id: Optional[UUID] = None
     alternate_phone_number: Optional[str] = None
     cloud_agent_number: Optional[str] = None
 
@@ -464,7 +462,7 @@ class BulkCreatedUserEntry(BaseModel):
     """Single entry in the bulk-create response."""
 
     sequence: int  # echoes the caller's sequence number
-    user_id: int  # real DB primary key assigned after creation
+    user_id: UUID  # real DB primary key assigned after creation
     email: str
 
     

@@ -1,3 +1,4 @@
+from uuid import UUID
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -7,7 +8,7 @@ from src.components.wallet.enum import MAX_WALLET_NUMERIC, ServiceName, Transact
 
 
 class WalletTransactionRequest(BaseModel):
-    partner_id: Optional[int] = None
+    partner_id: Optional[UUID] = None
 
     transaction_type: TransactionType = Field(
         ...,
@@ -43,7 +44,7 @@ class WalletTransactionRequest(BaseModel):
                 "partner_id": 12,
                 "transaction_type": "CREDIT",
                 "amount": 1500.00,
-                "service_name": "Maglo",
+                "service_name": "Talko",
                 "description": "Wallet top-up",
                 "attributes": {"campaign_id": "CMP1234"},
                 "debit_from_wallet":False,
@@ -76,7 +77,7 @@ class WalletTransactionRequest(BaseModel):
             ServiceName(value)
         except Exception:
             raise ValueError(
-                "Invalid Service Name: must be from existing Product (Maglo, Babbler, or Talko)"
+                "Invalid Service Name: must be from existing Product (Talko or Obotaai)"
             )
         return value
 
@@ -102,7 +103,7 @@ class WalletTransactionRequest(BaseModel):
 class WalletResponse(BaseModel):
     """Schema for wallet details response."""
 
-    partner_id: int
+    partner_id: UUID
     balance: Decimal
     frozen_balance: Decimal
     currency: str
@@ -113,8 +114,8 @@ class WalletResponse(BaseModel):
 class WalletRPCResponse(BaseModel):
     """Schema for wallet details response in gRPC."""
 
-    id: Optional[int] = None
-    partner_id: Optional[int] = None
+    id: Optional[UUID] = None
+    partner_id: Optional[UUID] = None
     balance: Optional[Decimal] = None
     currency: Optional[str] = None
     frozen_balance: Optional[Decimal] = None
@@ -126,8 +127,8 @@ class WalletRPCResponse(BaseModel):
 class WalletTransactionResponse(BaseModel):
     """Schema for individual wallet transaction."""
 
-    id: int
-    wallet_id: int
+    id: UUID
+    wallet_id: UUID
     transaction_type: str = Field(...)
     service_name: str = Field(...)
     previous_balance: Decimal = Field(...)

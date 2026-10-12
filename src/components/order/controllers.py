@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 import re
 from typing import Any, List, Optional
@@ -223,8 +224,8 @@ class OrderController:
             # OR they must belong to an internal partner (sales team).
             # Non-internal users attempting to order for a different partner_id
             # are rejected with 403.
-            request_partner_id: int = current_user.get(TokenKeys.PARTNER_ID)
-            payload_partner_id: int = validated.get("partner_id")
+            request_partner_id: UUID = current_user.get(TokenKeys.PARTNER_ID)
+            payload_partner_id: UUID = validated.get("partner_id")
             is_internal: bool = current_user.get("is_internal", False)
 
             if request_partner_id != payload_partner_id and not is_internal:
@@ -359,7 +360,7 @@ class OrderController:
         """
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(TokenKeys.USER_ID)
+            current_user_id: UUID = current_user.get(TokenKeys.USER_ID)
 
             user_data: dict = await auth_repo.get_role_by_user_id(current_user_id)
             user_hierarchy: int = user_data.get(RoleDictKeys.HIERARCHY)
@@ -494,7 +495,7 @@ class OrderController:
         ),
     ):
         try:
-            partner_id: Optional[int] = None
+            partner_id: Optional[UUID] = None
 
             if hasattr(request.state, "user") and request.state.user:
                 current_user: dict = request.state.user

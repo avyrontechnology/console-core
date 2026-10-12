@@ -1,5 +1,6 @@
 """Repositories module."""
 
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -7,7 +8,7 @@ from dependency_injector.wiring import Provide
 from fastapi import Depends
 from sqlalchemy import and_, case, func, insert, join, select
 from sqlalchemy.dialects.postgresql import INTEGER
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, aliased, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -22,9 +23,8 @@ from src.components.filters.criteria import BaseFilterCriteria
 from src.components.user.filter_builder import UserRoleFilterBuilder
 from src.components.partner.models import Partner
 from src.components.partner_home_page.constants import RoleHierarchyLevel
-from src.components.user import messages
 from src.components.user.constants import UserLogMsg, UserRoles
-from src.components.user.errors import PublisherExistsError, UserNotFoundError
+from src.components.user.errors import UserNotFoundError
 from src.components.user.helpers import safe_dict
 from src.components.user.models import User
 from src.components.user_config.models import UserConfig
@@ -53,7 +53,7 @@ class UserRepository:
     async def _resolve_hierarchy_root(
         self,
         session: Session,
-        current_user_id: int,
+        current_user_id: UUID,
         auth_repository: AuthRepository,
     ) -> Tuple[int, List[int]]:
         """
@@ -105,7 +105,7 @@ class UserRepository:
         exclude_ids = [id for id in [current_user_id, admin_user_id] if id is not None]
         return effective_root_id, exclude_ids
 
-    def _build_hierarchy_cte(self, root_user_id: int):
+    def _build_hierarchy_cte(self, root_user_id: UUID):
         """Recursive CTE walking User.parent_id from root_user_id downward, with a level counter."""
         cte = (
             select(
@@ -143,7 +143,7 @@ class UserRepository:
 
     async def get_all(
         self,
-        current_user_id: int,
+        current_user_id: UUID,
         limit: int,
         offset: int,
         auth_repository: AuthRepository = Depends(Provide["auth_repository"]),
@@ -217,7 +217,7 @@ class UserRepository:
                 raise
 
     async def get_by_id(
-        self, user_id: int, show_inactive_users: bool = False
+        self, user_id: UUID, show_inactive_users: bool = False
     ) -> User:
         async with self.__session_factory() as session:
             try:
@@ -263,17 +263,7 @@ class UserRepository:
                 if not services:
                     enabled_flags: list[dict[str, Any]] = [
                         {
-                            "key": SignupConfigKeys.MAGLO.to_config_key(),
-                            "value": True,
-                            "user_id": user.id,
-                        },
-                        {
                             "key": SignupConfigKeys.TALKO.to_config_key(),
-                            "value": True,
-                            "user_id": user.id,
-                        },
-                        {
-                            "key": SignupConfigKeys.BABBLER.to_config_key(),
                             "value": True,
                             "user_id": user.id,
                         },
@@ -299,15 +289,6 @@ class UserRepository:
                 )
                 return user
             except SQLAlchemyError as e:
-                if isinstance(
-                    e, IntegrityError
-                ) and "uq_partner_maglo_publisher" in str(e.orig):
-                    self.__console_service_logger.error(
-                        f"Maglo publisher already exists for partner_id={user_data_dict.get('partner_id')}"
-                    )
-                    raise PublisherExistsError(
-                        messages.USER_ALREADY_EXISTS_FOR_PUBLISHER
-                    )
                 self.__console_service_logger.error("Database error: {}".format(e))
                 raise e
             except UserException as ex:
@@ -349,7 +330,7 @@ class UserRepository:
                 self.__console_service_logger.error(f"Database error: {e}")
                 raise
 
-    async def delete_by_id(self, user_id: int) -> User:
+    async def delete_by_id(self, user_id: UUID) -> User:
         async with self.__session_factory() as session:
             try:
                 self.__console_service_logger.info(
@@ -384,8 +365,8 @@ class UserRepository:
 
     async def update_user(
         self,
-        user_id: int,
-        current_user_id: int,
+        user_id: UUID,
+        current_user_id: UUID,
         **update_fields,
     ) -> User:
         async with self.__session_factory() as session:
@@ -444,7 +425,7 @@ class UserRepository:
                 self.__console_service_logger.error("Database error:{}".format(exec))
                 raise exec
 
-    async def get_users_by_partner_id(self, partner_id: int) -> List[dict]:
+    async def get_users_by_partner_id(self, partner_id: UUID) -> List[dict]:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -492,7 +473,7 @@ class UserRepository:
             )
             raise ex
 
-    async def get_user_with_role(self, user_id: int) -> User:
+    async def get_user_with_role(self, user_id: UUID) -> User:
         async with self.__session_factory() as session:
             try:
                 self.__console_service_logger.info(
@@ -534,7 +515,7 @@ class UserRepository:
                 )
                 raise ex
 
-    async def partner_user_limit(self, partner_id: int) -> int:
+    async def partner_user_limit(self, partner_id: UUID) -> int:
         try:
             async with self.__session_factory() as session:
 
@@ -579,7 +560,7 @@ class UserRepository:
             )
             raise ex
 
-    async def get_user_details(self, user_id: int) -> Any:
+    async def get_user_details(self, user_id: UUID) -> Any:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -694,7 +675,7 @@ class UserRepository:
             )
             raise exec
 
-    async def is_admin_exists(self, partner_id: int, role_id: int) -> bool:
+    async def is_admin_exists(self, partner_id: UUID, role_id: UUID) -> bool:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -716,7 +697,7 @@ class UserRepository:
             raise exc
 
     async def get_user_by_user_id(
-        self, user_id: int, partner_id, show_inactive_users: bool = False
+        self, user_id: UUID, partner_id, show_inactive_users: bool = False
     ) -> User:
         try:
             async with self.__session_factory() as session:
@@ -727,7 +708,7 @@ class UserRepository:
                     User.id == user_id, User.partner_id == partner_id
                 )
                 # Inactive users are not returned by default, so callers such as
-                # Maglo lead assignment cannot pick a deactivated user.
+                # Lead assignment cannot pick a deactivated user.
                 if not show_inactive_users:
                     query = query.where(User.is_active.is_(True))
 
@@ -753,7 +734,7 @@ class UserRepository:
             )
             raise exec
         
-    async def get_admin_details_by_partner_id(self, partner_id: int) -> Optional[User]:
+    async def get_admin_details_by_partner_id(self, partner_id: UUID) -> Optional[User]:
         """
         Fetch the admin user details for a given partner_id.
 
@@ -848,7 +829,7 @@ class UserRepository:
                 raise exec
 
     async def get_users_by_user_ids(
-        self, partner_id: int, user_ids: List[int]
+        self, partner_id: UUID, user_ids: List[int]
     ) -> List[User]:
         try:
             async with self.__session_factory() as session:
@@ -897,7 +878,7 @@ class UserRepository:
             )
             raise exec
 
-    async def has_child_users(self, user_id: int) -> bool:
+    async def has_child_users(self, user_id: UUID) -> bool:
         """
         Check if the given user has any child users.
         Returns True if child users exist, otherwise False.
@@ -957,7 +938,7 @@ class UserRepository:
             raise exc
 
     async def toggle_walkthrough_key_activation(
-        self, user_id: int, **update_fields
+        self, user_id: UUID, **update_fields
     ) -> User:
         async with self.__session_factory() as session:
             try:
@@ -999,7 +980,7 @@ class UserRepository:
 
     async def update_popup_last_closed(
         self,
-        user_id: int,
+        user_id: UUID,
         service_name: str,
     ) -> None:
         """

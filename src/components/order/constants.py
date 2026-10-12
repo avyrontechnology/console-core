@@ -19,10 +19,7 @@ MAX_PARTNER_IDS_PER_REQUEST: int = 100
 
 
 class OrderSource:
-    BABBLER: str = "babbler"
     CONSOLE: str = "console"
-    MAGLO: str = "maglo"
-    MAGLO_APP: str = "maglo_app"
     OBOTAAI_WEBSITE: str = "obotaai_website"
 
 
@@ -45,14 +42,6 @@ class ServiceSubscriptionStatus:
     PENDING_ACTIVATION = "pending_activation"
     CANCELED = "canceled"
     PAYMENT_FAILED = "payment_failed"
-
-
-class OrderEmailConstants:
-    LIST_OF_RECIEVERS = [
-        'sachmann.singh@makunaiglobal.ai',
-    ]
-
-    SUBJECT = 'Daily Orders Report'
 
 
 MILLISECONDS_IN_DAY = 24 * 60 * 60 * 1000

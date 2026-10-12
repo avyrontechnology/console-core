@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -53,7 +54,7 @@ from src.components.location.errors import (
 )
 from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
-from src.components.user.errors import PublisherExistsError, UserNotFoundError
+from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
 from src.components.user.schema import Contrasts
 from src.components.user.services import UserService
@@ -200,11 +201,6 @@ class AuthController:
                 "Unexpected error during signup: {}".format(str(ex))
             )
             return ResourceConflictResponse(str(ex))
-        except PublisherExistsError as exc:
-            console_service_logger.error(
-                "Publisher already exists while creating new user: {}".format(str(exc))
-            )
-            return ResourceConflictResponse(str(exc))
         except Exception as ex:
             console_service_logger.error(
                 "Unexpected error during signup: {}".format(repr(ex))
@@ -257,7 +253,7 @@ class AuthController:
     ):
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info("Attempting to get roles...")
             roles = await auth_service.get_all_role(partner_id)
             console_service_logger.info(
@@ -282,7 +278,7 @@ class AuthController:
     @inject
     async def get_role_by_id(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -309,7 +305,7 @@ class AuthController:
     @inject
     async def delete_roles(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -382,7 +378,7 @@ class AuthController:
         try:
             console_service_logger.info("checking is user is internal or not")
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not await user_service.is_user_internal(user_id):
                 console_service_logger.warning(
                     "User with id {} is not an internal user, cannot fetch internal permissions.".format(
@@ -416,7 +412,7 @@ class AuthController:
     @inject
     async def get_permission_by_id(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -447,7 +443,7 @@ class AuthController:
     @inject
     async def delete_permission(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -512,8 +508,8 @@ class AuthController:
     @inject
     async def get_parent_users_by_role_id(
         request: Request,
-        role_id: int,
-        partner_id: int,
+        role_id: UUID,
+        partner_id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -527,11 +523,11 @@ class AuthController:
 
             current_user: dict = request.state.user
 
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             user_details: User = await user_service.get_user_details(current_user_id)
 
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             current_user_hierarchy: int = user_details.get(
                 CurrentUserMap.ROLE_HIERARCHY_LEVEL
@@ -581,10 +577,10 @@ class AuthController:
         try:
             console_service_logger.info("fetching permissions for all the roles.")
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
-            filter_partner_id: Optional[int] = None
+            filter_partner_id: Optional[UUID] = None
             if not is_internal_permission:
                 config = await partner_config_service.get_partner_config_by_key(
                     partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
@@ -620,7 +616,7 @@ class AuthController:
     @inject
     async def update_permission(
         request: Request,
-        permission_id: int,
+        permission_id: UUID,
         permission_data: UpdatePermissionRquest,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
@@ -661,7 +657,7 @@ class AuthController:
     async def assume_user(
         request: Request,
         svc_name: ServiceNames,
-        user_id: int = Path(..., ge=1, le=2_147_483_647),
+        user_id: UUID = Path(..., ge=1, le=2_147_483_647),
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -743,7 +739,7 @@ class AuthController:
     @inject
     async def update_role(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         role_data: UpdateRoleRequest = Body(...),
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
