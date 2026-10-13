@@ -36,8 +36,19 @@ async def test_ensure_seeds_missing_known_slug():
     assert "console:bulk_create_users" in slugs
     assert "console:generate_api_key" in slugs
     factory, session = _factory(set())
-    with patch.object(
-        sv, "collect_route_slugs", return_value={"console:bulk_create_users"}
+    meta = {
+        "console:bulk_create_users": {
+            "title": "Bulk Create Users",
+            "category": "User",
+            "display_text": "Bulk Create Users (User)",
+            "is_internal": False,
+        }
+    }
+    with (
+        patch.object(
+            sv, "collect_route_slugs", return_value={"console:bulk_create_users"}
+        ),
+        patch.object(sv, "_mapper_metadata", return_value=meta),
     ):
         report = await sv.ensure_route_permissions(factory)
     assert report["seeded"] == ["console:bulk_create_users"]
