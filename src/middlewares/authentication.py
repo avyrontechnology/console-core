@@ -19,7 +19,7 @@ from src.components.user.models import User
 from src.components.user.repositories import UserRepository
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
-from src.middlewares.constants import OPTIONAL_AUTH_PATHS
+from src.middlewares.constants import OPTIONAL_AUTH_ROUTES
 
 
 def _normalize_id_claims(payload: dict) -> dict:
@@ -93,9 +93,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
             return await call_next(request)
 
-        is_optional_auth = any(
-            request.url.path.endswith(path) for path in OPTIONAL_AUTH_PATHS
-        )
+        is_optional_auth = route_name in OPTIONAL_AUTH_ROUTES
 
         # -----------------------------------------
         # 1) CHECK API KEY FIRST

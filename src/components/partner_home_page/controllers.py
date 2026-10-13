@@ -7,6 +7,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request, status
 from src.components.auth.constant import TokenKeys
 from src.components.common.errors import ErrorMsg
 from src.components.common.response import InternalServerErrorResponse, SuccessResponse
+from src.components.rbac.permission_injector import permission_check
 from src.components.partner_home_page.schemas import UserEntityData
 from src.components.partner_home_page.services import PartnerHomePageService
 from src.core.container import Container
@@ -20,6 +21,7 @@ class PartnerHomePageController:
     @partner_home_page_router.get(
         "/partner_homepage_details", response_model=UserEntityData
     )
+    @permission_check("console:get_partner_homepage_details")
     @inject
     async def get_partner_homepage_details(
         request: Request,
@@ -49,7 +51,7 @@ class PartnerHomePageController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_home_page_router.get("/partner_dashboard_cards")
-    # @permission_check("console:get_partner_dashboard_cards")
+    @permission_check("console:get_partner_dashboard_cards")
     @inject
     async def get_partner_dashboard_cards(
         request: Request,

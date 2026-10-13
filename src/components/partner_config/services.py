@@ -559,6 +559,10 @@ class PartnerConfigService:
         permissions enabled. Powers the ``GetRolePermissions`` RPC / the home
         role-permission-keys view. A system default role (``partner_id`` NULL)
         has only default permissions.
+
+        NOTE: internal-only slugs are ALWAYS stripped here — this entry
+        point carries no caller identity, so it must never leak them.
+        Callers with explicit privilege use get_all_permission directly.
         """
         try:
             role = await auth_repo.get_role_by_id(role_id)
@@ -595,9 +599,17 @@ class PartnerConfigService:
                 partner_permission_list: list[str] = [
                     permission.slug for permission in partner_permissions
                 ]
-                return list(set(partner_permission_list + default_permission_list))
+                merged = list(set(partner_permission_list + default_permission_list))
+            else:
+                merged = default_permission_list
 
-            return default_permission_list
+            try:
+                internal = set(
+                    await auth_repo.get_internal_permissions()
+                )
+            except Exception:
+                internal = set()
+            return [slug for slug in merged if slug not in internal]
         except Exception as exec:
             self.__console_service_logger.error(
                 "An unexpected error occurred while role permission check: {}".format(

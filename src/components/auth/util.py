@@ -28,7 +28,9 @@ class AuthUtility:
         This function return current user Token payload
         """
         if request.state.user is None:
-            raise UnauthorizedResponse(detail="Unauthorized User")
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=401, detail="Unauthorized User")
         return request.state.user
 
     async def verify_password(self, plain_password: str, hash_password: str) -> bool:

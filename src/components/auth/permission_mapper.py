@@ -75,6 +75,15 @@ class PermissionCategories:
             ("get_partner_homepage_details", True),
             ("get_partner_dashboard_cards", False),
         ],
+        "Notifications": [
+            ("get_notification_preferences", False),
+            ("update_notification_preferences", False),
+            ("subscribe_to_notifications", False),
+            ("unsubscribe_from_notifications", False),
+            ("get_notification_history", False),
+            ("get_unread_notifications_count", False),
+            ("mark_notifications_as_read", False),
+        ],
         "Partner Meta Data": [
             ("create_partner_metadata", True),
             ("update_partner_meta_data", False),

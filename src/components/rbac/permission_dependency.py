@@ -113,7 +113,16 @@ class PermissionDependency:
             raise http_forbidden
 
         except Exception as exc:
+            # Auth failures (missing/invalid identity) are 401; anything
+            # else (DB/Redis down) is 503 — never 404, which misdirects
+            # clients into retrying the wrong thing and misfires alerts.
+            from src.components.common.response import UnauthorizedResponse
+
             logger.error(f"Permission check failed: {str(exc)}")
+            if isinstance(exc, UnauthorizedResponse) or "unauthorized" in str(
+                exc
+            ).lower():
+                raise HTTPException(status_code=401, detail="Unauthorized User")
             raise HTTPException(
-                status_code=404, detail=PermissionErrorText.INTERNAL_SERVER_ERROR
+                status_code=503, detail=PermissionErrorText.INTERNAL_SERVER_ERROR
             )

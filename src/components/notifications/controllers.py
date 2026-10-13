@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request, Query
 
 from src.components.common.constants import CurrentUserMap
+from src.components.rbac.permission_injector import permission_check
 from src.components.common.response import InternalServerErrorResponse, SuccessResponse
 from src.components.notifications.schemas import (
     MarkReadRequest,
@@ -26,6 +27,7 @@ class NotificationController:
         "/notification/preferences",
         response_model=NotificationPreferenceResponse,
     )
+    @permission_check("console:get_notification_preferences")
     @inject
     async def get_notification_preferences(
         request: Request,
@@ -52,6 +54,7 @@ class NotificationController:
         "/notification/preferences",
         response_model=NotificationPreferenceResponse,
     )
+    @permission_check("console:update_notification_preferences")
     @inject
     async def update_notification_preferences(
         request: Request,
@@ -81,6 +84,7 @@ class NotificationController:
             return InternalServerErrorResponse()
 
     @notification_router.post("/notifications/subscribe")
+    @permission_check("console:subscribe_to_notifications")
     @inject
     async def subscribe_to_notifications(
         request: Request,
@@ -115,6 +119,7 @@ class NotificationController:
             return InternalServerErrorResponse()
 
     @notification_router.delete("/notifications/unsubscribe")
+    @permission_check("console:unsubscribe_from_notifications")
     @inject
     async def unsubscribe_from_notifications(
         request: Request,
@@ -141,6 +146,7 @@ class NotificationController:
 
 
     @notification_router.get("/notifications/history")
+    @permission_check("console:get_notification_history")
     @inject
     async def get_notification_history(
         request: Request,
@@ -157,6 +163,7 @@ class NotificationController:
         return SuccessResponse(data={"notifications" : data, "count" : history.get('count')})
 
     @notification_router.get("/notifications/unread-count")
+    @permission_check("console:get_unread_notifications_count")
     @inject
     async def get_unread_notifications_count(
         request: Request,
@@ -169,6 +176,7 @@ class NotificationController:
         return SuccessResponse(data=UnreadCountResponse(unread_count=count).model_dump())
 
     @notification_router.patch("/notifications/read")
+    @permission_check("console:mark_notifications_as_read")
     @inject
     async def mark_notifications_as_read(
         request: Request,
