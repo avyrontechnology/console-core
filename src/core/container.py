@@ -437,6 +437,8 @@ class Container(containers.DeclarativeContainer):
         user_config_repository=user_config_repository,
         console_service_logger=console_service_logger,
         console_service_cache=cache_helper,
+        user_repository=user_repository,
+        audit_service=audit_service,
     )
     filter_service = providers.Factory(
         FilterService,

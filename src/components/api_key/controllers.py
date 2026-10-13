@@ -19,7 +19,6 @@ from src.components.common.response import (
     SuccessResponse,
     BadRequestResponse
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -30,7 +29,7 @@ class ApiKeysController:
     api_key_router = APIRouter()
 
     @api_key_router.get("/generate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:generate_api_key")
     @inject
     async def generate_api_key(
         request: Request,
@@ -60,7 +59,7 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.post("/generate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:generate_api_key_with_scopes")
     @inject
     async def generate_api_key_with_scopes(
         request: Request,
@@ -89,6 +88,7 @@ class ApiKeysController:
                 partner_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=payload.expires_at if payload else None,
             )
             return SuccessResponse(api_key)
         except ApiKeyException as exc:
@@ -108,7 +108,7 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.patch("/api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:update_api_key")
     @inject
     async def update_api_key(
         request: Request,
@@ -134,6 +134,7 @@ class ApiKeysController:
                 partner_id=partner_id,
                 scopes=payload.scopes,
                 user_context=payload.user_context,
+                expires_at=payload.expires_at,
             )
             return SuccessResponse(api_key)
         except ApiKeyNotFoundError as exc:
@@ -158,7 +159,7 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.get("/get_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:get_api_key")
     @inject
     async def get_api_key(
         request: Request,
@@ -205,7 +206,7 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.put("/inactivate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:inactivate_api_key")
     @inject
     async def inactivate_api_key(
         request: Request,

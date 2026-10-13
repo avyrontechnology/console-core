@@ -19,7 +19,6 @@ from src.components.common.response import (
     NotFoundResponse,
     ResourceCreatedResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -39,7 +38,7 @@ class ReleaseNoteController:
         response_model=schemas.ReleaseNotesResponse,
         description="Create a new release note",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upload_release_note")
     @inject
     async def upload_release_note(
         request: Request,
@@ -88,7 +87,7 @@ class ReleaseNoteController:
         response_model=schemas.ReleaseNotesbyidResponse,
         description="Fetch release note by ID",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_release_note")
     @inject
     async def get_release_note(
         request: Request,
@@ -129,7 +128,7 @@ class ReleaseNoteController:
     response_model=List[schemas.ReleaseNotesbyallResponse], 
     description="Fetch all release notes",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_all_release_notes")
     @inject
     async def get_all_release_notes(
         request: Request,
@@ -170,7 +169,7 @@ class ReleaseNoteController:
         response_model=schemas.ReleaseNotesResponse,
         description="Update release note by ID",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_release_note")
     @inject
     async def update_release_note(
         request: Request,
@@ -219,7 +218,7 @@ class ReleaseNoteController:
         response_model=schemas.ReleaseNoteHistoryResponse,
         description="Fetch release note history by ID",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_release_note_history")
     @inject
     async def get_release_note_history(
         request: Request,

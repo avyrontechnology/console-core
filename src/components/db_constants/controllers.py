@@ -18,7 +18,6 @@ from src.components.db_constants.enums import ConstantsTypes
 from src.components.db_constants.models import ConstantsBase
 from src.components.db_constants.schema import ConstantResponseSchema
 from src.components.db_constants.services import ConstantsService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import (
@@ -41,7 +40,7 @@ class ConstantsController:
         response_model=ConstantResponseSchema,
         description="Fetch constants data based on constant type",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_constants")
     @inject
     async def get_constants(
         request: Request,
@@ -101,7 +100,7 @@ class ConstantsController:
         response_model=ConstantResponseSchema,
         description="Update constants data based on constant ID",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_constant")
     @inject
     async def update_constant(
         request: Request,
@@ -186,7 +185,7 @@ class ConstantsController:
         response_model=ConstantResponseSchema,
         description="Rollback a constant to a previous version",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:rollback_constant")
     @inject
     async def rollback_constant(
         request: Request,

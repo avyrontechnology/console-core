@@ -30,7 +30,6 @@ from src.components.entitlement.schema import (
 )
 from src.components.entitlement.services import EntitlementService
 from src.components.plan.constants import Platform
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -42,7 +41,7 @@ class EntitlementController:
     @entitlement_router.patch(
         "/update-start-date",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_entitlement_start_date")
     @inject
     async def update_entitlement_start_date(
         request: Request,
@@ -167,7 +166,7 @@ class EntitlementController:
     @entitlement_router.patch(
         "/dismiss-popup",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:dismiss_popup")
     @inject
     async def dismiss_popup(
         request: Request,

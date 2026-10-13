@@ -110,6 +110,8 @@ class PartnerPermissionService:
                 details="Partner role permission created with id: {}".format(result.id),
             )
             await self.__audit_service.log_action(log_entry)
+            # Mapping changed: cached slug lists are stale.
+            await partner_config_service.bust_user_permissions()
             return result
         except PartnerRolePermissionException as ex:
             self.__console_service_logger.error(
@@ -222,7 +224,14 @@ class PartnerPermissionService:
             )
             raise ex
 
-    async def delete_partner_role_permission(self, id: UUID, current_user: dict) -> None:
+    async def delete_partner_role_permission(
+        self,
+        id: UUID,
+        current_user: dict,
+        partner_config_service: PartnerConfigService = Depends(
+            Provide["partner_config_service"]
+        ),
+    ) -> None:
         try:
             self.__console_service_logger.info(
                 "Attempting delete Partner Role Permission ID {}".format(id)
@@ -243,6 +252,8 @@ class PartnerPermissionService:
                 ),
             )
             await self.__audit_service.log_action(log_entry)
+            # Mapping changed: cached slug lists are stale.
+            await partner_config_service.bust_user_permissions()
             self.__console_service_logger.info(
                 "successfully deleted partner role permission, id {}".format(id)
             )

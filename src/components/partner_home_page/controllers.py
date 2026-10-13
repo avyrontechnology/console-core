@@ -49,7 +49,7 @@ class PartnerHomePageController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_home_page_router.get("/partner_dashboard_cards")
-    # @permission_check(PermissionDependency)
+    # @permission_check("console:get_partner_dashboard_cards")
     @inject
     async def get_partner_dashboard_cards(
         request: Request,

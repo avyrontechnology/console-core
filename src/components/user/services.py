@@ -364,6 +364,13 @@ class UserService:
                 prefix=RedisCache.KeysPrefix.CONSOLE,
                 pattern=CacheKeys.TOKEN.format(updated_user.partner_id, ""),
             )
+            # Role may have changed: drop cached permission list.
+            try:
+                await self.__console_service_cache.delete_cache(
+                    key=CacheKeys.USER_PERMISSIONS.format(user_id)
+                )
+            except Exception:
+                pass
 
             self.__console_service_logger.info(
                 "Deactivating all the user sessions by user id: {}".format(user_id)
@@ -905,13 +912,17 @@ class UserService:
 
         Args:
             request: Fully validated BulkUserCreateRequest.
-            requesting_partner_id: partner_id from the X-Partner-Id header —
-                every user in the batch must carry this same partner_id
-                (Server injects it; this is a defence-in-depth check).
+            requesting_partner_id: partner_id from the authenticated token —
+                server-side injected into every entry, ignoring any
+                client-supplied value (defence-in-depth).
 
         Raises:
             ValueError: Validation failures (duplicate email/phone, bad role, etc.)
         """
+
+        # ── Server-side partner injection (never trust client values) ──
+        for user_entry in request.users:
+            user_entry.partner_id = requesting_partner_id
 
         # ── 3. Pre-flight DB uniqueness check ─────────────────────────
         await self._check_uniqueness(request.users)

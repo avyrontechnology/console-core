@@ -31,7 +31,6 @@ from src.components.partner_address.schema import (
     UpsertPartnerAddressResponse,
 )
 from src.components.partner_address.services import PartnerAddressService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.services import UserService
 from src.core.container import Container
@@ -46,7 +45,7 @@ class PartnerAddressController:
     @partner_address_router.get(
         "/partner_addresses", response_model=List[PartnerAddressResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_addresses")
     @inject
     async def get_partner_addresses(
         request: Request,
@@ -78,7 +77,7 @@ class PartnerAddressController:
         "/partner_address_by_address_id/{address_id}",
         response_model=PartnerAddressResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_address_by_id")
     @inject
     async def get_partner_address_by_id(
         request: Request,
@@ -110,7 +109,7 @@ class PartnerAddressController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_address_router.delete("/partner_address/{address_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_address_by_id")
     @inject
     async def delete_partner_address_by_id(
         request: Request,
@@ -142,7 +141,7 @@ class PartnerAddressController:
         "/partner_address/{partner_id}",
         response_model=list[Contrasts.GetAddressByAddressIdResponse],
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_address_by_partner_id")
     @inject
     async def get_partner_address_by_partner_id(
         request: Request,
@@ -176,7 +175,7 @@ class PartnerAddressController:
     @partner_address_router.post(
         "/partner_address", response_model=list[UpsertPartnerAddressResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_address")
     @inject
     async def upsert_partner_address(
         request: Request,

@@ -77,6 +77,8 @@ class DefaultRolePermissionService:
                 details="Partner role permission created with id: {}".format(result.id),
             )
             await self.__audit_service.log_action(log_entry)
+            # Role↔permission mapping changed: all cached slug lists are stale.
+            await self.__partner_config_service.bust_user_permissions()
             return result
         except AuthException as exec:
             self.__console_service_logger.error(
@@ -283,6 +285,8 @@ class DefaultRolePermissionService:
                 ),
             )
             await self.__audit_service.log_action(log_entry)
+            # Role↔permission mapping changed: all cached slug lists are stale.
+            await self.__partner_config_service.bust_user_permissions()
             return {"message": "Default role permission deleted successfully."}
         except DefaultRolePermissionException as exec:
             self.__console_service_logger.error(str(exec))

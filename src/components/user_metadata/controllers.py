@@ -17,7 +17,6 @@ from src.components.common.response import (
     SuccessNoContentResponse,
     SuccessResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.errors import UserNotFoundError
 from src.components.user_metadata.errors import (
@@ -42,7 +41,7 @@ class UserMetadataController:
     @user_metadata_router.get(
         "/user_metadata", response_model=List[UserMetadataResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_users_metadata")
     @inject
     async def get_users_metadata(
         request: Request,
@@ -89,7 +88,7 @@ class UserMetadataController:
     @user_metadata_router.get(
         "/user_metadata/{user_id}", response_model=UserMetadataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_metadata_by_user_id")
     @inject
     async def get_user_metadata_by_user_id(
         request: Request,
@@ -130,7 +129,7 @@ class UserMetadataController:
     @user_metadata_router.post(
         "/user_metadata/{user_id}", response_model=UserMetadataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:add_user_metadata")
     @inject
     async def add_user_metadata(
         request: Request,
@@ -176,7 +175,7 @@ class UserMetadataController:
     @user_metadata_router.patch(
         "/user_metadata/{user_id}", response_model=UserMetadataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_user_metadata")
     @inject
     async def update_user_metadata(
         request: Request,
@@ -224,7 +223,7 @@ class UserMetadataController:
             return InternalServerErrorResponse()
 
     @user_metadata_router.delete("/user_metadata/{user_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_user_metadata")
     @inject
     async def delete_user_metadata(
         request: Request,

@@ -456,6 +456,7 @@ def upgrade() -> None:
     sa.Column('scopes', sa.JSON(), nullable=True),
     sa.Column('user_context', sa.JSON(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('expires_at', sa.BigInteger(), nullable=True),
     sa.Column('partner_id', sa.UUID(), nullable=False),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('created_by', sa.UUID(), nullable=True),

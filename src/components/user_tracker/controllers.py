@@ -11,7 +11,6 @@ from src.components.common.response import (
     ResourceConflictResponse,
     SuccessResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user_tracker.constants import UserTrackerResponseMsg
 from src.components.user_tracker.errors import (
@@ -38,7 +37,7 @@ class UserTrackerController:
     user_tracker_router = APIRouter()
 
     @user_tracker_router.get("/user-tracker/status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_availability_status")
     @inject
     async def get_user_availability_status(
         request: Request,
@@ -81,7 +80,7 @@ class UserTrackerController:
             return InternalServerErrorResponse()
 
     @user_tracker_router.put("/user-tracker/status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_user_availability_status")
     @inject
     async def update_user_availability_status(
         request: Request,
@@ -132,7 +131,7 @@ class UserTrackerController:
             return InternalServerErrorResponse()
 
     @user_tracker_router.put("/user-tracker/custom-status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_custom_statuses")
     @inject
     async def update_custom_statuses(
         request: Request,

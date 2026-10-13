@@ -23,7 +23,6 @@ from src.components.default_role_permission.schemas import (
 )
 from src.components.default_role_permission.services import DefaultRolePermissionService
 from src.components.partner_role_permission.constant import SuccessResponseMsg
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import DefaultRolePermissionException
@@ -37,7 +36,7 @@ class DefaultRolePermissionController:
     @default_role_permission_router.post(
         "/default_role_permission", response_model=DefaultRolePermissionResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:add_default_role_permission")
     @inject
     async def add_default_role_permission(
         request: Request,
@@ -81,7 +80,7 @@ class DefaultRolePermissionController:
     @default_role_permission_router.get(
         "/default_role_permission", response_model=DefaultRolePermissionResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_default_role_permission")
     @inject
     async def get_default_role_permission(
         request: Request,
@@ -106,7 +105,7 @@ class DefaultRolePermissionController:
         "/default_role_permission/{role_id}",
         response_model=DefaultRolePermissionResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_default_role_permission_by_role_id")
     @inject
     async def get_default_role_permission_by_role_id(
         request: Request,
@@ -139,7 +138,7 @@ class DefaultRolePermissionController:
         "/default_role_permission/role/{role_id}/action-permissions",
         response_model=SetRoleActionPermissionsResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:set_role_action_permissions")
     @inject
     async def set_role_action_permissions(
         request: Request,
@@ -183,7 +182,7 @@ class DefaultRolePermissionController:
     @default_role_permission_router.delete(
         "/default_role_permission/{default_role_permission_id}"
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_default_role_permission_by_id")
     @inject
     async def delete_default_role_permission_by_id(
         request: Request,

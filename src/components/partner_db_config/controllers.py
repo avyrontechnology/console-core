@@ -41,7 +41,7 @@ class PartnerDBConfigController:
         "/partner-db-config/{partner_id}",
         response_model=PartnerDBConfigResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_db_config")
     @inject
     async def upsert_partner_db_config(
         request: Request,
@@ -92,7 +92,7 @@ class PartnerDBConfigController:
         "/partner-db-config/{partner_id}",
         response_model=PartnerDBConfigResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_db_config")
     @inject
     async def get_partner_db_config(
         request: Request,
@@ -137,7 +137,7 @@ class PartnerDBConfigController:
     @partner_db_config_router.delete(
         "/partner-db-config/{partner_id}",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_db_config")
     @inject
     async def delete_partner_db_config(
         request: Request,

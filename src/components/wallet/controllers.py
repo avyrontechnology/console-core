@@ -21,7 +21,6 @@ from src.components.common.response import (
 )
 from src.components.partner.models import Partner
 from src.components.partner.services import PartnerService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.wallet.enum import ServiceName, TransactionType, PartnerTimeZone
 from src.components.wallet.errors import (
@@ -47,7 +46,7 @@ class WalletController:
     wallet_router = APIRouter()
 
     @wallet_router.get("", summary="Get wallet details")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_wallet")
     @inject
     async def get_wallet(
         request: Request,
@@ -106,7 +105,7 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(exc))
 
     @wallet_router.get("/transactions", summary="Get wallet transactions")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_wallet_transactions")
     @inject
     async def get_wallet_transactions(
         request: Request,
@@ -208,7 +207,7 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(exc))
 
     @wallet_router.get("/transaction-statement", response_class=FileResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:download_transaction_statement")
     @inject
     async def download_transaction_statement(
         request: Request,
@@ -267,7 +266,7 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(e))
 
     @wallet_router.post("/transaction", summary="Perform wallet transaction")
-    @permission_check(PermissionDependency)
+    @permission_check("console:perform_wallet_transaction")
     @inject
     async def perform_wallet_transaction(
         request: Request,

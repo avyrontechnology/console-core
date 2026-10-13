@@ -20,7 +20,6 @@ from src.components.location.schemas import (
     StateResponse,
 )
 from src.components.location.services import LocationService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger

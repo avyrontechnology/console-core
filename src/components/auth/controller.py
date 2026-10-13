@@ -52,7 +52,6 @@ from src.components.location.errors import (
     CountryNotFoundError,
     StateNotFoundError,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
@@ -211,7 +210,7 @@ class AuthController:
         "/role",
         response_model=RoleResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_role")
     @inject
     async def create_role(
         request: Request,
@@ -242,7 +241,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/role", response_model=List[RoleResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_roles")
     @inject
     async def get_roles(
         request: Request,
@@ -274,7 +273,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/role/{id}", response_model=RoleResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_role_by_id")
     @inject
     async def get_role_by_id(
         request: Request,
@@ -301,7 +300,7 @@ class AuthController:
 
     # soft delete role change is_activate=false and is_delete=true
     @auth_router.delete("/role/{id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_roles")
     @inject
     async def delete_roles(
         request: Request,
@@ -332,7 +331,7 @@ class AuthController:
         response_model=PermissionResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_permission")
     @inject
     async def create_permission(
         request: Request,
@@ -365,7 +364,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/permission", response_model=List[PermissionResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_all_permission")
     @inject
     async def get_all_permission(
         request: Request,
@@ -408,7 +407,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/permission/{id}", response_model=PermissionResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_permission_by_id")
     @inject
     async def get_permission_by_id(
         request: Request,
@@ -439,7 +438,7 @@ class AuthController:
 
     # soft delete permission change is_activate=false and is_delete=true
     @auth_router.delete("/permission/{id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_permission")
     @inject
     async def delete_permission(
         request: Request,
@@ -468,7 +467,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.post("/reset_password")
-    @permission_check(PermissionDependency)
+    @permission_check("console:reset_password")
     @inject
     async def reset_password(
         request: Request,
@@ -504,7 +503,7 @@ class AuthController:
         "/get_parents/{role_id}/partner/{partner_id}",
         response_model=list[Contrasts.ParentUserResponse],
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_parent_users_by_role_id")
     @inject
     async def get_parent_users_by_role_id(
         request: Request,
@@ -561,7 +560,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/get_permissions_for_all_roles", response_model=dict)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_default_role_permission_matrix")
     @inject
     async def get_default_role_permission_matrix(
         request: Request,
@@ -612,7 +611,7 @@ class AuthController:
         "/permission/{permission_id}",
         response_model=UpdatePermissionResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_permission")
     @inject
     async def update_permission(
         request: Request,
@@ -652,7 +651,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.post("/assume_user/{user_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:assume_user")
     @inject
     async def assume_user(
         request: Request,
@@ -689,7 +688,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/categories")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_categories")
     @inject
     async def get_categories(
         request: Request,
@@ -711,7 +710,7 @@ class AuthController:
             return InternalServerErrorResponse(detail=str(exec))
 
     @auth_router.get("/resources")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_permission_title_by_category_name")
     @inject
     async def get_permission_title_by_category_name(
         request: Request,
@@ -735,7 +734,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.patch("/role/{role_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_role")
     @inject
     async def update_role(
         request: Request,

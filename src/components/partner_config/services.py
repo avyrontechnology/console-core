@@ -261,6 +261,8 @@ class PartnerConfigService:
                 prefix=RedisCache.KeysPrefix.CONSOLE,
                 pattern=cache_patterns,
             )
+            # Partner config changed: permission resolution may differ.
+            await self.bust_user_permissions()
             self.__console_service_logger.info(
                 "Configuration setting update successfully for service board with id: {}".format(
                     partner_id
@@ -424,8 +426,60 @@ class PartnerConfigService:
         user_repo: UserRepository = Provide["user_repository"],
     ) -> list[str]:
         try:
+            cached = await self.__console_service_cache.get_cache(
+                key=CacheKeys.USER_PERMISSIONS.format(user_id)
+            )
+            if isinstance(cached, list):
+                return list(cached)
 
-            self.__console_service_logger.info("Checking for Super Admin User")
+            perms = await self.__compute_user_permissions(
+                user_id,
+                auth_repo=auth_repo,
+                user_service=user_service,
+                user_config_repo=user_config_repo,
+                user_repo=user_repo,
+            )
+            try:
+                await self.__console_service_cache.set_cache(
+                    key=CacheKeys.USER_PERMISSIONS.format(user_id),
+                    value=perms,
+                    ttl=TTL.FIVE_MINUTES,
+                )
+            except Exception:
+                pass
+            return perms
+        except Exception as exec:
+            self.__console_service_logger.error(
+                "An unexpected error occured while custom role permission check: {}".format(
+                    exec
+                )
+            )
+            raise exec
+
+    async def bust_user_permissions(self, user_id: UUID | None = None) -> None:
+        """Invalidate cached RBAC slug lists. Per-user when known, else all."""
+        try:
+            if user_id is None:
+                await self.__console_service_cache.clear_pattern(
+                    prefix=RedisCache.KeysPrefix.CONSOLE,
+                    pattern="USER_PERMISSIONS_USER:",
+                )
+            else:
+                await self.__console_service_cache.delete_cache(
+                    key=CacheKeys.USER_PERMISSIONS.format(user_id)
+                )
+        except Exception:
+            pass
+
+    async def __compute_user_permissions(
+        self,
+        user_id: UUID,
+        auth_repo: AuthRepository,
+        user_service: UserService,
+        user_config_repo: UserConfigRepository,
+        user_repo: UserRepository,
+    ) -> list[str]:
+        try:
 
             user_config: UserConfig = await user_config_repo.get_user_config_by_key(
                 user_id, "is_super_admin"

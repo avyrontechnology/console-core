@@ -2,28 +2,30 @@ from functools import wraps
 
 from fastapi import Request
 
-from src.components.rbac.constant import ServiceName
 
-
-def permission_check(permission_class):
+def permission_check(permission_name: str, permission_class=None):
     """
-    Decorator to dynamically check permissions for a route.
+    Decorator to check a permission for a route.
 
     Args:
+        permission_name: Explicit permission slug, e.g. "console:plan_create".
+            Written out at each route so renames are reviewable and greppable —
+            never derived from function names at runtime.
         permission_class: Class implementing the permission check logic.
+            Defaults to PermissionDependency (imported lazily to avoid cycles).
     """
+    if permission_class is None:
+        from src.components.rbac.permission_dependency import PermissionDependency
+
+        permission_class = PermissionDependency
 
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
-            # Dynamically retrieve the route name
-            route_name = request.scope["route"].name
-            permission_name = ServiceName.SERVICE_NAME + ":" + route_name
-
             # Create an instance of the permission class and perform the check
             instance = permission_class(permission_name=permission_name)
             await instance(
-                request=request,  
+                request=request,
             )
 
             # Proceed with the original function

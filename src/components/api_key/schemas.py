@@ -10,6 +10,7 @@ class ApiKeyResponse(BaseModel):
     scopes: Optional[List[str]] = None
     user_context: Optional[Dict] = None
     is_active: bool
+    expires_at: Optional[int] = None
     partner_id: UUID
 
     model_config = ConfigDict(
@@ -22,10 +23,12 @@ class ApiKeyGenerateRequest(BaseModel):
 
     ``user_context`` must be exactly ``{"user_id": <uuid>}`` (a real user of the
     partner); when omitted it is auto-derived from the caller.
+    ``expires_at`` is epoch ms; omitted/None = never expires (legacy).
     """
 
     scopes: Optional[List[str]] = None
     user_context: Optional[Dict] = None
+    expires_at: Optional[int] = None
 
 
 class ApiKeyUpdateRequest(BaseModel):
@@ -38,3 +41,4 @@ class ApiKeyUpdateRequest(BaseModel):
 
     scopes: Optional[List[str]] = None
     user_context: Optional[Dict] = None
+    expires_at: Optional[int] = None

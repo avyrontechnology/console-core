@@ -158,6 +158,7 @@ class ApiKeyService:
         partner_id: UUID = None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
         auth_service: AuthService = None,
     ) -> ApiKeyResponse:
 
@@ -204,6 +205,7 @@ class ApiKeyService:
                 current_user_id=user_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=expires_at,
             )
 
             self.__console_service_logger.info(
@@ -370,6 +372,7 @@ class ApiKeyService:
         partner_id: UUID = None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
         auth_service: AuthService = None,
     ) -> ApiKeyResponse:
         """Update ``scopes`` / ``user_context`` on the partner's active API key
@@ -398,6 +401,7 @@ class ApiKeyService:
                 current_user_id=user_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=expires_at,
             )
 
             if not row:

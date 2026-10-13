@@ -23,7 +23,6 @@ from src.components.plan.mapper import SERVICE_FEATURE_MAPPER
 from src.components.plan.models import Plan
 from src.components.plan.schema import PlanBase, PlanResponse, PlanUpdate
 from src.components.plan.services import PlanService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -39,7 +38,7 @@ class PlanController:
         response_model=PlanResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_plan")
     @inject
     async def create_plan(
         request: Request,
@@ -85,7 +84,7 @@ class PlanController:
 
     @plan_router.get("/get-plans", response_model=List[PlanResponse])
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_active_plans")
     async def get_active_plans(
         request: Request,
         service_name: Optional[str] = None,
@@ -156,7 +155,7 @@ class PlanController:
 
     @plan_router.get("/get-plan-by-id/{plan_id}", response_model=PlanResponse)
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_plan_by_id")
     async def get_plan_by_id(
         request: Request,
         plan_id: UUID,
@@ -187,7 +186,7 @@ class PlanController:
 
     @plan_router.patch("/update-plan/{plan_id}", response_model=PlanResponse)
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_plan")
     async def update_plan(
         request: Request,
         plan_id: UUID,
@@ -239,7 +238,7 @@ class PlanController:
 
     @plan_router.delete("/delete-plan/{plan_id}")
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_plan")
     async def delete_plan(
         request: Request,
         plan_id: UUID,
@@ -271,7 +270,7 @@ class PlanController:
 
     @plan_router.get("/get-modules")
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_modules")
     async def get_modules(
         request: Request,
         service_name: Optional[str] = None,

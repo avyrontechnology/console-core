@@ -16,7 +16,6 @@ from src.components.order.services import OrderService
 from src.components.payment.errors import WebhookSignatureError
 from src.components.payment.schema import PaymentHistoryPaginatedResponse
 from src.components.payment.services import PaymentService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -28,7 +27,7 @@ class PaymentController:
     payment_router = APIRouter(prefix="/payment", tags=["Payment"])
 
     @payment_router.get("/history")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_payment_history")
     @inject
     async def get_payment_history(
         request: Request,

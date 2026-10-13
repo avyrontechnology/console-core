@@ -55,7 +55,6 @@ from src.components.location.errors import (
     StateNotFoundError,
 )
 from src.components.rbac.constant import PermissionErrorText
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.constants import PaginationConstants, UserResponseMsg
 from src.components.user.errors import UserNotFoundError
@@ -78,7 +77,7 @@ class UserController:
     user_router = APIRouter()
 
     @user_router.get("/users", response_model=List[UserDataResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_all_users")
     @inject
     async def get_all_users(
         request: Request,
@@ -191,7 +190,7 @@ class UserController:
             )
 
     @user_router.get("/get_users_by_partner", response_model=UserNewResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_users_by_partner_id")
     @inject
     async def get_users_by_partner_id(
         request: Request,
@@ -220,7 +219,7 @@ class UserController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @user_router.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_user")
     @inject
     async def delete_user(
         request: Request,
@@ -254,7 +253,7 @@ class UserController:
         response_model=UserDataResponse,
         status_code=status.HTTP_200_OK,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_user")
     @inject
     async def update_user(
         request: Request,
@@ -333,7 +332,7 @@ class UserController:
     @user_router.get(
         "/user/get_by_id/{user_id}", response_model=Contrasts.GetUserDetailResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_by_user_id")
     @inject
     async def get_user_by_user_id(
         request: Request,
@@ -370,7 +369,7 @@ class UserController:
         "/user/get_by_partner_id/{partner_id}",
         response_model=Contrasts.GetUserDetailResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_admin_details_by_partner_id")
     @inject
     async def get_admin_details_by_partner_id(
         request: Request,
@@ -404,7 +403,7 @@ class UserController:
     @user_router.post(
         "/enlist_users_dynamically", response_model=PaginatedUserRoleResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:enlist_users_dynamically")
     @inject
     async def enlist_users_dynamically(
         request: Request,
@@ -492,7 +491,7 @@ class UserController:
         response_model=TaskStartResponse,
         status_code=status.HTTP_202_ACCEPTED,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:bulk_upload_users")
     @inject
     async def bulk_upload_users(
         request: Request,
@@ -668,11 +667,11 @@ class UserController:
         "/users/bulk_create",
         include_in_schema=False,
     )
+    @permission_check("console:bulk_create_users")
     @inject
     async def bulk_create_users(
         request: Request,
         body: BulkUserCreateRequest,
-        partner_id: Optional[str] = Header(None, alias="X-Partner-Id"),
         user_service: UserService = Depends(Provide[Container.console_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -691,8 +690,11 @@ class UserController:
         """
 
         try:
+            # Partner comes from the authenticated token, never from headers
+            # or body — every created user lands in the caller's partner.
+            token_partner_id = request.state.user.get(CurrentUserMap.PARTNER_ID)
             result = await user_service.bulk_create(
-                body, requesting_partner_id=partner_id
+                body, requesting_partner_id=token_partner_id
             )
         except ValueError as exc:
             raise HTTPException(
@@ -719,7 +721,7 @@ class UserController:
     # BULK UPLOAD RESULT 
     # =========================================================
     @user_router.get("/users/bulk_upload/result/{task_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_bulk_upload_result")
     @inject
     async def get_bulk_upload_result(
         request: Request,
@@ -813,7 +815,7 @@ class UserController:
     # BULK UPLOAD REFERENCE FILE (no request body — GET only)
     # =========================================================
     @user_router.get("/users/bulk_upload/reference-file")
-    @permission_check(PermissionDependency)
+    @permission_check("console:download_bulk_upload_reference_file")
     @inject
     async def download_bulk_upload_reference_file(
         request: Request,

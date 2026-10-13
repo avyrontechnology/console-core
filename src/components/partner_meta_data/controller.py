@@ -21,7 +21,6 @@ from src.components.partner_meta_data.schema import (
     UpdatePartnerMetaData,
 )
 from src.components.partner_meta_data.services import PartnerMetaDataServices
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import PartnerMetaDataException, PartnerNotFoundException
@@ -39,7 +38,7 @@ class PartnerMetaDataController:
     @partner_meta_data_router.post(
         "/partner_meta_data/{partner_id}", response_model=PartnerMetaDataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_partner_metadata")
     @inject
     async def create_partner_metadata(
         request: Request,
@@ -89,7 +88,7 @@ class PartnerMetaDataController:
     @partner_meta_data_router.patch(
         "/partner_meta_data/{partner_id}", response_model=PartnerMetaDataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_partner_meta_data")
     @inject
     async def update_partner_meta_data(
         request: Request,
@@ -153,7 +152,7 @@ class PartnerMetaDataController:
         "/partner_meta_data/partner/{partner_id}",
         response_model=PartnerMetaDataResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_meta_data")
     @inject
     async def get_partner_meta_data(
         request: Request,

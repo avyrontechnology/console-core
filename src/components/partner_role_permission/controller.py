@@ -21,7 +21,6 @@ from src.components.partner_role_permission.schema import (
     PartnerRolePermissionResponse,
 )
 from src.components.partner_role_permission.service import PartnerPermissionService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import PartnerRolePermissionException, PartnerConfigException
@@ -36,7 +35,7 @@ class PartnerPermissionController:
     @partner_role_permission_router.post(
         "/partner_role_permission", response_model=PartnerRolePermissionResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:add_partner_role_permission")
     @inject
     async def add_partner_role_permission(
         request: Request,
@@ -81,7 +80,7 @@ class PartnerPermissionController:
         "/partner_role_permission/partner/",
         response_model=PartnerRolePermissionResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_prp_by_partner_id")
     @inject
     async def get_prp_by_partner_id(
         request: Request,
@@ -129,7 +128,7 @@ class PartnerPermissionController:
     @partner_role_permission_router.get(
         "/partner_role_permission/", response_model=PartnerRolePermissionResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_role_permission_by_id")
     @inject
     async def get_partner_role_permission_by_id(
         request: Request,
@@ -173,7 +172,7 @@ class PartnerPermissionController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_role_permission_router.delete("/partner_role_permission/{id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_role_permission")
     @inject
     async def delete_partner_role_permission(
         request: Request,
@@ -213,7 +212,7 @@ class PartnerPermissionController:
     @partner_role_permission_router.get(
         "/partner_role_permission_matrix/{partner_id}/",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_role_permissions_matrix")
     @inject
     async def get_partner_role_permissions_matrix(
         request: Request,

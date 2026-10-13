@@ -49,7 +49,6 @@ from src.components.order.services import OrderService
 from src.components.partner.error import InvalidPartnerIdsError, PartnerNotFoundError
 from src.components.payment.enum import PaymentStatusEnum
 from src.components.payment.errors import PaymentError
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -65,7 +64,7 @@ class OrderController:
     @order_router.post(
         "/initiate", response_model=dict, status_code=status.HTTP_201_CREATED
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:initiate_order")
     @inject
     async def initiate_order(
         request: Request,
@@ -134,7 +133,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.post("/validate", response_model=dict)
-    @permission_check(PermissionDependency)
+    @permission_check("console:validate_order")
     @inject
     async def validate_order(
         request: Request,
@@ -197,7 +196,7 @@ class OrderController:
             "payment_method=DIRECT: no gateway, entitlement provisioned immediately."
         ),
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_manual_order")
     @inject
     async def create_manual_order(
         request: Request,
@@ -308,7 +307,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.get("/history")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_order_history")
     @inject
     async def get_order_history(
         request: Request,
@@ -484,7 +483,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.post("/billing-details")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_billing_details")
     @inject
     async def get_billing_details(
         request: Request,

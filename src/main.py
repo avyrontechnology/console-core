@@ -59,6 +59,15 @@ async def startup_event():
         "//////////////////////////// Constants initialized. ////////////////////////////"
     )
 
+    from src.components.rbac.startup_validation import validate_route_permissions
+
+    route_slugs = await validate_route_permissions(session_factory)
+    print(
+        "//////////////////////////// route permissions validated: {} slugs ////////////////////////////".format(
+            len(route_slugs)
+        )
+    )
+
     try:
         print(
             "//////////////////////////// Firebase disabled (no push services) ////////////////////////////"

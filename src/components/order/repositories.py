@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from src.components.auth.constant import UserHierarchyLevel
+from src.components.auth.models import Role
 from src.components.common.datetime import DateTimeUtil
 from src.components.entitlement.models import Entitlement
 from src.components.order.constants import MILLISECONDS_IN_DAY, OrderSource, OrderType, PaymentMethod
@@ -500,10 +501,11 @@ class OrderRepository:
                 joinedload(User.state),
                 joinedload(User.city),
             )
+            .join(Role, Role.id == User.role_id)
             .where(
                 and_(
                     User.partner_id.in_(partner_ids),
-                    User.role_id == UserHierarchyLevel.ADMIN_LEVEL_HIERARCHY,
+                    Role.hierarchy == UserHierarchyLevel.ADMIN_LEVEL_HIERARCHY,
                     User.is_active.is_(True),
                     User.is_deleted.is_(False),
                 )

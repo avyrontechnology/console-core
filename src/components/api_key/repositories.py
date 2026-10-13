@@ -27,6 +27,7 @@ class ApiKeyRepository:
         current_user_id: UUID,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
     ):
         """
         Generate and insert a new API key for a partner.
@@ -43,6 +44,7 @@ class ApiKeyRepository:
                     created_by=current_user_id,
                     scopes=scopes,
                     user_context=user_context,
+                    expires_at=expires_at,
                 )
 
                 session.add(api_key)
@@ -163,6 +165,7 @@ class ApiKeyRepository:
         current_user_id: UUID | None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
     ):
         """
         Update ``scopes`` / ``user_context`` on the partner's active API key
@@ -182,6 +185,8 @@ class ApiKeyRepository:
                     values["scopes"] = scopes
                 if user_context is not None:
                     values["user_context"] = user_context
+                if expires_at is not None:
+                    values["expires_at"] = expires_at
 
                 stmt = (
                     update(ApiKey)

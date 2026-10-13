@@ -676,16 +676,23 @@ class TestAuthRepository:
         )
 
     async def test_get_internal_permissions_success(self):
-        """Test fetching internal permissions successfully."""
+        """Test fetching internal permissions successfully.
 
-        mock_permissions = [("perm_1",), ("perm_2",)]
+        Regression: must return plain slug strings (scalars), NOT Row
+        tuples — the set-subtraction in custom_role_permission_check
+        silently keeps internal perms when given tuples (security leak).
+        """
+
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = ["perm_1", "perm_2"]
         mock_execute_result = MagicMock()
-        mock_execute_result.fetchall.return_value = mock_permissions
+        mock_execute_result.scalars.return_value = mock_scalars
         self.session.execute = AsyncMock(return_value=mock_execute_result)
 
         result = await self.auth_repository.get_internal_permissions()
 
-        assert result == mock_permissions
+        assert result == ["perm_1", "perm_2"]
+        assert all(isinstance(p, str) for p in result)
         self.mock_logger.info.assert_called_with("Getting internal permissions")
 
     async def test_get_internal_permissions_exception(self):

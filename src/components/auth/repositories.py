@@ -635,7 +635,7 @@ class AuthRepository:
 
                 query = select(Permission.slug).where(Permission.is_internal == True)
                 result = await session.execute(query)
-                permissions: List[str] = result.fetchall()
+                permissions: List[str] = list(result.scalars().all())
                 return permissions
 
         except Exception as exc:

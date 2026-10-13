@@ -4,7 +4,6 @@ from fastapi import APIRouter, Body, Depends, Query, Request, UploadFile, status
 from src.components.api_logs.schemas import ApiLogResponse
 from src.components.api_logs.services import APILogService
 from src.components.common.response import InternalServerErrorResponse, SuccessResponse
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -15,7 +14,7 @@ class ApiLogsController:
     api_log_router = APIRouter()
 
     @api_log_router.get("/api_logs/{log_id}", response_model=list[ApiLogResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_api_logs_by_log_id")
     @inject
     async def get_api_logs_by_log_id(
         request: Request,

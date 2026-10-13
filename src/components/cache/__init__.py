@@ -22,7 +22,10 @@ class Keys:
     # Byte-identical key template so console can bust it.
     GRPC_GET_ROLE_PERMISSIONS: str = "gRPC_GET_ROLE_PERMISSIONS_ROLE:{}"
     DB_CONFIG_KEY_PARTNER: str = "DB_CONFIG_KEY_PARTNER:{}"
+    # Resolved RBAC slug list per user (custom_role_permission_check).
+    USER_PERMISSIONS: str = "USER_PERMISSIONS_USER:{}"
 
 
 class TTL:
     ONE_WEEK: int = 7 * 24 * 60 * 60
+    FIVE_MINUTES: int = 5 * 60

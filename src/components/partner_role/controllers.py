@@ -26,7 +26,6 @@ from src.components.partner_role.schema import (
     UpdatePartnerRole,
 )
 from src.components.partner_role.service import PartnerRoleService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -37,7 +36,7 @@ class PartnerRoleController:
     partner_role_router: APIRouter = APIRouter()
 
     @partner_role_router.post("/partner_role/materialize")
-    @permission_check(PermissionDependency)
+    @permission_check("console:materialize_partner_roles")
     @inject
     async def materialize_partner_roles(
         request: Request,
@@ -62,7 +61,7 @@ class PartnerRoleController:
             return BadRequestResponse(str(ex))
 
     @partner_role_router.post("/partner_role", response_model=PartnerRoleResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_partner_role")
     @inject
     async def create_partner_role(
         request: Request,
@@ -89,7 +88,7 @@ class PartnerRoleController:
             return BadRequestResponse(str(ex))
 
     @partner_role_router.get("/partner_roles", response_model=PartnerRolePaginatedResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_roles")
     @inject
     async def get_partner_roles(
         request: Request,
@@ -127,7 +126,7 @@ class PartnerRoleController:
             return BadRequestResponse(str(ex))
 
     @partner_role_router.patch("/partner_role/{role_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_partner_role")
     @inject
     async def update_partner_role(
         request: Request,
@@ -151,7 +150,7 @@ class PartnerRoleController:
             return BadRequestResponse(str(ex))
 
     @partner_role_router.delete("/partner_role/{role_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_role")
     @inject
     async def delete_partner_role(
         request: Request,

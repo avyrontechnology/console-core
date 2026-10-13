@@ -284,6 +284,7 @@ class TestApiKeyService:
             current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
             scopes=["talko:list_leads"],
             user_context={"user_id": "11111111-1111-1111-1111-111111111111"},
+            expires_at=None,
         )
         self.cache_helper_mock.delete_cache.assert_awaited_once_with(
             key=RedisKeys.PARTNER_API_KEY.format(UUID("10101010-1010-1010-1010-101010101010"))

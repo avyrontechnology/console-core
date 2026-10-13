@@ -31,7 +31,6 @@ from src.components.partner_config.schemas import (
     UpdatePartnerConfigResponse,
 )
 from src.components.partner_config.services import PartnerConfigService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.services import UserService
 from src.core.container import Container
@@ -50,7 +49,7 @@ class PartnerConfigController:
     partner_config_router = APIRouter()
 
     @partner_config_router.post("/partner-config", response_model=PartnerConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_partner_config")
     @inject
     async def create_partner_config(
         request: Request,
@@ -113,7 +112,7 @@ class PartnerConfigController:
             return InternalServerErrorResponse()
 
     @partner_config_router.get("/partner-config", response_model=PartnerConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_config_by_key")
     @inject
     async def get_partner_config_by_key(
         request: Request,
@@ -163,7 +162,7 @@ class PartnerConfigController:
     @partner_config_router.patch(
         "/partner-configs/{partner_id}", response_model=UpdatePartnerConfigResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_config")
     @inject
     async def upsert_partner_config(
         request: Request,
@@ -241,7 +240,7 @@ class PartnerConfigController:
     @partner_config_router.get(
         "/partner-configs/{partner_id}", response_model=List[PartnerConfigResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_configs_by_partner_id")
     @inject
     async def get_partner_configs_by_partner_id(
         request: Request,

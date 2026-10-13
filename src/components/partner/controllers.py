@@ -39,7 +39,6 @@ from src.components.partner.schema import (
     UpdatePartnerRequest,
 )
 from src.components.partner.services import PartnerService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import (
@@ -55,7 +54,7 @@ class PartnerController:
     partner_router = APIRouter()
 
     @partner_router.post("/partners", response_model=List[PartnerResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_all_partners")
     @inject
     async def get_all_partners(
         request: Request,
@@ -90,7 +89,7 @@ class PartnerController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_router.get("/partner/{partner_id}", response_model=PartnerResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partners_by_id")
     @inject
     async def get_partners_by_id(
         request: Request,
@@ -167,7 +166,7 @@ class PartnerController:
     @partner_router.delete(
         "/partner/{partner_id}", status_code=status.HTTP_204_NO_CONTENT
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner")
     @inject
     async def delete_partner(
         request: Request,
@@ -206,7 +205,7 @@ class PartnerController:
         response_model=PartnerResponse,
         status_code=status.HTTP_200_OK,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_partner")
     @inject
     async def update_partner(
         request: Request,
@@ -250,7 +249,7 @@ class PartnerController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_router.get("/get_partner_statuses")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_statuses")
     @inject
     async def get_partner_statuses(
         request: Request,
@@ -288,7 +287,7 @@ class PartnerController:
     @partner_router.put(
         "/change_partner_status", response_model=ChangePartnerStatusResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:change_partner_status")
     @inject
     async def change_partner_status(
         request: Request,
@@ -377,7 +376,7 @@ class PartnerController:
         "/partner/{partner_id}/toggle_activation",
         response_model=TogglePartnerActivationResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:toggle_partner_activation")
     @inject
     async def toggle_partner_activation(
         request: Request,

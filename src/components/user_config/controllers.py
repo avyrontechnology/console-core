@@ -15,7 +15,6 @@ from src.components.common.response import (
     SuccessResponse,
     UnauthorizedResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.errors import UserNotFoundError
 from src.components.user.services import UserService
@@ -43,7 +42,7 @@ class UserConfigController:
     user_config_router = APIRouter()
 
     @user_config_router.post("/user-config", response_model=UserConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_user_config")
     @inject
     async def create_user_config(
         request: Request,
@@ -110,7 +109,7 @@ class UserConfigController:
             return InternalServerErrorResponse()
 
     @user_config_router.get("/user-config", response_model=UserConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_config_by_key")
     @inject
     async def get_user_config_by_key(
         request: Request,
@@ -156,7 +155,7 @@ class UserConfigController:
     @user_config_router.patch(
         "/user-configs/{partner_id}", response_model=List[UpdateUserConfigResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_user_config")
     @inject
     async def upsert_user_config(
         request: Request,
@@ -202,7 +201,7 @@ class UserConfigController:
             return InternalServerErrorResponse()
 
     @user_config_router.get("/user-configs", response_model=List[UserConfigResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_configs_by_user_id")
     @inject
     async def get_user_configs_by_user_id(
         request: Request,
