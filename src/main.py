@@ -59,8 +59,26 @@ async def startup_event():
         "//////////////////////////// Constants initialized. ////////////////////////////"
     )
 
-    from src.components.rbac.startup_validation import validate_route_permissions
+    from src.components.rbac.startup_validation import (
+        ensure_route_permissions,
+        validate_route_permissions,
+    )
 
+    # Self-seed any new route slugs first (zero-touch deploys), then
+    # fail-closed validate as a safety net.
+    sync_report = await ensure_route_permissions(session_factory)
+    if sync_report["seeded"]:
+        print(
+            "//////////////////////////// seeded permission slugs: {} ////////////////////////////".format(
+                sync_report["seeded"]
+            )
+        )
+    if sync_report["unmapped_warnings"]:
+        print(
+            "//////////////////////////// WARNING unmapped slugs (internal-only): {} ////////////////////////////".format(
+                sync_report["unmapped_warnings"]
+            )
+        )
     route_slugs = await validate_route_permissions(session_factory)
     print(
         "//////////////////////////// route permissions validated: {} slugs ////////////////////////////".format(
