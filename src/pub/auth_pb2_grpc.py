@@ -40,6 +40,11 @@ class AuthServiceStub(object):
                 request_serializer=auth__pb2.ValidateTokenRequest.SerializeToString,
                 response_deserializer=auth__pb2.ValidateTokenResponse.FromString,
                 _registered_method=True)
+        self.TalkoLogin = channel.unary_unary(
+                '/auth.AuthService/TalkoLogin',
+                request_serializer=auth__pb2.TalkoLoginRequest.SerializeToString,
+                response_deserializer=auth__pb2.TalkoLoginResponse.FromString,
+                _registered_method=True)
         self.GetUserChildHierarchy = channel.unary_unary(
                 '/auth.AuthService/GetUserChildHierarchy',
                 request_serializer=auth__pb2.GetUserChildHierarchyRequest.SerializeToString,
@@ -153,6 +158,15 @@ class AuthServiceServicer(object):
 
     def ValidateToken(self, request, context):
         """RPC to validate a token and return user information.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TalkoLogin(self, request, context):
+        """RPC for Talko login centralization: verify console credentials and
+        return the user profile Talko needs for its own session. Creates no
+        console session/token.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -307,6 +321,11 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     request_deserializer=auth__pb2.ValidateTokenRequest.FromString,
                     response_serializer=auth__pb2.ValidateTokenResponse.SerializeToString,
             ),
+            'TalkoLogin': grpc.unary_unary_rpc_method_handler(
+                    servicer.TalkoLogin,
+                    request_deserializer=auth__pb2.TalkoLoginRequest.FromString,
+                    response_serializer=auth__pb2.TalkoLoginResponse.SerializeToString,
+            ),
             'GetUserChildHierarchy': grpc.unary_unary_rpc_method_handler(
                     servicer.GetUserChildHierarchy,
                     request_deserializer=auth__pb2.GetUserChildHierarchyRequest.FromString,
@@ -441,6 +460,33 @@ class AuthService(object):
             '/auth.AuthService/ValidateToken',
             auth__pb2.ValidateTokenRequest.SerializeToString,
             auth__pb2.ValidateTokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TalkoLogin(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/auth.AuthService/TalkoLogin',
+            auth__pb2.TalkoLoginRequest.SerializeToString,
+            auth__pb2.TalkoLoginResponse.FromString,
             options,
             channel_credentials,
             insecure,

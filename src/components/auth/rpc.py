@@ -75,6 +75,7 @@ from src.pub.auth_pb2 import (
     UserDetail,
     UserParentDetail,
     UserProfile,
+    TalkoLoginResponse,
     ValidateTokenResponse,
 )
 from src.pub.auth_pb2_grpc import AuthServiceServicer
@@ -133,6 +134,45 @@ class AuthServiceGRPC(AuthServiceServicer):
         except Exception as exc:
             self.__logger.error(f"Got an unexpected Error: {exc}")
             return ValidateTokenResponse(is_active=False)
+
+    @inject
+    async def TalkoLogin(
+        self,
+        request,
+        context,
+        auth_service=Depends(Provide[Container.auth_service]),
+    ):
+        """Centralized credential check for Talko login. No session created."""
+        from src.exceptions import AuthException as AuthExc
+
+        try:
+            profile = await auth_service.verify_talko_credentials(
+                credential=request.credential,
+                password=request.password,
+            )
+            return TalkoLoginResponse(
+                message="Success",
+                user_id=uuid_str(profile["user_id"]),
+                partner_id=uuid_str(profile["partner_id"]),
+                role_id=uuid_str(profile["role_id"]),
+                role_hierarchy=profile["role_hierarchy"]
+                if profile["role_hierarchy"] is not None
+                else -1,
+                email=profile["email"] or "",
+                name=profile["name"] or "",
+                is_active=bool(profile["is_active"]),
+            )
+        except AuthExc as exc:
+            raise GrpcException(
+                details=str(exc),
+                status_code=StatusCode.UNAUTHENTICATED,
+            )
+        except Exception as exc:
+            self.__logger.error(f"TalkoLogin unexpected error: {exc}")
+            raise GrpcException(
+                details=RPCExceptionMsg.ERROR_MSG,
+                status_code=StatusCode.INTERNAL,
+            )
 
     async def GetUserChildHierarchy(self, request, context):
         """

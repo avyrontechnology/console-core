@@ -961,6 +961,59 @@ class AuthService:
             )
             raise exec
 
+    async def verify_talko_credentials(
+        self,
+        credential: str,
+        password: str,
+        user_service: UserService = Depends(Provide["console_service"]),
+    ) -> dict:
+        """Lightweight credential check for Talko login centralization.
+
+        Validates email+password against console users and returns the
+        profile Talko needs to mint its own session JWT. Creates NO
+        console session/token (Talko owns its sessions).
+        Raises AuthException on any failure (fail-closed, generic message).
+        """
+        try:
+            user: User = await user_service.get_user_by_field(
+                field_name=CurrentUserMap.EMAIL, value=credential.strip().lower()
+            )
+            if not user or not user.is_active:
+                self.__auth_service_logger.warning(
+                    "Talko login failed: user not found {}".format(credential)
+                )
+                raise AuthException(AuthExceptionMsg.INCORRECT_PWD)
+            if not await self.__auth_service_utility.verify_password(
+                password, user.hashed_password
+            ):
+                self.__auth_service_logger.warning(
+                    "Talko login failed: bad password for {}".format(credential)
+                )
+                raise AuthException(AuthExceptionMsg.INCORRECT_PWD)
+            role_hierarchy = None
+            if user.role_id:
+                try:
+                    role = await self.__auth_repository.get_role_by_id(user.role_id)
+                    role_hierarchy = role.hierarchy if role else None
+                except Exception:
+                    role_hierarchy = None
+            return {
+                "user_id": user.id,
+                "partner_id": user.partner_id,
+                "role_id": user.role_id,
+                "role_hierarchy": role_hierarchy,
+                "email": user.email,
+                "name": user.name,
+                "is_active": user.is_active,
+            }
+        except AuthException:
+            raise
+        except Exception as exc:
+            self.__auth_service_logger.error(
+                "Unexpected error during talko credential verify: {}".format(exc)
+            )
+            raise AuthException(AuthExceptionMsg.INCORRECT_PWD) from exc
+
     async def assume_user(
         self,
         request: Request,

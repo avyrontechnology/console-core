@@ -7,6 +7,11 @@ service AuthService {
     // RPC to validate a token and return user information.
     rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
 
+    // RPC for Talko login centralization: verify console credentials and
+    // return the user profile Talko needs for its own session. Creates no
+    // console session/token.
+    rpc TalkoLogin (TalkoLoginRequest) returns (TalkoLoginResponse);
+
     // RPC to get the list of child users for a given user.
     rpc GetUserChildHierarchy (GetUserChildHierarchyRequest) returns (GetUserChildHierarchyResponse);
 
@@ -84,6 +89,23 @@ message MBody {
 message ValidateTokenRequest {
     MContext mcontext = 1; 
     MBody mbody = 2;       
+}
+
+// Credential check for Talko login (centralized identity).
+message TalkoLoginRequest {
+    string credential = 1; // email
+    string password = 2;   // plain password (TLS transport)
+}
+
+message TalkoLoginResponse {
+    string message = 1;
+    string user_id = 2;
+    string partner_id = 3;
+    string role_id = 4;
+    int64 role_hierarchy = 5; // -1 when unknown
+    string email = 6;
+    string name = 7;
+    bool is_active = 8;
 }
 
 // The response message for token validation.

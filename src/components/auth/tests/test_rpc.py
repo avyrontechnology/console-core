@@ -862,3 +862,53 @@ class TestAuthServiceGRPC:
         assert response.user_profile.show_popup["console"] is False
         assert response.user_profile.show_popup["obotaai"] is False
         assert response.user_profile.show_popup["talko"] is True
+
+    async def test_talko_login_success(self):
+        from src.exceptions import AuthException
+
+        request = MagicMock()
+        request.credential = "admin@x.com"
+        request.password = "secret"
+
+        auth_service = AsyncMock()
+        auth_service.verify_talko_credentials = AsyncMock(
+            return_value={
+                "user_id": UUID("11111111-1111-1111-1111-111111111111"),
+                "partner_id": UUID("10101010-1010-1010-1010-101010101010"),
+                "role_id": UUID("22222222-2222-2222-2222-222222222222"),
+                "role_hierarchy": 1,
+                "email": "admin@x.com",
+                "name": "Admin",
+                "is_active": True,
+            }
+        )
+
+        response = await self.auth_service_grpc.TalkoLogin(
+            request=request, context=self.context_mock, auth_service=auth_service
+        )
+
+        assert response.message == "Success"
+        assert response.user_id == "11111111-1111-1111-1111-111111111111"
+        assert response.partner_id == "10101010-1010-1010-1010-101010101010"
+        assert response.role_hierarchy == 1
+        assert response.is_active is True
+
+    async def test_talko_login_bad_credentials_unauthenticated(self):
+        from grpc_interceptor.exceptions import GrpcException as GE
+
+        from src.exceptions import AuthException
+
+        request = MagicMock()
+        request.credential = "admin@x.com"
+        request.password = "wrong"
+
+        auth_service = AsyncMock()
+        auth_service.verify_talko_credentials = AsyncMock(
+            side_effect=AuthException("Incorrect email or password")
+        )
+
+        with pytest.raises(GE) as exc:
+            await self.auth_service_grpc.TalkoLogin(
+                request=request, context=self.context_mock, auth_service=auth_service
+            )
+        assert exc.value.status_code == StatusCode.UNAUTHENTICATED
