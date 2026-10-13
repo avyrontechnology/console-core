@@ -11,6 +11,13 @@ service WalletRPCService {
     ) returns (
         GetWalletsByPartnerIdsResponse
     );
+
+    // Idempotent per-call debit (talko ledger unification).
+    rpc WalletDebit (
+        WalletDebitRequest
+    ) returns (
+        WalletDebitResponse
+    );
 }
 
 
@@ -35,4 +42,21 @@ message GetWalletsByPartnerIdsRequest {
 // Batch response
 message GetWalletsByPartnerIdsResponse {
     repeated WalletRPCResponse wallets = 1;
+}
+// Idempotent per-call debit: find-or-debit on attributes.call_id.
+message WalletDebitRequest {
+    string partner_id = 1;
+    double amount = 2;
+    string currency = 3;
+    string call_id = 4;
+    double billed_minutes = 5;
+    string description = 6;
+}
+
+message WalletDebitResponse {
+    string message = 1;
+    string transaction_id = 2;
+    double amount = 3;
+    double remaining_balance = 4;
+    bool already_charged = 5;
 }

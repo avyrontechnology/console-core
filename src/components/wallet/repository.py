@@ -167,6 +167,33 @@ class WalletRepository:
             self.__logger.error(f"Database error in get_wallet_transactions: {exc}")
             raise exc
 
+    async def find_transaction_by_attribute(
+        self, wallet_id: UUID, key: str, value: str
+    ) -> Optional[WalletTransaction]:
+        """Idempotency lookup: first transaction whose attributes[key] == value.
+
+        Uses a bound parameter (never f-string interpolation).
+        """
+        try:
+            async with self.__session_factory() as session:
+                result = await session.execute(
+                    select(WalletTransaction)
+                    .where(
+                        WalletTransaction.wallet_id == wallet_id,
+                        text("attributes ->> :key = :value").bindparams(
+                            key=key, value=value
+                        ),
+                    )
+                    .order_by(WalletTransaction.created_at.asc())
+                    .limit(1)
+                )
+                return result.scalars().first()
+        except Exception as exc:
+            self.__logger.error(
+                f"Database error in find_transaction_by_attribute: {exc}"
+            )
+            raise exc
+
     async def create_wallet(self, partner_id: UUID) -> Wallet:
         """
         Create a wallet for the given partner if not already exists.

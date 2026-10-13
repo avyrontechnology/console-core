@@ -188,3 +188,58 @@ class TestWalletServiceGRPC:
         assert len(response.wallets) == 1
         assert response.wallets[0].id == ""
         assert response.wallets[0].partner_id == "10110110-1101-1011-0110-110110110110"
+    async def test_wallet_debit_success(self):
+        """Test idempotent debit passthrough."""
+        from src.pub.partner_wallet_pb2 import WalletDebitResponse
+
+        request = MagicMock()
+        request.partner_id = "10110110-1101-1011-0110-110110110110"
+        request.amount = 5.0
+        request.currency = "INR"
+        request.call_id = "C1"
+        request.billed_minutes = 2.0
+        request.description = ""
+
+        self.wallet_service_mock.debit_call_charge = AsyncMock(
+            return_value={
+                "transaction_id": UUID("33333333-3333-3333-3333-333333333333"),
+                "amount": 5.0,
+                "remaining_balance": 95.0,
+                "already_charged": False,
+            }
+        )
+
+        response = await self.grpc_service.WalletDebit(
+            request=request,
+            context=self.context_mock,
+            wallet_service=self.wallet_service_mock,
+        )
+
+        assert isinstance(response, WalletDebitResponse)
+        assert response.transaction_id == "33333333-3333-3333-3333-333333333333"
+        assert response.remaining_balance == 95.0
+        assert response.already_charged is False
+        self.wallet_service_mock.debit_call_charge.assert_awaited_once()
+
+    async def test_wallet_debit_wallet_not_found(self):
+        from src.components.wallet.errors import WalletNotFoundError
+
+        request = MagicMock()
+        request.partner_id = "10110110-1101-1011-0110-110110110110"
+        request.amount = 5.0
+        request.currency = "INR"
+        request.call_id = "C9"
+        request.billed_minutes = 1.0
+        request.description = ""
+
+        self.wallet_service_mock.debit_call_charge = AsyncMock(
+            side_effect=WalletNotFoundError("x")
+        )
+
+        with pytest.raises(GrpcException) as exc:
+            await self.grpc_service.WalletDebit(
+                request=request,
+                context=self.context_mock,
+                wallet_service=self.wallet_service_mock,
+            )
+        assert exc.value.status_code == StatusCode.NOT_FOUND

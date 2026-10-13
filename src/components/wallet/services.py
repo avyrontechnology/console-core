@@ -68,6 +68,73 @@ class WalletService:
             self.__logger.error(f"Unexpected error in get_wallet: {exc}")
             raise
 
+    async def debit_call_charge(
+        self,
+        partner_id: UUID,
+        amount: float,
+        currency: str,
+        call_id: str,
+        billed_minutes: float,
+        actor_id: UUID | None = None,
+    ) -> dict:
+        """Idempotent per-call debit for Talko ledger unification.
+
+        Find-or-debit on attributes.call_id: a retry returns the original
+        transaction instead of double-charging. Raises WalletNotFoundError
+        (no wallet = partner not provisioned) and InsufficientBalanceError.
+        Returns {transaction_id, amount, remaining_balance, already_charged}.
+        """
+        try:
+            wallet: Optional[Wallet] = (
+                await self.__wallet_repository.get_wallet_by_partner_id(partner_id)
+            )
+            if not wallet:
+                raise WalletNotFoundError(partner_id)
+            existing = await self.__wallet_repository.find_transaction_by_attribute(
+                wallet.id, "call_id", call_id
+            )
+            if existing is not None:
+                self.__logger.info(
+                    "Call {} already charged, returning original transaction {}".format(
+                        call_id, existing.id
+                    )
+                )
+                return {
+                    "transaction_id": existing.id,
+                    "amount": float(existing.amount),
+                    "remaining_balance": float(existing.remaining_balance),
+                    "already_charged": True,
+                }
+            updated = await self.__wallet_repository.perform_wallet_transaction(
+                current_user_id=actor_id or partner_id,
+                partner_id=partner_id,
+                transaction_type=TransactionType.DEBIT,
+                amount=Decimal(str(amount)),
+                service_name=ServiceName.TALKO,
+                description="call {} ({} min)".format(call_id, billed_minutes),
+                attributes={"call_id": call_id, "billed_minutes": billed_minutes},
+            )
+            self.__logger.info(
+                "Charged call {} amount={} partner={}".format(
+                    call_id, amount, partner_id
+                )
+            )
+            return {
+                "transaction_id": updated.id,
+                "amount": float(amount),
+                "remaining_balance": float(updated.balance),
+                "already_charged": False,
+            }
+        except (WalletNotFoundError, InsufficientBalanceError) as exc:
+            raise
+        except Exception as exc:
+            self.__logger.error(
+                "Unexpected error in debit_call_charge call_id={}: {}".format(
+                    call_id, exc
+                )
+            )
+            raise
+
 
     async def get_wallets_by_partner_ids(
         self,

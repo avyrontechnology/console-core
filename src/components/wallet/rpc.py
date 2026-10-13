@@ -9,6 +9,8 @@ from src.components.wallet.services import WalletService
 from src.pub.partner_wallet_pb2 import (
     GetWalletsByPartnerIdsRequest,
     GetWalletsByPartnerIdsResponse,
+    WalletDebitRequest,
+    WalletDebitResponse,
     WalletRPCResponse,
 )
 
@@ -66,5 +68,55 @@ class WalletServiceGRPC(WalletRPCService):
             )
             raise GrpcException(
                 details="Internal server error while fetching wallet details.",
+                status_code=StatusCode.INTERNAL,
+            )
+
+    @inject
+    async def WalletDebit(
+        self,
+        request: WalletDebitRequest,
+        context,
+        wallet_service: WalletService = Depends(
+            Provide[Container.wallet_service]
+        ),
+    ):
+        from uuid import UUID
+
+        from src.components.common.rpc_uuid import parse_uuid
+        from src.components.wallet.errors import (
+            InsufficientBalanceError,
+            WalletNotFoundError,
+        )
+
+        partner_id = parse_uuid(request.partner_id, "partner_id")
+        try:
+            result = await wallet_service.debit_call_charge(
+                partner_id=partner_id,
+                amount=request.amount,
+                currency=request.currency or "INR",
+                call_id=request.call_id,
+                billed_minutes=request.billed_minutes,
+            )
+            return WalletDebitResponse(
+                message="Success",
+                transaction_id=uuid_str(result["transaction_id"]),
+                amount=result["amount"],
+                remaining_balance=result["remaining_balance"],
+                already_charged=result["already_charged"],
+            )
+        except WalletNotFoundError:
+            raise GrpcException(
+                details="Wallet not found for partner.",
+                status_code=StatusCode.NOT_FOUND,
+            )
+        except InsufficientBalanceError as exc:
+            raise GrpcException(
+                details=str(exc),
+                status_code=StatusCode.FAILED_PRECONDITION,
+            )
+        except Exception as exc:
+            self.__logger.error(f"[gRPC]: WalletDebit failed: {exc}")
+            raise GrpcException(
+                details="Internal server error during wallet debit.",
                 status_code=StatusCode.INTERNAL,
             )
