@@ -1,7 +1,7 @@
 from uuid import UUID
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AuditLogSchema(BaseModel):
@@ -20,3 +20,12 @@ class AuditLogSchema(BaseModel):
         if v is None:
             return None
         return v if isinstance(v, str) else str(v)
+
+
+class AuditLogResponse(AuditLogSchema):
+    """Read model for listing (adds row identity + timestamp)."""
+
+    id: UUID
+    created_at: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)

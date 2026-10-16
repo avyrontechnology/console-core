@@ -138,6 +138,7 @@ class Container(containers.DeclarativeContainer):
                 "..components.api_logs.controllers",
                 "..components.api_logs.services",
                 "..components.api_logs.repositories",
+                "..components.audit_log.controllers",
                 "..components.plan.repositories",
                 "..components.entitlement.repositories",
                 "..components.order.repositories",

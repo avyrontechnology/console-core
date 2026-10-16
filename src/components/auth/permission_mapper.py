@@ -135,6 +135,9 @@ class PermissionCategories:
         "Api Logs": [
             ("get_api_logs_by_log_id", True),
         ],
+        "Audit Logs": [
+            ("get_audit_logs", True),
+        ],
         "Plans": [
             ("create_plan", False),
             ("get_active_plans", False),

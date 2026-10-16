@@ -20,6 +20,7 @@ from src.components.session_mangement.controllers import UserSessionController
 from src.components.partner_role.controllers import PartnerRoleController
 
 from ..components.api_logs.controllers import ApiLogsController
+from ..components.audit_log.controllers import AuditLogController
 from ..components.db_constants.controllers import ConstantsController
 from ..components.entitlement.controllers import EntitlementController
 from ..components.grace.controllers import GraceController
@@ -125,6 +126,9 @@ class Router:
         )
         router.include_router(
             ApiLogsController.api_log_router, prefix="", tags=["Api Logs"]
+        )
+        router.include_router(
+            AuditLogController.audit_log_router, prefix="", tags=["Audit Logs"]
         )
         router.include_router(PlanController.plan_router, prefix="", tags=["Plans"])
         router.include_router(OrderController.order_router, prefix="", tags=["Orders"])
