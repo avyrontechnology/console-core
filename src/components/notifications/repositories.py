@@ -271,7 +271,7 @@ class NotificationRepository:
             result = await session.execute(query)
             return result.scalar() or 0
 
-    async def mark_as_read(self, user_id: UUID, notification_ids: List[int]) -> None:
+    async def mark_as_read(self, user_id: UUID, notification_ids: List[UUID]) -> None:
         async with self.__session_factory() as session:
             stmt = update(NotificationHistory).where(NotificationHistory.user_id == user_id)
             

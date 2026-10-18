@@ -531,7 +531,7 @@ class PartnerRepository:
             )
             raise exec
 
-    async def validate_partner_ids(self, partner_ids: List[int]) -> None:
+    async def validate_partner_ids(self, partner_ids: List[UUID]) -> None:
         if not partner_ids:
             return
 
@@ -542,7 +542,7 @@ class PartnerRepository:
                     Partner.is_active.is_(True),
                 )
                 result = await session.execute(stmt)
-                valid_ids: Set[int] = {row[0] for row in result.fetchall()}
+                valid_ids: Set[UUID] = {row[0] for row in result.fetchall()}
 
                 invalid_ids = set(partner_ids) - valid_ids
                 if invalid_ids:

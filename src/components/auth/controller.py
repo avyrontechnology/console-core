@@ -656,7 +656,7 @@ class AuthController:
     async def assume_user(
         request: Request,
         svc_name: ServiceNames,
-        user_id: UUID = Path(..., ge=1, le=2_147_483_647),
+        user_id: UUID = Path(..., description="User ID to assume."),
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]

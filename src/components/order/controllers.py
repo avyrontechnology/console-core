@@ -1,6 +1,5 @@
 from uuid import UUID
 import json
-import re
 from typing import Any, List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -19,7 +18,7 @@ from src.components.common.response import (
 )
 from src.components.wallet.enum import ALL_CURRENCIES
 from src.components.order.constants import (
-    MAX_PARTNER_ID_INT32,
+
     MAX_PARTNER_IDS_PER_REQUEST,
     OrderSource,
     OrderType,
@@ -365,16 +364,9 @@ class OrderController:
             user_hierarchy: int = user_data.get(RoleDictKeys.HIERARCHY)
             is_superadmin: bool = user_hierarchy <= 0
 
-            parsed_partner_ids: Optional[List[int]] = _parse_partner_ids(partner_ids)
+            parsed_partner_ids: Optional[List[UUID]] = _parse_partner_ids(partner_ids)
 
             if parsed_partner_ids is not None:
-                invalid_ids = _get_out_of_range_ids(parsed_partner_ids)
-                if invalid_ids:
-                    return BadRequestResponse(
-                        detail="partner_id(s) {} exceed the valid range of {}".format(
-                            invalid_ids, MAX_PARTNER_ID_INT32
-                        )
-                    )
                 if len(parsed_partner_ids) > MAX_PARTNER_IDS_PER_REQUEST:
                     return BadRequestResponse(
                         detail="Maximum {} partner_ids allowed per request".format(
@@ -634,13 +626,13 @@ class OrderController:
 # =============================================================================
 
 
-def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[int]]:
+def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[UUID]]:
     """
-    Parse the partner_ids query param into a list of ints.
+    Parse the partner_ids query param into a list of UUIDs.
 
     Accepted formats:
-      "1"       → [1]
-      "[1,2,3]" → [1, 2, 3]
+      "<uuid>"                  → [UUID(...)]
+      '["<uuid>", "<uuid>"]'    → [UUID(...), UUID(...)]
 
     Returns None if raw_value is None (no filter applied).
     Raises ValueError for unrecognised formats.
@@ -651,32 +643,20 @@ def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[int]]:
     raw = raw_value.strip()
 
     try:
-        if re.fullmatch(r"\d+", raw):
-            return [int(raw)]
+        if not raw.startswith("["):
+            return [UUID(raw)]
 
-        if raw.startswith("["):
-            parsed = json.loads(raw)
-            if (
-                not isinstance(parsed, list)
-                or not parsed
-                or not all(isinstance(i, int) for i in parsed)
-            ):
-                raise ValueError("List must contain integers only")
-            return parsed
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list) or not parsed:
+            raise ValueError("List must contain UUID strings only")
+        return [UUID(str(item)) for item in parsed]
 
-        raise ValueError("Unrecognised format")
-
-    except (ValueError, json.JSONDecodeError, OverflowError) as exc:
+    except (ValueError, AttributeError, TypeError, json.JSONDecodeError) as exc:
         raise ValueError(
-            "partner_ids must be a single positive integer (e.g. 1) "
-            "or a JSON list of positive integers (e.g. [1,2,3]). "
+            "partner_ids must be a single UUID "
+            'or a JSON list of UUIDs (e.g. ["<uuid>","<uuid>"]). '
             "Error: {}".format(exc)
         ) from exc
-
-
-def _get_out_of_range_ids(partner_ids: List[int]) -> List[int]:
-    """Return any partner_ids that exceed the 32-bit integer ceiling."""
-    return [pid for pid in partner_ids if pid > MAX_PARTNER_ID_INT32]
 
 
 def _validate_date_ranges(

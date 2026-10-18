@@ -167,7 +167,7 @@ class NotificationService:
     async def get_unread_count(self, user_id: UUID, service_type: NotificationServiceType) -> int:
         return await self.__repository.get_unread_count(user_id, service_type)
 
-    async def mark_notifications_read(self, user_id: UUID, notification_ids: List[int]) -> None:
+    async def mark_notifications_read(self, user_id: UUID, notification_ids: List[UUID]) -> None:
         await self.__repository.mark_as_read(user_id, notification_ids)
         
     async def should_send_notification(

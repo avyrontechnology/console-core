@@ -355,7 +355,7 @@ class OrderRepository:
         Build SQLAlchemy filter conditions from the filters dict.
 
         Supported keys (all optional):
-        partner_ids                 : list[int]
+        partner_ids                 : list[UUID]
         source                      : str
         status                      : str
         order_created_at_from       : datetime

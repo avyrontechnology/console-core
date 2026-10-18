@@ -568,7 +568,7 @@ class OrderService:
           - order_type          (str)  : FRESH | RENEWAL | UPGRADE | DOWNGRADE
         """
         try:
-            partner_ids: Optional[int] = filters.get("partner_ids")
+            partner_ids: Optional[List[UUID]] = filters.get("partner_ids")
 
             if partner_ids:
                 await partner_repo.validate_partner_ids(partner_ids)

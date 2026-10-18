@@ -106,4 +106,4 @@ class UnreadCountResponse(BaseModel):
     service_type: Optional[NotificationServiceType] = None
 
 class MarkReadRequest(BaseModel):
-    notification_ids: List[int]
+    notification_ids: List[UUID]
