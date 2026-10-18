@@ -300,19 +300,18 @@ class PartnerFilterRequest(BaseModel):
 
     @field_validator("filters")
     def validate_id_field(cls, filters):
-        MAX_INT = 2147483647
+        """IDs are UUIDs since the PK migration: accept UUID (or list of UUIDs)."""
         for f in filters or []:
             if isinstance(f, dict) and f.get("field") == "id":
                 value = f.get("value")
-                try:
-                    value_int = int(value)
-                except (TypeError, ValueError):
-                    raise ValueError("Please enter a valid numeric ID")
-
-                if value_int > MAX_INT:
-                    raise ValueError("ID exceeds maximum limit")
-                if value_int < 0:
-                    raise ValueError("ID cannot be negative")
+                values = value if isinstance(value, (list, tuple)) else [value]
+                for item in values:
+                    if item is None:
+                        raise ValueError("Please enter a valid UUID")
+                    try:
+                        UUID(str(item))
+                    except (TypeError, ValueError):
+                        raise ValueError("Please enter a valid UUID")
         return filters
 
     model_config = ConfigDict(from_attributes=True)

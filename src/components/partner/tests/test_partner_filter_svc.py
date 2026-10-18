@@ -517,8 +517,9 @@ class TestPartnerFilterService:
     @pytest.mark.parametrize(
         "value",
         [
-            123,           # int
-            "123",         # numeric string
+            "11111111-1111-1111-1111-111111111111",   # UUID string
+            UUID("11111111-1111-1111-1111-111111111111"),   # UUID object
+            ["22222222-2222-2222-2222-222222222222"],    # list of UUIDs (IN operator)
         ],
     )
     def test_filters_id_valid(self, value):
@@ -527,22 +528,15 @@ class TestPartnerFilterService:
         assert req.filters[0]["value"] == value
 
 
-    def test_filters_id_non_numeric_raises(self):
+    def test_filters_id_non_uuid_raises(self):
         filters = [{"field": "id", "operator": "=", "value": "abc"}]
         with pytest.raises(ValidationError) as excinfo:
             PartnerFilterRequest(filters=filters)
-        assert "Please enter a valid numeric ID" in str(excinfo.value)
+        assert "Please enter a valid UUID" in str(excinfo.value)
 
 
-    def test_filters_id_exceeds_max_int_raises(self):
-        filters = [{"field": "id", "operator": "=", "value": str(MAX_INT + 1)}]
+    def test_filters_id_numeric_raises(self):
+        filters = [{"field": "id", "operator": "=", "value": 1}]
         with pytest.raises(ValidationError) as excinfo:
             PartnerFilterRequest(filters=filters)
-        assert "ID exceeds maximum limit" in str(excinfo.value)
-
-
-    def test_filters_id_negative_raises(self):
-        filters = [{"field": "id", "operator": "=", "value": "-1"}]
-        with pytest.raises(ValidationError) as excinfo:
-            PartnerFilterRequest(filters=filters)
-        assert "ID cannot be negative" in str(excinfo.value)
+        assert "Please enter a valid UUID" in str(excinfo.value)
