@@ -160,7 +160,7 @@ class UserConfigController:
     async def upsert_user_config(
         request: Request,
         partner_id: UUID,
-        user_ids: List[int] = Query(
+        user_ids: List[UUID] = Query(
             ..., description="List of user IDs whose configurations need to be updated."
         ),
         update_user_config_data: UserConfigData = Body(

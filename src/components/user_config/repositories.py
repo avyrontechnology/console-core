@@ -80,7 +80,7 @@ class UserConfigRepository:
             raise exec
 
     async def update_user_config(
-        self, user_ids: List[int], update_user_config_data: UserConfigData
+        self, user_ids: List[UUID], update_user_config_data: UserConfigData
     ) -> List[UserConfig]:
         try:
             async with self.__session_factory() as session:

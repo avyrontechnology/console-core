@@ -234,7 +234,7 @@ class UserConfigService:
     async def update_user_config(
         self,
         partner_id: UUID,
-        user_ids: List[int],
+        user_ids: List[UUID],
         update_user_config_data: UserConfigData,
         current_user: dict,
         user_service: UserService = Depends(Provide["console_service"]),
