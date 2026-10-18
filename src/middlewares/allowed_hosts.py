@@ -30,7 +30,12 @@ class AllowedHostsMiddleware(BaseHTTPMiddleware):
 
         try:
             console_service_logger.debug("Verfying Allowed Hosts at Middleware...")
-            if request.headers.get("content-type") == "application/json":
+            if (
+                request.headers.get("content-type") == "application/json"
+                and request.method in ("POST", "PUT", "PATCH")
+            ):
+                # Only body-carrying methods must parse cleanly; a GET with a
+                # JSON content-type but no body used to 400.
                 await request.json()  # Attempt to parse JSON
             host = request.headers.get("host")
             if host not in self.allowed_hosts:

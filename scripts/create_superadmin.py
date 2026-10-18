@@ -162,6 +162,36 @@ async def ensure_partner_configs(conn, partner_id: str) -> None:
         )
 
 
+async def ensure_wallet(conn, partner_id: str) -> None:
+    await conn.execute(
+        text(
+            "INSERT INTO console_wallets (id, partner_id, balance, frozen_balance, "
+            "currency, created_at) SELECT gen_random_uuid(), CAST(:pid AS uuid), "
+            "1000.00, 0, 'INR', :now WHERE NOT EXISTS ("
+            "  SELECT 1 FROM console_wallets WHERE partner_id = CAST(:pid AS uuid)"
+            ")"
+        ),
+        {"pid": partner_id, "now": int(time.time() * 1000)},
+    )
+
+
+async def ensure_api_key(conn, partner_id: str) -> None:
+    """A partner key so the API-KEY auth path and the UI page both work."""
+    import secrets
+
+    await conn.execute(
+        text(
+            "INSERT INTO console_api_keys (id, key, scopes, user_context, is_active, "
+            "partner_id, created_at) "
+            "SELECT gen_random_uuid(), :key, "
+            "'[]'::jsonb, NULL, TRUE, CAST(:pid AS uuid), :now WHERE NOT EXISTS ("
+            "  SELECT 1 FROM console_api_keys WHERE partner_id = CAST(:pid AS uuid)"
+            ")"
+        ),
+        {"pid": partner_id, "key": secrets.token_hex(32), "now": int(time.time() * 1000)},
+    )
+
+
 async def upsert_user(conn, email: str, password: str, name: str, phone: str) -> str:
     row = (
         await conn.execute(
@@ -212,6 +242,8 @@ async def main(email: str, password: str, name: str, phone: str) -> None:
         role_id = await ensure_role(conn)
         partner_id = await ensure_partner(conn)
         await ensure_partner_configs(conn, partner_id)
+        await ensure_wallet(conn, partner_id)
+        await ensure_api_key(conn, partner_id)
 
         user_id = await upsert_user(conn, email, password, name, phone)
         await conn.execute(
