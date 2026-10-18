@@ -363,6 +363,41 @@ class AuthController:
             )
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
+    @auth_router.get("/user/permissions", response_model=List[str])
+    @permission_check("console:get_user_permissions")
+    @inject
+    async def get_user_permissions(
+        request: Request,
+        auth_service: AuthService = Depends(Provide[Container.auth_service]),
+        partner_config_service: PartnerConfigService = Depends(
+            Provide[Container.partner_config_service]
+        ),
+        console_service_logger: ConsoleServiceLogger = Depends(
+            Provide[Container.console_service_logger]
+        ),
+    ):
+        """Permission slugs granted to the calling user.
+
+        The homepage payload carries UI feature flags (can_view_users, ...),
+        not RBAC slugs, so clients gate on this instead. Uses the same
+        resolution as enforcement (default role + partner grants) so the UI
+        never disagrees with the API.
+        """
+        try:
+            user_id: UUID = request.state.user.get(CurrentUserMap.USER_ID)
+            console_service_logger.info(
+                "Fetching permission slugs for user: {}".format(user_id)
+            )
+            permissions: List[str] = (
+                await partner_config_service.custom_role_permission_check(user_id)
+            )
+            return SuccessResponse(jsonable_encoder(permissions))
+        except Exception as ex:
+            console_service_logger.error(
+                "Unexpected error while fetching user permissions: {}".format(repr(ex))
+            )
+            return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
+
     @auth_router.get("/permission", response_model=List[PermissionResponse])
     @permission_check("console:get_all_permission")
     @inject

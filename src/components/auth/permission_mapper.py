@@ -27,6 +27,7 @@ class PermissionCategories:
             ("bulk_upload_users", False),
             ("get_bulk_upload_result", False),
             ("download_bulk_upload_reference_file", False),
+            ("get_user_permissions", False),
             
         ],
         "User Metadata": [
