@@ -88,6 +88,72 @@ async def test_excluded_path(auth_middleware, mock_request, mock_call_next, mock
 
 
 @pytest.mark.asyncio
+async def test_public_route_resolved_without_scope_route(
+    auth_middleware, mock_call_next, mock_console_service_logger
+):
+    """scope["route"] is unset when BaseHTTPMiddleware runs pre-routing.
+
+    Public routes must still resolve, otherwise login/signup/webhooks 401.
+    """
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.post("/console-service/v1/do_login")
+    async def do_login():  # route name must be do_login
+        return {"ok": True}
+
+    request = MagicMock(spec=Request)
+    request.headers = {}
+    request.state = MagicMock()
+    request.app = app
+    request.url.path = "/console-service/v1/do_login"
+    request.scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/console-service/v1/do_login",
+        "headers": [],
+        "root_path": "",
+    }
+
+    response = await auth_middleware.dispatch(
+        request, mock_call_next, console_service_logger=mock_console_service_logger
+    )
+
+    assert response == mock_call_next.return_value
+    mock_call_next.assert_called_once_with(request)
+
+
+@pytest.mark.asyncio
+async def test_unknown_path_is_not_treated_as_public(
+    auth_middleware, mock_request, mock_call_next, mock_console_service_logger
+):
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.post("/console-service/v1/secret")
+    async def secret_route():
+        return {"ok": True}
+
+    mock_request.app = app
+    mock_request.url.path = "/console-service/v1/secret"
+    mock_request.scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/console-service/v1/secret",
+        "headers": [],
+        "root_path": "",
+    }
+
+    response = await auth_middleware.dispatch(
+        mock_request, mock_call_next, console_service_logger=mock_console_service_logger
+    )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_missing_authorization_header(
     auth_middleware, mock_request, mock_call_next, mock_console_service_logger
 ):

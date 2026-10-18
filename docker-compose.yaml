@@ -59,7 +59,8 @@ services:
 
   console-db:
     container_name: console-db
-    image: postgres:11.5-alpine
+    # 13+ is required: the schema uses gen_random_uuid() server defaults.
+    image: postgres:16-alpine
     environment:
       - POSTGRES_USER=jaggerbomb
       - POSTGRES_PASSWORD=jaggerbomb

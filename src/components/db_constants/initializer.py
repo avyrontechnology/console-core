@@ -1,5 +1,4 @@
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 
 from src.components.db_constants.mapper import CONSTANT_KEY_TO_MODEL_MAPPER
 from src.components.db_constants.models import (
@@ -26,21 +25,14 @@ class ConstantsInitializer:
         Load constants from the database into the provided dictionary.
         """
         async with session_factory() as session:
-            query = select(model_class)
-
-            media_model = model_class in [MediaConstants, GlobalMediaConstants]
-            if media_model:
-                query = query.options(joinedload(model_class.media))
-
-            result = await session.execute(query)
+            result = await session.execute(select(model_class))
 
             constants = result.scalars().all()
 
+            # Media constants store a plain integer value now that the media
+            # tables/flows are gone, so every model resolves via `value`.
             for constant in constants:
-                if media_model and constant.media:
-                    target_dict[constant.name] = constant.media.name
-                else:
-                    target_dict[constant.name] = constant.value
+                target_dict[constant.name] = constant.value
 
     @classmethod
     async def initialize_constants(cls, session):

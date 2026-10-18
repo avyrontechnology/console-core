@@ -1,6 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.routing import Match
 from starlette_context import context
 from uuid import UUID
 import time
@@ -20,6 +21,22 @@ from src.components.user.repositories import UserRepository
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
 from src.middlewares.constants import OPTIONAL_AUTH_ROUTES
+
+
+def _resolve_route(app, scope: dict):
+    """Find the route matching this scope before the router has run.
+
+    Uses Starlette's own matcher so the name we trust is the resolved route,
+    never a substring of the URL.
+    """
+    try:
+        for route in app.routes:
+            match, _child_scope = route.matches(scope)
+            if match == Match.FULL:
+                return route
+    except Exception:
+        return None
+    return None
 
 
 def _normalize_id_claims(payload: dict) -> dict:
@@ -83,6 +100,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             scope = None
         if isinstance(scope, dict):
             route = scope.get("route")
+        if route is None and isinstance(scope, dict):
+            # BaseHTTPMiddleware runs BEFORE the router, so scope["route"] is
+            # still unset. Resolve it by matching the app's routes ourselves;
+            # without this every public route (login, signup, webhooks) was
+            # treated as private and answered 401.
+            route = _resolve_route(request.app, scope)
         route_name = getattr(route, "name", None) or getattr(route, "path", None)
         request_path: str = request.url.path
 
