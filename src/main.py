@@ -61,6 +61,7 @@ async def startup_event():
 
     from src.components.rbac.startup_validation import (
         ensure_route_permissions,
+        ensure_superadmin_grants,
         validate_route_permissions,
     )
 
@@ -85,6 +86,16 @@ async def startup_event():
             len(route_slugs)
         )
     )
+
+    # Super admin is defined as "has every permission": re-grant on boot so a
+    # permission seeded later is never silently missing for it.
+    grant_report = await ensure_superadmin_grants(session_factory)
+    if grant_report["granted"]:
+        print(
+            "//////////////////////////// superadmin grants added: {} ////////////////////////////".format(
+                grant_report["granted"]
+            )
+        )
 
     try:
         print(

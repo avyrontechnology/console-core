@@ -51,7 +51,15 @@ def _mapper_metadata() -> dict[str, dict]:
 
 
 async def ensure_route_permissions(session_factory) -> dict:
-    """Upsert missing route slugs. Returns {seeded: [...], unmapped_warnings: [...] }."""
+    """Upsert missing slugs.
+
+    Seeds every mapper-declared slug, not just route-bound ones: the mapper
+    is the catalogue the admin UI gates on, so a slug declared there (e.g.
+    console:add_partner, whose route is intentionally public for partner
+    onboarding) must still exist or the UI denies it for everyone.
+
+    Returns {seeded: [...], unmapped_warnings: [...] }.
+    """
     from src.components.common.datetime import DateTimeUtil
 
     route_slugs = collect_route_slugs()
@@ -59,12 +67,14 @@ async def ensure_route_permissions(session_factory) -> dict:
     async with session_factory() as session:
         result = await session.execute(select(Permission.slug))
         db_slugs = set(result.scalars().all())
-        missing = sorted(route_slugs - db_slugs)
+        # Mapper slugs exist for the UI catalogue; route slugs exist for the
+        # API. Both must be present in console_permission.
+        missing = sorted((route_slugs | set(meta.keys())) - db_slugs)
         seeded: list[str] = []
         warnings: list[str] = []
         for slug in missing:
             info = meta.get(slug)
-            if info is None:
+            if info is None and slug in route_slugs:
                 # Typo safety: internal-only so external users never get it.
                 info = {
                     "title": slug,
@@ -103,3 +113,47 @@ async def validate_route_permissions(session_factory) -> set[str]:
             "(seed via permissions_gen_v2): {}".format(missing)
         )
     return route_slugs
+
+
+async def ensure_superadmin_grants(session_factory) -> dict:
+    """Give the hierarchy-0 system role every permission in the catalogue.
+
+    Super admin is defined as "has everything", so this is enforced on every
+    boot rather than relying on a one-off grant step: a permission seeded
+    later (new route, mapper addition) would otherwise silently be missing.
+    Idempotent, and it never touches any other role.
+    """
+    from src.components.auth.models import Role
+    from src.components.default_role_permission.models import DefaultRolePermission
+
+    SUPERADMIN_HIERARCHY = 0
+
+    async with session_factory() as session:
+        role = (
+            await session.execute(
+                select(Role).where(
+                    Role.hierarchy == SUPERADMIN_HIERARCHY, Role.partner_id.is_(None)
+                )
+            )
+        ).scalars().first()
+        if role is None:
+            return {"granted": 0, "role_id": None}
+        role_id = role.id  # read inside the session; detached access would raise
+
+        granted = (
+            await session.execute(
+                select(Permission.id).where(
+                    Permission.id.not_in(
+                        select(DefaultRolePermission.permission_id).where(
+                            DefaultRolePermission.role_id == role_id
+                        )
+                    )
+                )
+            )
+        ).scalars().all()
+
+        for permission_id in granted:
+            session.add(DefaultRolePermission(role_id=role_id, permission_id=permission_id))
+        if granted:
+            await session.commit()
+    return {"granted": len(granted), "role_id": str(role_id)}

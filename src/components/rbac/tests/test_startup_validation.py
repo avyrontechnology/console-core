@@ -64,7 +64,7 @@ async def test_ensure_unknown_slug_seeds_internal_only_with_warning():
     factory, session = _factory(set())
     with patch.object(
         sv, "collect_route_slugs", return_value={"console:typo_route_xyz"}
-    ):
+    ), patch.object(sv, "_mapper_metadata", return_value={}):
         report = await sv.ensure_route_permissions(factory)
     assert report["seeded"] == ["console:typo_route_xyz"]
     assert report["unmapped_warnings"] == ["console:typo_route_xyz"]
@@ -73,10 +73,42 @@ async def test_ensure_unknown_slug_seeds_internal_only_with_warning():
 
 
 @pytest.mark.asyncio
+async def test_ensure_seeds_mapper_slugs_with_no_route():
+    """A mapper slug with no route (public onboarding action) still exists."""
+    factory, session = _factory(set())
+    with patch.object(sv, "collect_route_slugs", return_value=set()), patch.object(
+        sv,
+        "_mapper_metadata",
+        return_value={
+            "console:add_partner": {
+                "title": "Add Partner",
+                "category": "Partner",
+                "display_text": "Add Partner (Partner)",
+                "is_internal": True,
+            }
+        },
+    ):
+        report = await sv.ensure_route_permissions(factory)
+    assert report["seeded"] == ["console:add_partner"]
+    assert report["unmapped_warnings"] == []
+
+
+@pytest.mark.asyncio
 async def test_ensure_skips_existing_slugs():
     factory, session = _factory({"console:bulk_create_users"})
     with patch.object(
         sv, "collect_route_slugs", return_value={"console:bulk_create_users"}
+    ), patch.object(
+        sv,
+        "_mapper_metadata",
+        return_value={
+            "console:bulk_create_users": {
+                "title": "Bulk Create Users",
+                "category": "User",
+                "display_text": "x",
+                "is_internal": False,
+            }
+        },
     ):
         report = await sv.ensure_route_permissions(factory)
     assert report["seeded"] == []
