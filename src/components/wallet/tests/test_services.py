@@ -113,6 +113,55 @@ class TestWalletService:
         assert len(table._cellvalues) == 3
         assert [c for c in table._cellvalues[0]] == TABLE_HEADERS
 
+    async def test_debit_call_charge_spends_available_balance(self):
+        """A call charge must debit wallet balance, never frozen funds.
+
+        Without debit_from_wallet=True the repository debits the frozen
+        amount, so a wallet with funds but no frozen balance always fails.
+        """
+        partner_id = UUID("11111111-1111-1111-1111-111111111111")
+        wallet = MagicMock(id=partner_id, balance=Decimal("100.00"))
+        self.mock_wallet_repo.get_wallet_by_partner_id.return_value = wallet
+        self.mock_wallet_repo.find_transaction_by_attribute.return_value = None
+        self.mock_wallet_repo.perform_wallet_transaction.return_value = wallet
+
+        result = await self.wallet_service.debit_call_charge(
+            partner_id=partner_id,
+            amount=2.5,
+            currency="INR",
+            call_id="call-1",
+            billed_minutes=3,
+        )
+
+        kwargs = self.mock_wallet_repo.perform_wallet_transaction.await_args.kwargs
+        assert kwargs["debit_from_wallet"] is True
+        assert result["already_charged"] is False
+        assert result["remaining_balance"] == 100.00
+
+    async def test_debit_call_charge_retry_is_not_double_charged(self):
+        partner_id = UUID("11111111-1111-1111-1111-111111111111")
+        wallet = MagicMock(id=partner_id, balance=Decimal("97.50"))
+        existing = MagicMock(id=UUID("22222222-2222-2222-2222-222222222222"), amount=2.5, remaining_balance=97.50)
+
+        self.mock_wallet_repo.get_wallet_by_partner_id.return_value = wallet
+        self.mock_wallet_repo.find_transaction_by_attribute.return_value = existing
+
+        result = await self.wallet_service.debit_call_charge(
+            partner_id=partner_id,
+            amount=2.5,
+            currency="INR",
+            call_id="call-1",
+            billed_minutes=3,
+        )
+
+        self.mock_wallet_repo.perform_wallet_transaction.assert_not_awaited()
+        assert result == {
+            "transaction_id": existing.id,
+            "amount": 2.5,
+            "remaining_balance": 97.50,
+            "already_charged": True,
+        }
+
     async def test_perform_transaction_success(self):
         """Should successfully perform transaction."""
         # Mock wallet object consistent with WalletResponse schema

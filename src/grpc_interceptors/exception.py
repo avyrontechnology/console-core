@@ -1,4 +1,5 @@
 from typing import Any, Callable
+
 import grpc
 from grpc_interceptor.exceptions import GrpcException
 from grpc_interceptor.server import AsyncServerInterceptor
@@ -19,9 +20,12 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
             if not hasattr(response_or_iterator, "__aiter__"):
                 return await response_or_iterator
         except GrpcException as e:
-            await context.set_code(e.status_code)
-            await context.set_details(e.details)
-            raise
+            # abort() is the only cross-version-safe way to set a status: it is
+            # async in every grpc.aio release. set_code/set_details became sync
+            # methods in grpc 1.84, and re-raising the GrpcException after
+            # setting them makes grpc format that exception into the details,
+            # hiding the real message from the caller.
+            await context.abort(e.status_code, e.details)
 
         # If it's a streaming method (returns async generator), yield items
         return self._intercept_streaming(response_or_iterator, context)
@@ -31,6 +35,4 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
             async for item in iterator:
                 yield item
         except GrpcException as e:
-            await context.set_code(e.status_code)
-            await context.set_details(e.details)
-            raise
+            await context.abort(e.status_code, e.details)

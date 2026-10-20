@@ -113,6 +113,8 @@ class WalletService:
                 service_name=ServiceName.TALKO,
                 description="call {} ({} min)".format(call_id, billed_minutes),
                 attributes={"call_id": call_id, "billed_minutes": billed_minutes},
+                # A call charge spends available balance, not frozen funds.
+                debit_from_wallet=True,
             )
             self.__logger.info(
                 "Charged call {} amount={} partner={}".format(
