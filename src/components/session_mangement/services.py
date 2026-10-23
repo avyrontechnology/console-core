@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Dict, List, Optional, Union, Tuple
 
 from sqlalchemy.exc import IntegrityError
@@ -110,7 +111,7 @@ class UserSessionService:
             )
             raise exc
 
-    async def deactivate_user_sessions(self, user_id: int | list[int], service_name: str | list[str] | None = None,) -> int:
+    async def deactivate_user_sessions(self, user_id: UUID | list[UUID], service_name: str | list[str] | None = None,) -> int:
         """
         Deactivate all active sessions for a user.
         """
@@ -132,7 +133,7 @@ class UserSessionService:
             raise exc
 
     async def deactivate_all_sessions_by_partner_id(
-        self, partner_id: int, config: Optional[bool], service_name: Optional[str]=None
+        self, partner_id: UUID, config: Optional[bool], service_name: Optional[str]=None
     ) -> int:
         """
         Deactivate all user sessions for a specific partner and update UserConfig.
@@ -154,16 +155,8 @@ class UserSessionService:
                 )
                 return 0
 
-            if config is not None:
-                config_count = await self.__user_session_repository.deactivate_or_create_user_configs_by_user_ids(
-                    user_ids, config
-                )
-                self.__console_service_logger.info(
-                    f"{config_count} UserConfig records for partner_id: {partner_id}"
-                )
-
             self.__console_service_logger.info(
-                f"Successfully deactivated {deactivated_count} sessions and updated/created "
+                f"Successfully deactivated {deactivated_count} sessions "
             )
 
             return
@@ -207,7 +200,7 @@ class UserSessionService:
 
     async def has_active_session(
             self, 
-            user_id: int,
+            user_id: UUID,
             service_name: str
         ) -> bool:
         """

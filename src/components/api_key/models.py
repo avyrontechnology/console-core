@@ -1,5 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, JSON
+import uuid
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 from src.core.db import Base
@@ -18,8 +20,10 @@ class ApiKey(MetaData):
     scopes = Column(JSON, nullable=True)
     user_context = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    # Epoch ms expiry; NULL = never expires (legacy keys). Checked on every use.
+    expires_at = Column(BigInteger, nullable=True, index=True)
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

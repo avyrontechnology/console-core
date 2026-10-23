@@ -1,5 +1,6 @@
 """Grace Period Service."""
 
+from uuid import UUID
 from typing import List, Optional, Tuple
 
 from dependency_injector.wiring import Provide
@@ -71,10 +72,10 @@ class GraceService:
         One GracePeriod record is created per service. created_by (MetaData)
         stores who granted the grace.
         """
-        partner_id: int = payload["partner_id"]
+        partner_id: UUID = payload["partner_id"]
         granted_days: int = payload["granted_days"]
         remark: str = payload["remark"]
-        created_by: int = current_user["user_id"]
+        created_by: UUID = current_user["user_id"]
 
         self.logger.info(
             "grant_grace started | partner_id={} granted_days={} created_by={}".format(
@@ -162,9 +163,9 @@ class GraceService:
 
     async def settle_grace(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
-        order_id: int,
+        order_id: UUID,
         payment_date_ms: Optional[int] = None,
     ) -> Tuple[Optional[int], int]:
         """
@@ -215,7 +216,7 @@ class GraceService:
 
     async def get_grace_status(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_repo: PartnerRepository = Depends(Provide["partner_repository"]),
     ) -> GraceStatusResponse:
         """
@@ -274,7 +275,7 @@ class GraceService:
     # =========================================================================
 
     async def _assert_no_active_entitlement(
-        self, entitlement_repo, partner_id: int, service_name: str
+        self, entitlement_repo, partner_id: UUID, service_name: str
     ) -> None:
         """Raise GraceNotEligibleError if any active entitlement exists for partner + service."""
         active = await entitlement_repo.get_active_entitlement(
@@ -286,7 +287,7 @@ class GraceService:
             )
 
     async def _assert_no_scheduled_entitlement(
-        self, entitlement_repo, partner_id: int, service_name: str
+        self, entitlement_repo, partner_id: UUID, service_name: str
     ) -> None:
         """Raise GraceNotEligibleError if a scheduled entitlement exists for partner + service."""
         scheduled = await entitlement_repo.get_scheduled_entitlements(partner_id)
@@ -297,7 +298,7 @@ class GraceService:
             )
 
     async def _get_service_names_from_last_order(
-        self, order_repo, partner_id: int
+        self, order_repo, partner_id: UUID
     ) -> List[str]:
         """
         Fetch the partner's last SUCCESS order and extract service names from its

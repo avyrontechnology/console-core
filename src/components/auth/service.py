@@ -1,10 +1,10 @@
 import json
 import uuid
+from uuid import UUID
 from collections import defaultdict
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Union
 
-import httpx
 from dependency_injector.wiring import Provide
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.exc import IntegrityError
@@ -28,12 +28,10 @@ from src.components.auth.constant import (
 from src.components.auth.dto import ServiceAccessDTO
 from src.components.auth.error import (
     OtpMediumMissing,
-    OtpTemplateNotFound,
     PermissionNotFoundError,
     RoleNotFoundError,
     UserCreatedButEmailFailedError, 
 )
-from src.components.auth.messages import AuthMessages
 from src.components.auth.models import OTP, Permission, Role
 from src.components.auth.permission_mapper import PermissionCategories
 from src.components.auth.repositories import AuthRepository
@@ -76,14 +74,11 @@ from src.components.partner_config.schemas import PartnerConfigResponse
 from src.components.partner_config.services import PartnerConfigService
 from src.components.partner_meta_data.models import PartnerMetaData
 from src.components.partner_meta_data.services import PartnerMetaDataServices
-from src.components.services.constants import SEND_CREDENTIALS_BODY
-from src.components.services.email_service import EmailService
 from src.components.session_mangement.errors import UserSessionNotFoundError
 from src.components.session_mangement.models import UserSession
 from src.components.session_mangement.services import UserSessionService
-from src.components.user.errors import PublisherExistsError, UserNotFoundError
+from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
-from src.components.team.repositories import TeamRepository
 from src.components.user.repositories import UserRepository
 from src.components.user.schema import Contrasts
 from src.components.user.services import UserService
@@ -123,7 +118,7 @@ class AuthService:
         login_data: LoginData = None,
         svc_name: str = "console",
         is_assume_user: bool = False,
-        user_id: int = None,
+        user_id: UUID = None,
         user_config_service: UserConfigService = Depends(
             Provide["user_config_service"]
         ),
@@ -222,17 +217,10 @@ class AuthService:
                     if login_data.send_mail_otp:
                         await self.__send_email_otp(user.email, otp_entry.otp)
                     if login_data.send_whatsapp_otp:
-                        token_data: dict = await self.__create_session_and_token(
-                            request,
-                            user,
-                            config_map,
-                            svc_name,
-                            service_access_dto.trial_expiry,
-                            partner_config_map,
-                        )
-                        token: str = token_data.get("access_token", "")
-                        await self.__send_whatsapp_otp(
-                            user.phone_number, otp_entry.otp, token
+                        # Retired channel removed — fail closed (never claim sent without sending)
+                        # (never claim "OTP sent" without sending).
+                        raise OtpMediumMissing(
+                            "WhatsApp OTP is unavailable (channel removed)"
                         )
 
                     self.__auth_service_logger.info(
@@ -315,7 +303,7 @@ class AuthService:
                 f"Access token decoded sucessfully & Got the payload: {payload}"
             )
             user_session_id = payload.get("user_session_id")
-            partner_id: int = payload.get("partner_id")
+            partner_id: UUID = payload.get("partner_id")
 
             # Invalidating  cache for user's issued token
             self.__auth_service_logger.debug(
@@ -375,11 +363,9 @@ class AuthService:
         user_repository: UserRepository = Depends(Provide["user_repository"]),
         partner_repository: PartnerRepository = Depends(Provide["partner_repository"]),
         location_service: LocationService = Depends(Provide["location_service"]),
-        email_service: EmailService = Depends(Provide["email_service"]),
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
-        team_repository: TeamRepository = Depends(Provide["team_repository"]),
     ):
         try:
             self.__auth_service_logger.info("Attempting to create new user")
@@ -463,56 +449,9 @@ class AuthService:
                 if partner_object.is_internal and user_role.hierarchy >= parent_role.hierarchy:
                     raise AuthException(AuthExceptionMsg.PARENT_VALIDATION)
   
-            # Validate team BEFORE creating user so a bad team_id leaves no orphan user
-            if user_data.team_role_id and not user_data.team_id:
-                raise AuthException("team_role_id requires team_id to be set")
-
-            if user_data.team_id:
-                teams_cfg = await partner_config_service.get_partner_config_by_key(
-                    partner_id, PartnerConfigEnum.IS_TEAMS_ENABLED.value
-                )
-                if not (teams_cfg and teams_cfg.value):
-                    raise AuthException("Teams is not enabled for this partner")
-                team = await team_repository.get_team_by_id(user_data.team_id, partner_id)
-                if team is None:
-                    raise AuthException(
-                        "Team {} does not exist or does not belong to partner {}".format(
-                            user_data.team_id, partner_id
-                        )
-                    )
-                if user_data.team_role_id and not (
-                    await team_repository.is_role_in_partner_catalog(
-                        user_data.team_role_id, partner_id
-                    )
-                ):
-                    raise AuthException(
-                        "Team role {} is not part of this partner's role catalog".format(
-                            user_data.team_role_id
-                        )
-                    )
-
             user = await user_repository.add_user(
                 user_data=user_data, services=services
             )
-
-            if user_data.team_id:
-                await team_repository.add_member(
-                    team_id=user_data.team_id,
-                    user_id=user.id,
-                    role_id=user_data.team_role_id,
-                    created_by=user.id,
-                )
-                await self.__auth_service_cache.invalidate_partner_teams_cache(
-                    partner_id
-                )
-
-            if parent_id:
-                ancestor_ids: list[int] = await self.__auth_repository.get_ancestor_ids(parent_id)
-                for ancestor_id in ancestor_ids:
-                    await self.__auth_service_cache.delete_cache(
-                        key=CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", ancestor_id),
-                        prefix=RedisCache.KeysPrefix.MAGLO,
-                    )
 
             # Log the successful creation of the user
             self.__auth_service_logger.info(
@@ -526,28 +465,9 @@ class AuthService:
                 )
             )
             if send_user_credentials and send_user_credentials.value:
-                mail_body: str = SEND_CREDENTIALS_BODY.format(
-                    user_name=name,
-                    credential=email,
-                    password=password,
+                raise UserCreatedButEmailFailedError(
+                    "User created but credentials email unavailable (mailer removed)"
                 )
-                try:
-                    email_service.send_email(
-                        to_emails=[email],
-                        subject=AuthMessages.LOGIN_CREDENTIALS,
-                        body=mail_body,
-                    )
-
-                    self.__auth_service_logger.info(
-                        "User credentials sent successfully: {}".format(user)
-                    )
-                except Exception as exc:
-                    self.__auth_service_logger.warning(
-                        "User created but email failed: {}".format(exc)
-                    )
-                    raise UserCreatedButEmailFailedError(
-                        "User created but email notification failed"
-                    ) from exc
 
             log_entry = AuditLogSchema(
                 action=AuditActions.create,
@@ -560,22 +480,8 @@ class AuthService:
             )
             await self.__audit_service.log_action(log_entry)
 
-            cache_patterns: list = [
-                CacheKeys.ENLIST_AGENTS.format(partner_id),
-                CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-            ]
-
-            await self.__auth_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=cache_patterns,
-            )
-
             return user
-        except PublisherExistsError as ex:
-            self.__auth_service_logger.error(
-                "Publisher already exists for partner: {}".format(str(ex))
-            )
-            raise ex
+
         except CountryNotFoundError as exec:
             self.__auth_service_logger.error(
                 "Country not find while create user: {}".format(str(exec))
@@ -633,7 +539,7 @@ class AuthService:
     ) -> Role:
         try:
             self.__auth_service_logger.info("Attempting to create new role")
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             role = await self.__auth_repository.add_role(role_data, user_id)
             log_entry = AuditLogSchema(
                 action=AuditActions.create,
@@ -659,7 +565,7 @@ class AuthService:
 
     async def get_all_role(
         self,
-        partner_id: int,
+        partner_id: UUID,
         partner_service: PartnerService = Depends(Provide["partner_service"]),
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
@@ -677,7 +583,7 @@ class AuthService:
             custom_roles_cfg = await partner_config_service.get_partner_config_by_key(
                 partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
             )
-            filter_partner_id: Optional[int] = (
+            filter_partner_id: Optional[UUID] = (
                 partner_id if (custom_roles_cfg and custom_roles_cfg.value == True) else None
             )
 
@@ -691,7 +597,7 @@ class AuthService:
             )
             raise ex
 
-    async def get_role_by_id(self, id: int) -> Role:
+    async def get_role_by_id(self, id: UUID) -> Role:
         try:
             self.__auth_service_logger.info("Attempting to get role{}".format(id))
             return await self.__auth_repository.get_role_by_id(id)
@@ -708,12 +614,12 @@ class AuthService:
 
     async def delete_role(
         self,
-        id: int,
+        id: UUID,
         current_user: dict,
     ) -> Role:
         try:
             self.__auth_service_logger.info("Attempting to delete role{}".format(id))
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             deleted_roles = await self.__auth_repository.delete_role(id, user_id)
             log_entry = AuditLogSchema(
                 action=AuditActions.delete,
@@ -725,17 +631,6 @@ class AuthService:
                 details="Role with role id: {} is deleted successfully".format(id),
             )
             await self.__audit_service.log_action(log_entry)
-
-            # Same blast radius as update_role: a deleted global role changes the
-            # effective scope of any user still pointing at it (and team fallback).
-            await self.__auth_service_cache.invalidate_role_derived_user_caches()
-            await self.__auth_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=[
-                    CacheKeys.GRPC_GET_USER_TEAMS.format("*", ""),
-                    CacheKeys.GRPC_GET_PARTNER_TEAMS.format(""),
-                ],
-            )
 
             return deleted_roles
         except RoleNotFoundError as ex:
@@ -756,7 +651,7 @@ class AuthService:
             self.__auth_service_logger.info(
                 "Attempting to create permission: {}".format(user_permission.title)
             )
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             permission = await self.__auth_repository.add_permission(
                 user_permission, user_id
             )
@@ -798,7 +693,7 @@ class AuthService:
 
     async def get_permission_by_id(
         self,
-        id: int,
+        id: UUID,
     ):
         try:
             self.__auth_service_logger.info(
@@ -818,14 +713,14 @@ class AuthService:
 
     async def delete_permission(
         self,
-        id: int,
+        id: UUID,
         current_user: dict,
     ) -> Permission:
         try:
             self.__auth_service_logger.info(
                 "Attempting to delete permission {}".format(id)
             )
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             deleted_permission = await self.__auth_repository.delete_permission(
                 id, user_id
             )
@@ -842,8 +737,7 @@ class AuthService:
             )
             await self.__audit_service.log_action(log_entry)
             # A deleted permission drops out of every user's resolved RBAC set,
-            # which maglo caches per user (GRPC_GET_USER_PERMISSIONS, ONE_WEEK).
-            await self.__auth_service_cache.invalidate_user_permissions_cache()
+            # which downstream caches per user (GRPC_GET_USER_PERMISSIONS, ONE_WEEK).
             return deleted_permission
 
         except PermissionNotFoundError as ex:
@@ -859,7 +753,7 @@ class AuthService:
 
     async def get_user_permission(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> List[str]:
         try:
             self.__auth_service_logger.info(
@@ -873,7 +767,7 @@ class AuthService:
 
     async def get_role_by_user_id(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> dict:
         try:
             self.__auth_service_logger.info(
@@ -910,9 +804,9 @@ class AuthService:
                 raise AuthException(AuthExceptionMsg.USER_NOT_FOUND)
 
             # get current user details
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             user_details: dict = await user_service.get_user_details(current_user_id)
-            current_user_partner_id: int = user_details.get(CurrentUserMap.PARTNER_ID)
+            current_user_partner_id: UUID = user_details.get(CurrentUserMap.PARTNER_ID)
             current_user_role_hierarchy: int = user_details.get(
                 CurrentUserMap.ROLE_HIERARCHY_LEVEL
             )
@@ -961,7 +855,7 @@ class AuthService:
             raise exc
 
     async def get_parent_users_by_role_id(
-        self, role_id: int, partner_id: int
+        self, role_id: UUID, partner_id: UUID
     ) -> list[Contrasts.ParentUserResponse]:
         try:
             self.__auth_service_logger.info(
@@ -988,9 +882,9 @@ class AuthService:
 
     async def get_role_permissions_matrix(
         self,
-        user_id: int,
+        user_id: UUID,
         is_internal_permission: Optional[bool],
-        filter_partner_id: Optional[int] = None,
+        filter_partner_id: Optional[UUID] = None,
         user_service: UserService = Depends(Provide["console_service"]),
     ) -> dict:
         try:
@@ -1035,7 +929,7 @@ class AuthService:
             raise exec
 
     async def update_permission(
-        self, permission_id: int, permission_data: UpdatePermissionRquest
+        self, permission_id: UUID, permission_data: UpdatePermissionRquest
     ):
         try:
             self.__auth_service_logger.info(
@@ -1048,9 +942,8 @@ class AuthService:
                 "Permission with id: {} updated successfully".format(permission_id)
             )
             response = UpdatePermissionResponse.model_validate(updated_permission)
-            # Editing a permission (e.g. its slug) changes the strings maglo's
+            # Editing a permission (e.g. its slug) changes the strings downstream
             # per-user RBAC set resolves to (GRPC_GET_USER_PERMISSIONS, ONE_WEEK).
-            await self.__auth_service_cache.invalidate_user_permissions_cache()
             return response
         except PermissionNotFoundError as exec:
             self.__auth_service_logger.error(
@@ -1068,10 +961,63 @@ class AuthService:
             )
             raise exec
 
+    async def verify_talko_credentials(
+        self,
+        credential: str,
+        password: str,
+        user_service: UserService = Depends(Provide["console_service"]),
+    ) -> dict:
+        """Lightweight credential check for Talko login centralization.
+
+        Validates email+password against console users and returns the
+        profile Talko needs to mint its own session JWT. Creates NO
+        console session/token (Talko owns its sessions).
+        Raises AuthException on any failure (fail-closed, generic message).
+        """
+        try:
+            user: User = await user_service.get_user_by_field(
+                field_name=CurrentUserMap.EMAIL, value=credential.strip().lower()
+            )
+            if not user or not user.is_active:
+                self.__auth_service_logger.warning(
+                    "Talko login failed: user not found {}".format(credential)
+                )
+                raise AuthException(AuthExceptionMsg.INCORRECT_PWD)
+            if not await self.__auth_service_utility.verify_password(
+                password, user.hashed_password
+            ):
+                self.__auth_service_logger.warning(
+                    "Talko login failed: bad password for {}".format(credential)
+                )
+                raise AuthException(AuthExceptionMsg.INCORRECT_PWD)
+            role_hierarchy = None
+            if user.role_id:
+                try:
+                    role = await self.__auth_repository.get_role_by_id(user.role_id)
+                    role_hierarchy = role.hierarchy if role else None
+                except Exception:
+                    role_hierarchy = None
+            return {
+                "user_id": user.id,
+                "partner_id": user.partner_id,
+                "role_id": user.role_id,
+                "role_hierarchy": role_hierarchy,
+                "email": user.email,
+                "name": user.name,
+                "is_active": user.is_active,
+            }
+        except AuthException:
+            raise
+        except Exception as exc:
+            self.__auth_service_logger.error(
+                "Unexpected error during talko credential verify: {}".format(exc)
+            )
+            raise AuthException(AuthExceptionMsg.INCORRECT_PWD) from exc
+
     async def assume_user(
         self,
         request: Request,
-        user_id: int,
+        user_id: UUID,
         svc_name: str = "console",
         console_service: UserService = Depends(Provide["console_service"]),
         partner_config_service: PartnerConfigService = Depends(
@@ -1092,7 +1038,7 @@ class AuthService:
             user = await console_service.get_user_by_id(user_id)
            
             # Extract partner_id
-            partner_id: Optional[int] = getattr(user, "partner_id", None)
+            partner_id: Optional[UUID] = getattr(user, "partner_id", None)
             if not partner_id:
                 raise AuthException("Partner ID not found for user")
 
@@ -1231,19 +1177,11 @@ class AuthService:
             console_categories: list[str] = list(
                 PermissionCategories.CONSOLE_PERMISSIONS.keys()
             )
-            maglo_categories: list[str] = list(
-                PermissionCategories.MAGLO_PERMISSIONS.keys()
-            )
-            babller_categories: list[str] = list(
-                PermissionCategories.BABBLER_PERMISSIONS.keys()
-            )
             talko_categories: list[str] = list(
                 PermissionCategories.TALKO_PERMISSIONS.keys()
             )
             response = {
                 "console": console_categories,
-                "maglo": maglo_categories,
-                "babbler": babller_categories,
                 "talko": talko_categories,
             }
             self.__auth_service_logger.info("Fetched all the categories ")
@@ -1265,12 +1203,8 @@ class AuthService:
         )
 
         try:
-            if service_name == ServiceNames.MAGLO:
-                permission = PermissionCategories.MAGLO_PERMISSIONS
-            elif service_name == ServiceNames.CONSOLE:
+            if service_name == ServiceNames.CONSOLE:
                 permission = PermissionCategories.CONSOLE_PERMISSIONS
-            elif service_name == ServiceNames.BABBLER:
-                permission = PermissionCategories.BABBLER_PERMISSIONS
             elif service_name == ServiceNames.TALKO:
                 permission = PermissionCategories.TALKO_PERMISSIONS
 
@@ -1304,7 +1238,7 @@ class AuthService:
 
     async def update_role(
         self,
-        role_id: int,
+        role_id: UUID,
         role_data: UpdateRoleRequest,
     ):
         try:
@@ -1315,17 +1249,7 @@ class AuthService:
             update_role: Role = await self.__auth_repository.update_role(
                 role_id, **role_data
             )
-            response: RoleResponse = RoleResponse.model_validate(update_role)
-
-            await self.__auth_service_cache.invalidate_role_derived_user_caches()
-            await self.__auth_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=[
-                    CacheKeys.GRPC_GET_USER_TEAMS.format("*", ""),
-                    CacheKeys.GRPC_GET_PARTNER_TEAMS.format(""),
-                ],
-            )
-
+            response = RoleResponse.model_validate(update_role)
             return response
         except RoleNotFoundError as exec:
             self.__auth_service_logger.error(
@@ -1392,24 +1316,7 @@ class AuthService:
     ) -> dict:
         """Handles session + token creation (existing flow)."""
         try:
-            ACCESS_TOKEN_EXPIRE_MINUTES = 15
-            if service_name in [ServiceNames.MAGLO_APP.value, ServiceNames.BABBLER_APP.value]:
-                if trial_expiry:
-                    from datetime import datetime, timezone
-
-                    now = datetime.now(timezone.utc)
-                    trial_expiry_dt = datetime.fromtimestamp(
-                        trial_expiry / 1000, tz=timezone.utc
-                    )
-                    ACCESS_TOKEN_EXPIRE_MINUTES = int(
-                        (trial_expiry_dt - now).total_seconds() / 60
-                    )
-                else:
-                    ACCESS_TOKEN_EXPIRE_MINUTES = int(
-                        ENV.APP_ACCESS_TOKEN_EXPIRE_MINUTES
-                    )
-            else:
-                ACCESS_TOKEN_EXPIRE_MINUTES: int = int(ENV.ACCESS_TOKEN_EXPIRE_MINUTES)
+            ACCESS_TOKEN_EXPIRE_MINUTES: int = int(ENV.ACCESS_TOKEN_EXPIRE_MINUTES)
 
             # create user session
             user_session_id: str = str(uuid.uuid4())
@@ -1447,14 +1354,6 @@ class AuthService:
 
             token_data.update(
                 {
-                    TokenKeys.IS_MAGLO_ENABLED: (
-                        config_map.get(ServiceKeys.IS_MAGLO_ENABLED, False)
-                        and partner_config_map.get(ServiceKeys.IS_MAGLO_ENABLED, False)
-                    ),
-                    TokenKeys.IS_BABBLER_ENABLED: (
-                        config_map.get(ServiceKeys.IS_BABBLER_ENABLED, False)
-                        and partner_config_map.get(ServiceKeys.IS_BABBLER_ENABLED, False)
-                    ),
                     TokenKeys.IS_TALKO_ENABLED: (
                         config_map.get(ServiceKeys.IS_TALKO_ENABLED, False)
                         and partner_config_map.get(ServiceKeys.IS_TALKO_ENABLED, False)
@@ -1462,9 +1361,6 @@ class AuthService:
                     TokenKeys.IS_INTERNAL: user.is_internal,
                     TokenKeys.IS_WALLET_ENABLED: self.__is_wallet_enabled,
                     TokenKeys.IS_OBOTAAI_ENABLED: self.__is_obotaai_enabled,
-                    TokenKeys.IS_MAGLO_APP_ENABLED: config_map.get(
-                        "is_maglo_app_enabled", False
-                    ),
                     TokenKeys.SUBSCRIPTION_MODE: (
                         subscription_mode.value
                         if subscription_mode
@@ -1485,7 +1381,7 @@ class AuthService:
             if access_token:
                 await self.__auth_service_cache.set_cache(
                     key=CacheKeys.TOKEN.format(user.partner_id, access_token),
-                    value=json.dumps(token_data),
+                    value=json.dumps(token_data, default=str),
                     ttl=access_token_expires,
                 )
                 self.__auth_service_logger.info(
@@ -1585,16 +1481,6 @@ class AuthService:
                     await user_repository.update_user(
                         user_id=user.id, current_user_id=user.id, **update_data
                     )
-                cache_patterns: list = [
-                    CacheKeys.HOME_PAGE.format(user.partner_id, ""),
-                    CacheKeys.GRPC_GET_USER_DETAILS.format("*", user.id),
-                ]
-
-                await self.__auth_service_cache.clear_pattern(
-                    prefix=RedisCache.KeysPrefix.MAGLO,
-                    pattern=cache_patterns,
-                )
-
             if payload.is_verify:
                 self.__auth_service_logger.info(
                     f"OTP successfully verified for user {payload.credential}"
@@ -1635,114 +1521,16 @@ class AuthService:
         self,
         email: str,
         otp: str,
-        email_service: EmailService = Depends(Provide["email_service"]),
     ):
         """
-        Sends an OTP email using HTML template.
+        Email OTP retired with the mailer — fail closed (never claim sent).
         """
-        try:
-            self.__auth_service_logger.info(f"Sending OTP {otp} to email {email}")
-            body = {"otp": otp, "OTP_TIMEOUT": OtpConstants.OTP_TIMEOUT}
-
-            email_service.send_email(
-                to_emails=[email],
-                subject="Your One-Time Login Code",
-                body=body,
-                html_template="otp_template.html",
-                channel_key=ENV.MAILMG_NO_REPLY_CHANNEL_KEY,
-            )
-
-            self.__auth_service_logger.info(f"OTP email sent successfully to {email}")
-
-        except Exception as e:
-            self.__auth_service_logger.error(
-                f"Failed to send OTP email to {email}: {str(e)}"
-            )
-            raise
-
-    async def __send_whatsapp_otp(
-        self, phone_number: str, otp: int, auth_token: str
-    ) -> Dict[str, Any]:
-        """
-        Send an OTP message via WhatsApp using the Babbler API.
-
-        Args:
-            phone_number (str): The recipient's WhatsApp phone number.
-            otp (int): The OTP to send.
-            auth_token (str): Authorization token for the Babbler API.
-
-        Returns:
-            Dict[str, Any]: JSON response from the Babbler API if successful.
-
-        Raises:
-            OtpTemplateNotFound: If the OTP template is missing or not approved.
-            httpx.HTTPStatusError: If the HTTP request fails.
-            Exception: For unexpected errors during the process.
-        """
-        try:
-            phone_number: str = phone_number.replace("-", "")
-            self.__auth_service_logger.info(
-                f"Sending OTP {otp} to WhatsApp {phone_number}"
-            )
-
-            async with httpx.AsyncClient(timeout=10) as client:
-                headers: Dict[str, str] = {
-                    "accept": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
-                }
-
-                # Step 1: Fetch templates
-                get_url: str = (
-                    f"{ENV.BABBLER_BASE_URL}/template?phone_number_id={ENV.BABBLER_PHONE_NUMBER_ID}&name={ENV.BABBLER_OTP_TEMPLATE_NAME}"
-                )
-                resp: httpx.Response = await client.get(get_url, headers=headers)
-                try:
-                    resp.raise_for_status()
-                except httpx.HTTPStatusError as e:
-                    self.__auth_service_logger.error(
-                        f"Failed to fetch templates: {e.response.text}"
-                    )
-                    raise
-
-                templates = resp.json().get("data", {}).get("templates", [])
-                if not templates or templates[0].get("status") != "APPROVED":
-                    raise OtpTemplateNotFound(
-                        "OTP template does not exist or is not approved"
-                    )
-
-                # Step 3: Send OTP template
-                send_url: str = f"{ENV.BABBLER_BASE_URL}/template/send"
-
-                payload: Dict[str, Any] = {
-                    "template_name": ENV.BABBLER_OTP_TEMPLATE_NAME,
-                    "sender_no": ENV.BABBLER_OTP_SENDER_NUMBER,
-                    "recipient_no": phone_number,
-                    "header_param": [],
-                    "body_param": [otp],
-                }
-
-                send_resp: httpx.Response = await client.post(
-                    send_url,
-                    headers={**headers, "Content-Type": "application/json"},
-                    json=payload,
-                )
-                send_resp.raise_for_status()
-
-                self.__auth_service_logger.info(
-                    f"OTP {otp} successfully sent to WhatsApp {phone_number}"
-                )
-                return send_resp.json()
-
-        except Exception as e:
-            self.__auth_service_logger.error(
-                f"Error while sending WhatsApp OTP to {phone_number}: {e}"
-            )
-            raise
+        raise OtpMediumMissing("Email OTP is unavailable (mailer removed)")
 
     async def resolve_user_walkthrough_key(
         self,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         user_service: UserService = Depends(Provide["console_service"]),
     ) -> None:
         try:
@@ -1774,70 +1562,7 @@ class AuthService:
                     service_access_dto.svc_name,
                 )
             )
-        if service_access_dto.svc_name == ServiceNames.MAGLO_APP:
-            flag_key = SvcFlagMap.get(service_access_dto.svc_name)
-            flag_value = service_access_dto.config_map.get(flag_key)
-            # fetch partner meta data
-            partner_meta_data: PartnerMetaData = (
-                await partner_meta_data_service.get_partner_meta_data_by_partner_id(
-                    service_access_dto.user.partner_id
-                )
-            )
-            is_maglo_app_enabled: PartnerConfigResponse = (
-                await partner_config_service.get_partner_config_by_key(
-                    partner_id=service_access_dto.user.partner_id,
-                    key=PartnerConfigEnum.IS_MAGLO_APP_ENABLED.value,
-                )
-            )
-
-            if flag_value:
-                # Check maglo app config
-                maglo_enabled = (
-                    is_maglo_app_enabled is not None
-                    and is_maglo_app_enabled.value is True
-                )
-
-                # Check trial validity
-                trial_active = (
-                    partner_meta_data is not None
-                    and partner_meta_data.maglo_app_trail_expiry_time is not None
-                    and partner_meta_data.maglo_app_trail_expiry_time
-                    > DateTimeUtil.get_current_time()
-                )
-
-                if not maglo_enabled and not trial_active:
-                    raise AuthException(AuthExceptionMsg.MAGLO_APP_NOT_ENABLED)
-
-                if not maglo_enabled and trial_active:
-                    service_access_dto.trial_expiry = (
-                        partner_meta_data.maglo_app_trail_expiry_time
-                    )
-
-            flag_key = SvcFlagMap.get(service_access_dto.svc_name)
-            flag_value = service_access_dto.config_map.get(flag_key)
-
-            if flag_value is False:
-                # Distinguish a user who was never enabled for the Maglo app
-                # (e.g. a newly onboarded user with no config row yet) from a
-                # user who explicitly deleted/deactivated their Maglo app
-                # account (a config row exists with value False).
-                existing_config: Optional[UserConfigResponse] = (
-                    await user_config_service.get_user_config_by_key(
-                        service_access_dto.user.id, flag_key
-                    )
-                )
-                if existing_config is None:
-                    raise AuthException(AuthExceptionMsg.USER_MAGLO_APP_NOT_ENABLED)
-                raise AuthException(AuthExceptionMsg.ACCOUNT_DELETED)
-
-        if service_access_dto.svc_name == ServiceNames.BABBLER_APP:
-            # NOTE this is temporarly solution for babbler app once respective user key will update need to remove this validation.
-            config_map = service_access_dto.config_map
-            babbler_enabled = config_map.get("is_babbler_enabled")
-            if babbler_enabled: 
-                return
-            
-        # Verify if user is enbaled for coming login request for a service(maglo,babbler,talko)
+        # Verify if user is enbaled for coming login request for a service(talko)
         if (
             service_access_dto.svc_name != ServiceNames.CONSOLE
             and not service_access_dto.is_assume_user

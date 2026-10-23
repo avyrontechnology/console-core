@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
@@ -27,11 +28,11 @@ class TestUpdateUserDataIsActive:
 
 class TestGetUserDetailResponseIsActive:
     def test_is_active_included(self):
-        res = Contrasts.GetUserDetailResponse(id=1, name="A", is_active=False)
+        res = Contrasts.GetUserDetailResponse(id= UUID("11111111-1111-1111-1111-111111111111"), name="A", is_active=False)
         assert res.is_active is False
 
     def test_is_active_defaults_to_none(self):
-        assert Contrasts.GetUserDetailResponse(id=1, name="A").is_active is None
+        assert Contrasts.GetUserDetailResponse(id= UUID("11111111-1111-1111-1111-111111111111"), name="A").is_active is None
 
 
 class TestUserRoleFilterValidation:

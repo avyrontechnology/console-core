@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -7,9 +8,7 @@ class PartnerMetadata(BaseModel):
     type_of_business: Optional[str] = Field(None, min_length=3, max_length=64)
     years_in_business: Optional[int] = 0
     annual_revenue: Optional[int] = 0
-    is_maglo_enabled: Optional[bool] = False
     is_talko_enabled: Optional[bool] = False
-    is_babbler_enabled: Optional[bool] = False
 
 
 class UpdatePartnerMetaData(PartnerMetadata):
@@ -17,11 +16,8 @@ class UpdatePartnerMetaData(PartnerMetadata):
 
 
 class PartnerMetaDataResponse(PartnerMetadata):
-    id: int
-    maglo_trail_expiry_time: Optional[int] = None
+    id: UUID
     talko_trail_expiry_time: Optional[int] = None
-    babbler_trail_expiry_time: Optional[int] = None
-    maglo_app_trail_expiry_time: Optional[int] = None
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -36,19 +32,15 @@ class PartnerMetaDataResponse(PartnerMetadata):
         return v or 0
 
     @field_validator(
-        "is_maglo_enabled", "is_talko_enabled", "is_babbler_enabled", mode="before"
+        "is_talko_enabled", mode="before"
     )
     def default_bool_fields(cls, v):
         return v if v is not None else False
 
 
 class PartnerPlanDetailsResponse(BaseModel):
-    is_maglo_service_enabled: Optional[bool] = False
-    is_maglo_service_free_trial_enabled: Optional[bool] = False
     is_talko_service_enabled: Optional[bool] = False
     is_talko_service_free_trial_enabled: Optional[bool] = False
-    is_babbler_service_enabled: Optional[bool] = False
-    is_babbler_service_free_trial_enabled: Optional[bool] = False
     can_create_deals: Optional[bool] = False
     can_add_workflow: Optional[bool] = False
     can_view_workflow: Optional[bool] = False
@@ -57,8 +49,6 @@ class PartnerPlanDetailsResponse(BaseModel):
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     from_email: Optional[str] = None
-    is_maglo_app_enabled: Optional[bool] = False
-    is_maglo_app_free_trial_enabled: Optional[bool] = False
     is_mailer_enabled: Optional[bool] = False
     is_gsm_calling_enabled: Optional[bool] = False
     can_view_task_management: Optional[bool] = False
@@ -76,8 +66,6 @@ class PartnerPlanDetailsResponse(BaseModel):
     can_view_finance_management: Optional[bool] = False
     is_add_number_enabled: Optional[bool] = False
     is_obotaai_enabled: Optional[bool] = False
-    is_teams_enabled: Optional[bool] = False
-    is_team_data_partition_enabled: Optional[bool] = False
     can_view_products: Optional[bool] = False
     can_view_inventory: Optional[bool] = False
     can_view_order_management: Optional[bool] = False

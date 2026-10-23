@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request, status
 from src.components.auth.constant import TokenKeys
 from src.components.common.errors import ErrorMsg
 from src.components.common.response import InternalServerErrorResponse, SuccessResponse
+from src.components.rbac.permission_injector import permission_check
 from src.components.partner_home_page.schemas import UserEntityData
 from src.components.partner_home_page.services import PartnerHomePageService
 from src.core.container import Container
@@ -19,6 +21,7 @@ class PartnerHomePageController:
     @partner_home_page_router.get(
         "/partner_homepage_details", response_model=UserEntityData
     )
+    @permission_check("console:get_partner_homepage_details")
     @inject
     async def get_partner_homepage_details(
         request: Request,
@@ -31,8 +34,8 @@ class PartnerHomePageController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(TokenKeys.USER_ID)
-            partner_id: int = current_user.get(TokenKeys.PARTNER)
+            user_id: UUID = current_user.get(TokenKeys.USER_ID)
+            partner_id: UUID = current_user.get(TokenKeys.PARTNER)
             console_service_logger.info(
                 "Fetching partner homepage details for user: {}".format(user_id)
             )
@@ -48,7 +51,7 @@ class PartnerHomePageController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_home_page_router.get("/partner_dashboard_cards")
-    # @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_dashboard_cards")
     @inject
     async def get_partner_dashboard_cards(
         request: Request,
@@ -61,7 +64,7 @@ class PartnerHomePageController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(TokenKeys.USER_ID)
+            current_user_id: UUID = current_user.get(TokenKeys.USER_ID)
             console_service_logger.info("Getting partner dashboard cards")
             dashboard_cards: List[dict] = (
                 await partner_home_page_service.partner_dashboard_cards(current_user_id)

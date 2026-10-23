@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -71,10 +72,10 @@ class TestAuthService:
         )
 
         self.permission_mock = PermissionData(
-            title="edit", slug="maglo_admin_view", description="admin can edit"
+            title="edit", slug="talko_admin_view", description="admin can edit"
         )
 
-        self.current_user_mock = {"user_id": 1}
+        self.current_user_mock = {"user_id": UUID("11111111-1111-1111-1111-111111111111")}
 
         self.login_data = LoginData(
             credential="mockuser@gmail.com", password="password"
@@ -87,57 +88,57 @@ class TestAuthService:
             phone_number="+911234567890",
             name="New User",
             designation="Developer",
-            partner_id=1,
-            role_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
             parent_id=None,
         )
 
         self.permission_response = PermissionResponse(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             title="edit",
-            slug="maglo_admin_view",
+            slug="talko_admin_view",
             description="admin can edit",
             is_active=True,
             is_deleted=False,
         )
 
         self.role_response = RoleResponse(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             name="Admin",
             slug="admin",
             hierarchy=1,
             description="Administrator role with all permissions",
             is_active=True,
             is_deleted=False,
-            created_by=1001,
-            updated_by=1002,
+            created_by= UUID("10011001-1001-1001-1001-100110011001"),
+            updated_by= UUID("10021002-1002-1002-1002-100210021002"),
             deleted_by=None,
         )
 
         self.user_response = UserDataResponse(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             email="newuser@example.com",
             password="password",
             phone_number="+911234567890",
             name="New User",
             designation="Developer",
-            partner_id=1,
-            role_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
             parent_id=None,
         )
 
     def _prepare_get_token_mocks(self, partner_config_service):
         """Shared scaffolding for get_token() happy-path tests."""
         user_mock = AsyncMock()
-        user_mock.id = 1
+        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
         user_mock.name = "testuser"
-        user_mock.partner_id = 1
+        user_mock.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         user_mock.is_internal = False
 
         user_config_service = AsyncMock()
         user_config_service.get_user_configs_by_user_id.return_value = [
-            {"key": "is_maglo_enabled", "value": False},
-            {"key": "is_babbler_enabled", "value": False},
+            {"key": "is_talko_enabled", "value": False},
+            {"key": "is_obotaai_enabled", "value": False},
             {"key": "is_talko_enabled", "value": False},
         ]
 
@@ -165,32 +166,17 @@ class TestAuthService:
             PartnerConfigResponse(
                 key=PartnerConfigEnum.IS_OTP_ENABLED.value,
                 value=False,
-                partner_id=1,
-            ),
-            PartnerConfigResponse(
-                key=PartnerConfigEnum.IS_MAGLO_ENABLED.value,
-                value=True,
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             ),
             PartnerConfigResponse(
                 key=PartnerConfigEnum.IS_TALKO_ENABLED.value,
                 value=False,
-                partner_id=1,
-            ),
-            PartnerConfigResponse(
-                key=PartnerConfigEnum.IS_BABBLER_ENABLED.value,
-                value=True,
-                partner_id=1,
-            ),
-            PartnerConfigResponse(
-                key=PartnerConfigEnum.IS_MAGLO_APP_ENABLED.value,
-                value=True,
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             ),
             PartnerConfigResponse(
                 key=PartnerConfigEnum.IS_OBOTAAI_ENABLED.value,
                 value=True,
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             ),
         ]
 
@@ -208,7 +194,7 @@ class TestAuthService:
         partner_config_service = AsyncMock()
         partner_config_service.get_partner_config_by_key.return_value = (
             PartnerConfigResponse(
-                key=PartnerConfigEnum.IS_OTP_ENABLED.value, value=False, partner_id=1
+                key=PartnerConfigEnum.IS_OTP_ENABLED.value, value=False, partner_id= UUID("11111111-1111-1111-1111-111111111111")
             )
         )
 
@@ -265,7 +251,7 @@ class TestAuthService:
 
         created_user = await self.auth_service.sing_up(
             self.user_data,
-            services="is_maglo_enabled",
+            services="is_talko_enabled",
             user_repository=self.user_repository_mock,
             partner_repository=self.partner_repository_mock,
             partner_config_service=self.partner_config_service_mock,  # <-- important
@@ -286,7 +272,7 @@ class TestAuthService:
         # Set partner limit to match the active license to trigger limit exception
         self.user_repository_mock.partner_user_limit.return_value = 5
         self.user_repository_mock.is_admin_exists.return_value = False
-        services = "is_maglo_enabled"
+        services = "is_talko_enabled"
         partner_config_service_mock = AsyncMock()
         partner_config_service_mock.get_partner_config_by_key.return_value = None
         # Check for AuthException due to partner limit
@@ -310,7 +296,7 @@ class TestAuthService:
 
         self.user_repository_mock.partner_user_limit.return_value = 5
         self.user_repository_mock.is_admin_exists.return_value = True
-        services = "is_maglo_enabled"
+        services = "is_talko_enabled"
         partner_config_service_mock = AsyncMock()
         partner_config_service_mock.get_partner_config_by_key.return_value = None
         with pytest.raises(AuthException) as exc:
@@ -333,79 +319,6 @@ class TestAuthService:
         self.user_repository_mock.add_user.return_value = self.user_response
         self.auth_utility_mock.get_password_hash.return_value = "hashed_password"
 
-    async def test_sign_up_team_role_id_requires_team_id(self) -> None:
-        self._prepare_signup_common_mocks()
-        user_data = self.user_data.model_copy(update={"team_role_id": 5})
-        team_repository_mock = AsyncMock()
-
-        with pytest.raises(AuthException, match="team_role_id requires team_id"):
-            await self.auth_service.sing_up(
-                user_data,
-                services="is_maglo_enabled",
-                user_repository=self.user_repository_mock,
-                partner_repository=self.partner_repository_mock,
-                partner_config_service=AsyncMock(),
-                team_repository=team_repository_mock,
-            )
-        team_repository_mock.get_team_by_id.assert_not_called()
-
-    @staticmethod
-    def _teams_enabled_config_by_key(partner_id, key):
-        return MagicMock(value=key == PartnerConfigEnum.IS_TEAMS_ENABLED.value)
-
-    async def test_sign_up_team_role_id_not_in_catalog_rejected(self) -> None:
-        self._prepare_signup_common_mocks()
-        user_data = self.user_data.model_copy(
-            update={"team_id": 7, "team_role_id": 99}
-        )
-
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.side_effect = (
-            self._teams_enabled_config_by_key
-        )
-        team_repository_mock = AsyncMock()
-        team_repository_mock.get_team_by_id.return_value = MagicMock(id=7)
-        team_repository_mock.is_role_in_partner_catalog.return_value = False
-
-        with pytest.raises(AuthException, match="not part of this partner's role catalog"):
-            await self.auth_service.sing_up(
-                user_data,
-                services="is_maglo_enabled",
-                user_repository=self.user_repository_mock,
-                partner_repository=self.partner_repository_mock,
-                partner_config_service=partner_config_service_mock,
-                team_repository=team_repository_mock,
-            )
-        team_repository_mock.add_member.assert_not_called()
-
-    async def test_sign_up_creates_team_member_with_team_role_id(self) -> None:
-        self._prepare_signup_common_mocks()
-        user_data = self.user_data.model_copy(
-            update={"team_id": 7, "team_role_id": 42}
-        )
-
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.side_effect = (
-            self._teams_enabled_config_by_key
-        )
-        team_repository_mock = AsyncMock()
-        team_repository_mock.get_team_by_id.return_value = MagicMock(id=7)
-        team_repository_mock.is_role_in_partner_catalog.return_value = True
-
-        await self.auth_service.sing_up(
-            user_data,
-            services="is_maglo_enabled",
-            user_repository=self.user_repository_mock,
-            partner_repository=self.partner_repository_mock,
-            partner_config_service=partner_config_service_mock,
-            team_repository=team_repository_mock,
-        )
-
-        team_repository_mock.add_member.assert_awaited_once()
-        call_kwargs = team_repository_mock.add_member.call_args.kwargs
-        assert call_kwargs["team_id"] == 7
-        assert call_kwargs["role_id"] == 42
-
     async def test_add_role_success(self):
         """Test successful role addition."""
         self.auth_repository_mock.add_role.return_value = self.role_response
@@ -419,10 +332,10 @@ class TestAuthService:
     async def test_get_role_by_id(self):
         """Test retrieving a role by ID."""
         self.auth_repository_mock.get_role_by_id.return_value = self.role_mock
-        role = await self.auth_service.get_role_by_id(id=1)
+        role = await self.auth_service.get_role_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert role == self.role_mock
-        self.mock_logger.info.assert_called_with("Attempting to get role1")
+        self.mock_logger.info.assert_called_with("Attempting to get role11111111-1111-1111-1111-111111111111")
 
     async def test_get_all_roles(self):
         """Test retrieving all roles."""
@@ -519,8 +432,8 @@ class TestAuthService:
     async def test_sign_up_partner_not_found(self):
 
         # Mock partner retrieval to raise PartnerNotFoundError
-        self.partner_repository_mock.get_by_id.side_effect = PartnerNotFoundError(1)
-        services = "is_maglo_enabled"
+        self.partner_repository_mock.get_by_id.side_effect = PartnerNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
+        services = "is_talko_enabled"
         with pytest.raises(AuthException) as exc:
             await self.auth_service.sing_up(
                 self.user_data,
@@ -529,9 +442,9 @@ class TestAuthService:
                 partner_repository=self.partner_repository_mock,
             )
 
-        assert str(exc.value) == "Partner not found, id: 1"
+        assert str(exc.value) == "Partner not found, id: 11111111-1111-1111-1111-111111111111"
         self.mock_logger.error.assert_called_with(
-            "Partner not find while create user: Partner not found, id: 1"
+            "Partner not find while create user: Partner not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_sign_up_parent_not_found(self):
@@ -543,12 +456,12 @@ class TestAuthService:
             phone_number="+911234567890",
             name="Test User",
             designation="Developer",
-            partner_id=12,
-            role_id=1,
-            parent_id=1,
+            partner_id= UUID("12121212-1212-1212-1212-121212121212"),
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
+            parent_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
 
-        self.user_repository_mock.get_user_with_role.side_effect = UserNotFoundError(1)
+        self.user_repository_mock.get_user_with_role.side_effect = UserNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
         self.partner_repository_mock.get_by_id.return_value = MagicMock(
             active_license=5
         )
@@ -556,7 +469,7 @@ class TestAuthService:
 
         self.user_repository_mock.partner_user_limit.return_value = 1
         self.user_repository_mock.is_admin_exists.return_value = False
-        services = "is_maglo_enabled"
+        services = "is_talko_enabled"
         partner_config_service_mock = AsyncMock()
         partner_config_service_mock.get_partner_config_by_key.return_value = None
         # Act & Assert
@@ -571,7 +484,7 @@ class TestAuthService:
 
         assert str(exc.value) == "Parent not found"
         self.mock_logger.error.assert_called_with(
-            "Parent not find while create user: User not found, id: 1"
+            "Parent not find while create user: User not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_get_all_permission(self):
@@ -589,12 +502,12 @@ class TestAuthService:
             self.permission_mock
         )
 
-        permission = await self.auth_service.get_permission_by_id(id=1)
+        permission = await self.auth_service.get_permission_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert permission == self.permission_mock
 
     async def test_delete_permission(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.auth_repository_mock.delete_permission.return_value = True
 
@@ -613,9 +526,9 @@ class TestAuthService:
             phone_number="+911234567890",
             name="New User",
             designation="Developer",
-            partner_id=1,
-            role_id=1,
-            parent_id=2,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
+            parent_id= UUID("22222222-2222-2222-2222-222222222222"),
         )
 
         # Mock partner and role hierarchy
@@ -633,7 +546,7 @@ class TestAuthService:
         self.user_repository_mock.get_user_with_role.return_value = (
             parent_user_role_mock
         )
-        services = "is_maglo_enabled"
+        services = "is_talko_enabled"
         partner_config_service_mock = AsyncMock()
         partner_config_service_mock.get_partner_config_by_key.return_value = None
 
@@ -653,7 +566,7 @@ class TestAuthService:
         self.auth_repository_mock.sing_up.side_effect = Exception(
             "Some unexpected error"
         )
-        services = "is_maglo_enabled"
+        services = "is_talko_enabled"
         with pytest.raises(Exception):
             await self.auth_service.sing_up(
                 self.user_data,
@@ -722,8 +635,8 @@ class TestAuthService:
         partner_mock = MagicMock(active_license=10)
         self.partner_repository_mock.get_by_id.return_value = partner_mock
 
-        self.auth_repository_mock.get_role_by_id.side_effect = RoleNotFoundError(1)
-        services = "is_maglo_enabled"
+        self.auth_repository_mock.get_role_by_id.side_effect = RoleNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
+        services = "is_talko_enabled"
         partner_config_service_mock = AsyncMock()
         partner_config_service_mock.get_partner_config_by_key.return_value = None
         # Act & Assert
@@ -736,9 +649,9 @@ class TestAuthService:
                 partner_config_service=partner_config_service_mock,
             )
 
-        assert str(exc.value) == "Role not found, id: 1"
+        assert str(exc.value) == "Role not found, id: 11111111-1111-1111-1111-111111111111"
         self.mock_logger.error.assert_called_with(
-            "Role not find while create user: Role not found, id: 1"
+            "Role not find while create user: Role not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_add_role_general_exception(self):
@@ -765,22 +678,22 @@ class TestAuthService:
     async def test_delete_permission_permission_not_found_exception(self):
 
         self.auth_repository_mock.delete_permission.side_effect = (
-            PermissionNotFoundError(1)
+            PermissionNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
         )
 
         with pytest.raises(AuthException):
             await self.auth_service.delete_permission(
-                id=1, current_user=self.current_user_mock
+                id= UUID("11111111-1111-1111-1111-111111111111"), current_user=self.current_user_mock
             )
 
     async def test_get_permission_by_id_permission_not_found_exception(self):
 
         self.auth_repository_mock.get_permission_by_id.side_effect = (
-            PermissionNotFoundError(1)
+            PermissionNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
         )
 
         with pytest.raises(AuthException):
-            await self.auth_service.get_permission_by_id(id=1)
+            await self.auth_service.get_permission_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_create_permission_auth_exception(self):
 
@@ -808,19 +721,19 @@ class TestAuthService:
 
     async def test_delete_role_not_found_exception(self):
 
-        self.auth_repository_mock.delete_role.side_effect = RoleNotFoundError(1)
+        self.auth_repository_mock.delete_role.side_effect = RoleNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
 
         with pytest.raises(AuthException):
             await self.auth_service.delete_role(
-                id=1, current_user=self.current_user_mock
+                id= UUID("11111111-1111-1111-1111-111111111111"), current_user=self.current_user_mock
             )
 
     async def test_get_role_by_id_not_found_exception(self):
 
-        self.auth_repository_mock.get_role_by_id.side_effect = RoleNotFoundError(1)
+        self.auth_repository_mock.get_role_by_id.side_effect = RoleNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
 
         with pytest.raises(AuthException):
-            await self.auth_service.get_role_by_id(id=1)
+            await self.auth_service.get_role_by_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_get_token_general_exception(self):
 
@@ -843,11 +756,11 @@ class TestAuthService:
         user_mock.email = "user@example.com"
         user_mock.is_active = True
         user_mock.hashed_password = "hashed_old_password"
-        user_mock.partner_id = 1
+        user_mock.partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.user_repository_mock.get_user_by_field.return_value = user_mock
         self.user_repository_mock.get_user_details.return_value = {
-            "partner_id": 1,
+            "partner_id": UUID("11111111-1111-1111-1111-111111111111"),
             "role_hierarchy_level": CurrentUserMap.ADMIN_ROLE_HIERARCHY_LEVEL,
             "email": "admin@example.com",
         }
@@ -912,13 +825,13 @@ class TestAuthService:
         user_mock.email = "user@example.com"
         user_mock.is_active = True
         user_mock.hashed_password = "hashed_old_password"
-        user_mock.partner_id = 1
+        user_mock.partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         user_session_mock = AsyncMock()
         # Mocking repository calls
         self.user_repository_mock.get_user_by_field.return_value = user_mock
         self.user_repository_mock.get_user_details.return_value = {
-            "partner_id": 1,
+            "partner_id": UUID("11111111-1111-1111-1111-111111111111"),
             "role_hierarchy_level": 8,
             "email": "user@example.com",
         }
@@ -943,17 +856,17 @@ class TestAuthService:
 
     async def test_get_parents_by_role_id_success(self):
         """Test successful retrieval of parents by role ID."""
-        role_id = 1
-        partner_id = 100
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
         mock_parents = [
             {
-                "id": 1,
+                "id": UUID("11111111-1111-1111-1111-111111111111"),
                 "name": "Parent One",
                 "designation": "Admin",
                 "email": "parent1@example.com",
             },
             {
-                "id": 2,
+                "id": UUID("22222222-2222-2222-2222-222222222222"),
                 "name": "Parent Two",
                 "designation": "Manager",
                 "email": "parent2@example.com",
@@ -976,8 +889,8 @@ class TestAuthService:
 
     async def test_get_parents_by_role_id_role_not_found(self):
         """Test case when the specified role ID does not exist."""
-        role_id = 999  # Non-existent role ID
-        partner_id = 100
+        role_id= UUID("99999999-9999-9999-9999-999999999999")  # Non-existent role ID
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         self.auth_repository_mock.get_parent_users_by_role_id.side_effect = (
             RoleNotFoundError("Role not found")
@@ -996,8 +909,8 @@ class TestAuthService:
 
     async def test_get_parents_by_role_id_unexpected_error(self):
         """Test case when an unexpected error occurs."""
-        role_id = 1
-        partner_id = 100
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
 
         self.auth_repository_mock.get_parent_users_by_role_id.side_effect = Exception(
             "Unexpected database error"
@@ -1025,12 +938,12 @@ class TestAuthService:
     #         phone_number="+911234567890",
     #         name="Test User",
     #         designation="Developer",
-    #         partner_id=1,
-    #         role_id=1,
+    #         partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+    #         role_id= UUID("11111111-1111-1111-1111-111111111111"),
     #         parent_id=None,
-    #         city_id=101,
-    #         state_id=202,
-    #         country_id=303,
+    #         city_id= UUID("10110110-1101-1011-0110-110110110110"),
+    #         state_id= UUID("20220220-2202-2022-0220-220220220220"),
+    #         country_id= UUID("30330330-3303-3033-0330-330330330330"),
     #     )
 
     #     partner_config_service_mock = AsyncMock()
@@ -1059,7 +972,7 @@ class TestAuthService:
     #     location_service_mock = AsyncMock()
     #     location_service_mock.validate_location_hierarchy.return_value = True
     #     self.user_repository_mock.is_admin_exists.return_value = False
-    #     services = "is_maglo_enabled"
+    #     services = "is_talko_enabled"
     #     # Act
     #     created_user = await self.auth_service.sing_up(
     #         user_data,
@@ -1089,11 +1002,11 @@ class TestAuthService:
         user_mock.email = "user@example.com"
         user_mock.is_active = True
         user_mock.hashed_password = "hashed_old_password"
-        user_mock.partner_id = 1
+        user_mock.partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.user_repository_mock.get_user_by_field.return_value = user_mock
         self.user_repository_mock.get_user_details.return_value = {
-            "partner_id": 1,
+            "partner_id": UUID("11111111-1111-1111-1111-111111111111"),
             "role_hierarchy_level": CurrentUserMap.ADMIN_ROLE_HIERARCHY_LEVEL,
             "email": "admin@example.com",
         }
@@ -1120,10 +1033,10 @@ class TestAuthService:
         )
 
     async def test_get_role_permissions_matrix_success(self):
-        user_id = 123
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
         # Mock roles
-        role1 = MagicMock(id=1)
-        role2 = MagicMock(id=2)
+        role1 = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"))
+        role2 = MagicMock(id= UUID("22222222-2222-2222-2222-222222222222"))
         roles = [role1, role2]
         self.auth_service.get_all_role = AsyncMock(return_value=roles)
 
@@ -1167,12 +1080,12 @@ class TestAuthService:
         request_mock.client = MagicMock()
         request_mock.client.host = "127.0.0.1"
         request_mock.state = MagicMock()
-        request_mock.state.user = {"user_id": 100}
+        request_mock.state.user = {"user_id": UUID("10010010-0100-1001-0010-010010010010")}
 
          # mock console service
         console_service_mock = AsyncMock()
         console_service_mock.get_user_by_id.return_value = MagicMock(
-            id=202, partner_id=1
+            id= UUID("20220220-2202-2022-0220-220220220220"), partner_id= UUID("11111111-1111-1111-1111-111111111111")
         )
 
         #  mock partner config
@@ -1189,7 +1102,7 @@ class TestAuthService:
 
         result = await self.auth_service.assume_user(
             request_mock,
-            202,
+            UUID("20220220-2202-2022-0220-220220220220"),
             console_service=console_service_mock,
             partner_config_service=partner_config_service_mock,
             user_config_service=user_config_service_mock,
@@ -1198,7 +1111,7 @@ class TestAuthService:
         self.auth_service.get_token.assert_awaited_once_with(
             request=request_mock,
             is_assume_user=True,
-            user_id=202,
+            user_id= UUID("20220220-2202-2022-0220-220220220220"),
             svc_name="console",
         )
 
@@ -1210,16 +1123,16 @@ class TestAuthService:
         request_mock.client = MagicMock()
         request_mock.client.host = "127.0.0.1"
         request_mock.state = MagicMock()
-        request_mock.state.user = {"user_id": 100}
+        request_mock.state.user = {"user_id": UUID("10010010-0100-1001-0010-010010010010")}
 
         # mock console service to raise error
         console_service_mock = AsyncMock()
-        console_service_mock.get_user_by_id.side_effect = UserNotFoundError(202)
+        console_service_mock.get_user_by_id.side_effect = UserNotFoundError(UUID("20220220-2202-2022-0220-220220220220"))
 
         with pytest.raises(UserNotFoundError):
             await self.auth_service.assume_user(
                 request_mock,
-                202,
+                UUID("20220220-2202-2022-0220-220220220220"),
                 console_service=console_service_mock,
             )
         async def test__get_user_user_not_found(self):
@@ -1305,7 +1218,7 @@ class TestAuthService:
 
     async def test_get_user_assume_user_success(self):
         # Arrange
-        user_id = 42
+        user_id= UUID("42424242-4242-4242-4242-424242424242")
         user_mock = MagicMock()
         user_mock.is_internal = False
 
@@ -1326,7 +1239,7 @@ class TestAuthService:
 
     async def test_get_user_assume_internal_user(self):
         # Arrange
-        user_id = 42
+        user_id= UUID("42424242-4242-4242-4242-424242424242")
         user_mock = MagicMock()
         user_mock.is_internal = True
 
@@ -1346,12 +1259,12 @@ class TestAuthService:
         self.mock_logger.warning.assert_called_with("Cannot assume internal user")
 
     async def test_update_permission_success(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = UpdatePermissionRquest(
             name="edit_user", description="Edit user permission"
         )
         updated_data = {
-            "id": 1,
+            "id": UUID("11111111-1111-1111-1111-111111111111"),
             "name": "edit_user",
             "description": "Edit user permission",
         }
@@ -1373,7 +1286,7 @@ class TestAuthService:
         assert result.id == updated_data["id"]
 
     async def test_update_permission_permission_not_found(self):
-        permission_id = 999
+        permission_id= UUID("99999999-9999-9999-9999-999999999999")
         request_data = UpdatePermissionRquest(
             name="invalid", description="Invalid permission"
         )
@@ -1385,7 +1298,7 @@ class TestAuthService:
             await self.auth_service.update_permission(permission_id, request_data)
 
     async def test_update_permission_auth_exception(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = UpdatePermissionRquest(
             name="auth_error", description="Auth fails"
         )
@@ -1401,7 +1314,7 @@ class TestAuthService:
         )
 
     async def test_update_permission_unexpected_exception(self):
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = UpdatePermissionRquest(
             name="unknown", description="unknown error"
         )
@@ -1422,10 +1335,6 @@ class TestAuthService:
         PermissionCategories.CONSOLE_PERMISSIONS = {
             "DB Constants": [("get_constants", True)]
         }
-        PermissionCategories.MAGLO_PERMISSIONS = {"Lead": [("get_leads", True)]}
-        PermissionCategories.BABBLER_PERMISSIONS = {
-            "Communication": [("send_message", True)]
-        }
 
         PermissionCategories.TALKO_PERMISSIONS = {"Vendor": [("create_vendor", True)]}
 
@@ -1435,8 +1344,6 @@ class TestAuthService:
         # Assert
         assert result == {
             "console": ["DB Constants"],
-            "maglo": ["Lead"],
-            "babbler": ["Communication"],
             "talko": ["Vendor"],
         }
         self.mock_logger.info.assert_any_call("getting categories name...")
@@ -1447,8 +1354,6 @@ class TestAuthService:
         PermissionCategories.CONSOLE_PERMISSIONS = {
             "Dashboard": [("view_dashboard", True), ("edit_dashboard", False)]
         }
-        PermissionCategories.MAGLO_PERMISSIONS = {}
-        PermissionCategories.BABBLER_PERMISSIONS = {}
 
         # Act
         result = self.auth_service.get_permission_title_by_category_name(
@@ -1497,7 +1402,7 @@ class TestAuthService:
             )
 
     async def test_update_role_success(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = MagicMock()
         request_data.model_dump.return_value = {
             "name": "Updated Admin",
@@ -1522,7 +1427,7 @@ class TestAuthService:
         assert result.id == role_id
 
     async def test_update_role_role_not_found(self):
-        role_id = 99
+        role_id= UUID("99999999-9999-9999-9999-999999999999")
         request_data = MagicMock()
         request_data.model_dump.return_value = {"name": "Not Found"}
         self.auth_repository_mock.update_role.side_effect = RoleNotFoundError(
@@ -1537,7 +1442,7 @@ class TestAuthService:
         )
 
     async def test_update_role_auth_exception(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = MagicMock()
         request_data.model_dump.return_value = {"name": "Auth Error"}
         self.auth_repository_mock.update_role.side_effect = AuthException("Auth failed")
@@ -1550,7 +1455,7 @@ class TestAuthService:
         )
 
     async def test_update_role_unexpected_exception(self):
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         request_data = MagicMock()
         request_data.model_dump.return_value = {"name": "Unexpected"}
         self.auth_repository_mock.update_role.side_effect = Exception(
@@ -1592,8 +1497,8 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_resolve_user_walkthrough_key_success(self):
-        user_id = 10
-        partner_id = 20
+        user_id= UUID("10101010-1010-1010-1010-101010101010")
+        partner_id= UUID("20202020-2020-2020-2020-202020202020")
 
         user_service = AsyncMock()
         user_service.resolve_user_walkthrough_key = AsyncMock(return_value=None)
@@ -1610,8 +1515,8 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_resolve_user_walkthrough_key_exception(self):
-        user_id = 10
-        partner_id = 20
+        user_id= UUID("10101010-1010-1010-1010-101010101010")
+        partner_id= UUID("20202020-2020-2020-2020-202020202020")
 
         user_service = AsyncMock()
         user_service.resolve_user_walkthrough_key = AsyncMock(
@@ -1631,163 +1536,12 @@ class TestAuthService:
 
 
     @pytest.mark.asyncio
-    async def test_validate_maglo_enabled(self):
-        dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
-            svc_name=ServiceNames.MAGLO_APP,
-            config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            partner_config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            is_assume_user=False,
-            trial_expiry=None,
-        )
-
-        partner_meta_data_service = AsyncMock()
-        partner_meta_data_service.get_partner_meta_data_by_partner_id.return_value = None
-
-        partner_config_service = AsyncMock()
-        partner_config_service.get_partner_config_by_key.return_value = MagicMock(value=True)
-
-        await self.auth_service.validate_service_access(
-            dto,
-            partner_config_service,
-            partner_meta_data_service,
-        )
-
-        assert dto.trial_expiry is None
-
-
-    @pytest.mark.asyncio
-    async def test_validate_maglo_trial_active(self):
-        future_time = DateTimeUtil.get_current_time()
-
-        dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
-            svc_name=ServiceNames.MAGLO_APP,
-            config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            partner_config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            is_assume_user=False,
-            trial_expiry=None,
-        )
-
-        partner_meta = MagicMock(maglo_app_trail_expiry_time=future_time+1234)
-
-        partner_meta_data_service = AsyncMock()
-        partner_meta_data_service.get_partner_meta_data_by_partner_id.return_value = partner_meta
-
-        partner_config_service = AsyncMock()
-        partner_config_service.get_partner_config_by_key.return_value = MagicMock(value=False)
-
-        await self.auth_service.validate_service_access(
-            dto,
-            partner_config_service,
-            partner_meta_data_service,
-        )
-
-
-
-    @pytest.mark.asyncio
-    async def test_validate_maglo_disabled_and_trial_expired(self):
-        past_time = DateTimeUtil.get_current_time()
-
-        dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
-            svc_name=ServiceNames.MAGLO_APP,
-            config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            partner_config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            is_assume_user=False,
-            trial_expiry=None,
-        )
-
-        partner_meta = MagicMock(maglo_app_trail_expiry_time=past_time)
-
-        partner_meta_data_service = AsyncMock()
-        partner_meta_data_service.get_partner_meta_data_by_partner_id.return_value = partner_meta
-
-        partner_config_service = AsyncMock()
-        partner_config_service.get_partner_config_by_key.return_value = MagicMock(value=False)
-
-        with pytest.raises(AuthException) as exc:
-            await self.auth_service.validate_service_access(
-                dto,
-                partner_config_service,
-                partner_meta_data_service,
-            )
-
-        assert str(exc.value) == AuthExceptionMsg.MAGLO_APP_NOT_ENABLED
-
-
-    @pytest.mark.asyncio
-    async def test_validate_account_deleted(self):
-        """A user whose Maglo app config row exists with value False (e.g.
-        explicitly deactivated/deleted their Maglo app account) should still
-        get the account-deleted message."""
-        dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
-            svc_name=ServiceNames.MAGLO_APP,
-            config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): False},
-            partner_config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            is_assume_user=False,
-            trial_expiry=None,
-        )
-
-        partner_meta_data_service = AsyncMock()
-        partner_meta_data_service.get_partner_meta_data_by_partner_id.return_value = None
-
-        partner_config_service = AsyncMock()
-        partner_config_service.get_partner_config_by_key.return_value = MagicMock(value=True)
-
-        user_config_service = AsyncMock()
-        user_config_service.get_user_config_by_key.return_value = MagicMock(value=False)
-
-        with pytest.raises(AuthException) as exc:
-            await self.auth_service.validate_service_access(
-                dto,
-                partner_config_service,
-                partner_meta_data_service,
-                user_config_service=user_config_service,
-            )
-
-        assert str(exc.value) == AuthExceptionMsg.ACCOUNT_DELETED
-
-    @pytest.mark.asyncio
-    async def test_validate_maglo_app_not_enabled_for_new_user(self):
-        """A newly onboarded user who never had a Maglo app config row
-        created should get the not-enabled message, not account-deleted."""
-        dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
-            svc_name=ServiceNames.MAGLO_APP,
-            config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): False},
-            partner_config_map={SvcFlagMap.get(ServiceNames.MAGLO_APP): True},
-            is_assume_user=False,
-            trial_expiry=None,
-        )
-
-        partner_meta_data_service = AsyncMock()
-        partner_meta_data_service.get_partner_meta_data_by_partner_id.return_value = None
-
-        partner_config_service = AsyncMock()
-        partner_config_service.get_partner_config_by_key.return_value = MagicMock(value=True)
-
-        user_config_service = AsyncMock()
-        user_config_service.get_user_config_by_key.return_value = None
-
-        with pytest.raises(AuthException) as exc:
-            await self.auth_service.validate_service_access(
-                dto,
-                partner_config_service,
-                partner_meta_data_service,
-                user_config_service=user_config_service,
-            )
-
-        assert str(exc.value) == AuthExceptionMsg.USER_MAGLO_APP_NOT_ENABLED
-
-    @pytest.mark.asyncio
     async def test_service_not_enabled(self):
         dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=99),
-            svc_name=ServiceNames.BABBLER,
-            config_map={SvcFlagMap.get(ServiceNames.BABBLER): False},
-            partner_config_map={SvcFlagMap.get(ServiceNames.BABBLER): True},
+            user=MagicMock(partner_id= UUID("11111111-1111-1111-1111-111111111111"), id= UUID("99999999-9999-9999-9999-999999999999")),
+            svc_name=ServiceNames.TALKO,
+            config_map={SvcFlagMap.get(ServiceNames.TALKO): False},
+            partner_config_map={SvcFlagMap.get(ServiceNames.TALKO): True},
             is_assume_user=False,
             trial_expiry=None,
         )
@@ -1807,10 +1561,10 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_partner_service_not_enabled(self):
         dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=99),
-            svc_name=ServiceNames.BABBLER,
-            config_map={SvcFlagMap.get(ServiceNames.BABBLER): True},
-            partner_config_map={SvcFlagMap.get(ServiceNames.BABBLER): False},
+            user=MagicMock(partner_id= UUID("11111111-1111-1111-1111-111111111111"), id= UUID("99999999-9999-9999-9999-999999999999")),
+            svc_name=ServiceNames.TALKO,
+            config_map={SvcFlagMap.get(ServiceNames.TALKO): True},
+            partner_config_map={SvcFlagMap.get(ServiceNames.TALKO): False},
             is_assume_user=False,
             trial_expiry=None,
         )
@@ -1832,7 +1586,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_console_service_bypass(self):
         dto = ServiceAccessDTO(
-            user=MagicMock(partner_id=1, id=10),
+            user=MagicMock(partner_id= UUID("11111111-1111-1111-1111-111111111111"), id= UUID("10101010-1010-1010-1010-101010101010")),
             svc_name=ServiceNames.CONSOLE,
             config_map={},
             is_assume_user=False,
@@ -1854,12 +1608,12 @@ class TestAuthService:
         request_mock.client = MagicMock()
         request_mock.client.host = "127.0.0.1"
         request_mock.state = MagicMock()
-        request_mock.state.user = {"user_id": 100}
+        request_mock.state.user = {"user_id": UUID("10010010-0100-1001-0010-010010010010")}
 
         # mock console service
         console_service_mock = AsyncMock()
         console_service_mock.get_user_by_id.return_value = MagicMock(
-            id=202, partner_id=1
+            id= UUID("20220220-2202-2022-0220-220220220220"), partner_id= UUID("11111111-1111-1111-1111-111111111111")
         )
 
         # mock partner config
@@ -1882,7 +1636,7 @@ class TestAuthService:
         with pytest.raises(AuthException) as exc:
             await self.auth_service.assume_user(
                 request_mock,
-                202,
+                UUID("20220220-2202-2022-0220-220220220220"),
                 console_service=console_service_mock,
                 partner_config_service=partner_config_service_mock,
                 user_config_service=user_config_service_mock,

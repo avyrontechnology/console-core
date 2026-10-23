@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, List
 
@@ -27,7 +28,7 @@ class PartnerConfigRepository:
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
     async def create_partner_config(
-        self, partner_config_data: PartnerConfigBase, partner_id: int
+        self, partner_config_data: PartnerConfigBase, partner_id: UUID
     ):
         try:
             async with self.__session_factory() as session:
@@ -63,7 +64,7 @@ class PartnerConfigRepository:
             raise exec
 
     async def get_partner_config_by_key(
-        self, partner_id: int | list[int], key: str
+        self, partner_id: UUID | list[UUID], key: str
     ) -> PartnerConfig | Exception:
         try:
             async with self.__session_factory() as session:
@@ -72,7 +73,7 @@ class PartnerConfigRepository:
                         partner_id
                     )
                 )
-                if isinstance(partner_id, int):
+                if not isinstance(partner_id, list):
                     partner_id = [partner_id]
 
                 self.__console_service_logger.info(
@@ -95,9 +96,9 @@ class PartnerConfigRepository:
 
     async def update_partner_config(
         self,
-        partner_id: int,
+        partner_id: UUID,
         update_partner_config_data: PartnerConfigData,
-        current_user_id: int,
+        current_user_id: UUID,
     ) -> PartnerConfig:
         try:
             async with self.__session_factory() as session:
@@ -163,7 +164,7 @@ class PartnerConfigRepository:
             )
             raise exec
 
-    async def get_partner_configs_by_partner_id(self, partner_id: int):
+    async def get_partner_configs_by_partner_id(self, partner_id: UUID):
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -200,8 +201,8 @@ class PartnerConfigRepository:
 
         async with self.__session_factory() as session:
             try:
-                current_user_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
-                partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+                current_user_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
+                partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
                 # Check existing
                 query = select(PartnerConfig).filter(
@@ -237,7 +238,7 @@ class PartnerConfigRepository:
                 )
                 raise exc
 
-    async def has_users_on_partner_roles(self, partner_id: int) -> bool:
+    async def has_users_on_partner_roles(self, partner_id: UUID) -> bool:
         """True if any active user of this partner is assigned to a partner-owned role."""
         async with self.__session_factory() as session:
             result = await session.execute(
@@ -253,7 +254,7 @@ class PartnerConfigRepository:
             )
             return (result.scalar() or 0) > 0
             
-    async def delete_partner_config_by_key(self, partner_id: int, key: str):
+    async def delete_partner_config_by_key(self, partner_id: UUID, key: str):
         """Soft delete a partner config by key."""
         try:
             async with self.__session_factory() as session:

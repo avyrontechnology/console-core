@@ -1,4 +1,5 @@
 import json
+from uuid import UUID
 
 from src.components.notifications.schemas import CommonNotificationMessage
 from src.console_celery.celery_app import celery
@@ -10,18 +11,27 @@ from src.components.notifications.constants import NotificationServiceType
 celery_logger = CeleryLogger.get_logger()
 
 
-def _resolve_notification_user_id(message: dict) -> int | None:
+def _resolve_notification_user_id(message: dict, payload: dict | None = None) -> UUID | None:
     """
     Keep the queue contract tolerant for lead and bulk lead events.
     Some emitters send the recipient under payload.assigned_to, while others
     may already flatten it to payload.user_id or a top-level user_id.
+    Queue payloads carry UUIDs as strings: parse to UUID, None when absent.
     """
-    payload = message.get("payload") or {}
-    return (
+    payload = payload if isinstance(payload, dict) else (message.get("payload") or {})
+    if isinstance(payload, str):
+        payload = {}
+    raw = (
         payload.get("assigned_to")
         or payload.get("user_id")
         or message.get("user_id")
     )
+    if raw is None:
+        return None
+    try:
+        return raw if isinstance(raw, UUID) else UUID(str(raw))
+    except ValueError:
+        return None
 
 
 def _normalize_payload(payload):
@@ -54,7 +64,7 @@ def handle_event(message):
         return
 
     payload = _normalize_payload(event.payload)
-    # Producers (e.g. maglo-service) send the reference identifiers directly
+        # Producers send the reference identifiers directly
     # on `payload` (flat), not nested under a second "payload" key. Fall back
     # to the flat payload itself when there is no nested payload, so the
     # lead reference data (lead_request_id, assigned_to, lead_name, etc.)
@@ -66,7 +76,8 @@ def handle_event(message):
 
     dispatch_notification_task.apply(
         kwargs={
-            "user_id": payload.get("assigned_to") or payload.get("user_id") or message.get("user_id"),
+            # Queue boundary: console IDs are UUIDs; producers send strings.
+            "user_id": _resolve_notification_user_id(message, payload),
             "title": event.heading,
             "body": event.body,
             "data": nested_payload,

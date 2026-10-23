@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import ClassVar, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -6,7 +7,7 @@ from src.components.partner_role.constants import DataScope, RolePlacement
 
 
 class MaterializePartnerRoles(BaseModel):
-    partner_id: int = Field(..., ge=1, le=9999999999999)
+    partner_id: UUID = Field(...)
 
 
 class CreatePartnerRole(BaseModel):
@@ -14,11 +15,11 @@ class CreatePartnerRole(BaseModel):
     description: Optional[str] = Field(default=None, max_length=200)
     data_scope: DataScope = DataScope.SUBTREE
     # Position: place the new role above/below this reference role.
-    reference_role_id: int
+    reference_role_id: UUID
     placement: RolePlacement
     # Permission source: the new role is seeded with this base role's
     # permissions at creation. May differ from reference_role_id.
-    base_role_id: int
+    base_role_id: UUID
 
 
 class UpdatePartnerRole(BaseModel):
@@ -29,13 +30,13 @@ class UpdatePartnerRole(BaseModel):
 
 
 class PartnerRoleResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     slug: str
     hierarchy: int
-    partner_id: Optional[int] = None
+    partner_id: Optional[UUID] = None
     data_scope: Optional[str] = None
-    base_role_id: Optional[int] = None
+    base_role_id: Optional[UUID] = None
     is_internal: bool
     is_active: bool
     description: Optional[str] = None

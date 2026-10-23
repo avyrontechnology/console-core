@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -29,15 +30,15 @@ class TestPartnerMetaDataRepository:
 
         # Test data
         self.partner_metadata = PartnerMetaData(
-            id=1,
-            partner_id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             api_key="5f715b8f-3ae7-4fce-a685-cc0f766359a5",
             timezone="UTC",
             number_of_users=30,
         )
 
         self.partner_metadata_instance = PartnerMetadata(
-            partner_id=123,
+            partner_id= UUID("12312312-3123-1231-2312-312312312312"),
             timezone="UTC",
             number_of_users=50,
         )
@@ -49,7 +50,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_get_partner_metadata_by_id(self):
         """Test getting a partner metadata by ID."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the database execution and response
         mock_scalars = MagicMock()
@@ -68,7 +69,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_add_partner_metadata_repository_already_exists(self):
         """Test adding partner metadata when metadata already exists."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Simulate existing partner metadata by setting return value for is_partner_meta_data_exists
         self.partner_metadata_repository_mock.is_partner_meta_data_exists = AsyncMock(
@@ -82,7 +83,7 @@ class TestPartnerMetaDataRepository:
 
         assert (
             str(exc.value)
-            == "Meta data for partner id: 1 is already exists, you can update it if needed."
+            == "Meta data for partner id: 11111111-1111-1111-1111-111111111111 is already exists, you can update it if needed."
         )
 
     async def test_get_all_partner_meta_data(self):
@@ -106,7 +107,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_add_partner_metadata_repository(self):
         """Test adding new partner metadata."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock is_partner_meta_data_exists to return False
         with patch.object(
@@ -135,7 +136,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_update_partner_meta_data(self):
         """Test updating an existing partner metadata."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = UpdatePartnerMetaData(timezone="PST", number_of_users=100)
 
         # Mock the database execution and response
@@ -158,7 +159,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_update_partner_meta_data_not_found(self):
         """Test updating non-existent partner metadata."""
-        partner_id = 999
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
         update_data = UpdatePartnerMetaData(timezone="PST")
 
         # Mock the session to simulate no existing record
@@ -172,11 +173,11 @@ class TestPartnerMetaDataRepository:
                 partner_id, update_data
             )
 
-        assert str(exc.value) == "Partner Meta Data not found, id: 999"
+        assert str(exc.value) == "Partner Meta Data not found, id: 99999999-9999-9999-9999-999999999999"
 
     async def test_is_partner_exists(self):
         """Test checking if a partner exists with the given partner ID."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the database response to simulate that a partner exists
         mock_scalars = MagicMock()
@@ -198,7 +199,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_is_partner_exists_not_found(self):
         """Test checking if a partner does not exist with the given partner ID."""
-        partner_id = 999
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
 
         # Mock the database response to simulate that no partner was found
         mock_scalars = MagicMock()
@@ -220,7 +221,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_is_partner_exists_database_error(self):
         """Test handling of a database error during partner existence check."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Simulate a SQLAlchemyError when executing the query
         self.session.execute = AsyncMock(side_effect=SQLAlchemyError("Database error"))
@@ -236,7 +237,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_is_partner_meta_data_exists_found(self):
         """Test case where partner metadata exists for the given partner ID."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the database response to simulate that partner metadata exists
         mock_scalars = MagicMock()
@@ -262,7 +263,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_add_partner_metadata_repository_integrity_error(self):
         """Test handling of a database integrity error during partner metadata addition."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock IntegrityError with required arguments
         mock_statement = "INSERT INTO partner_meta_data (...) VALUES (...)"
@@ -280,7 +281,7 @@ class TestPartnerMetaDataRepository:
             )
 
     async def test_add_partner_metadata_repository_generic_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock generic Exception
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
@@ -302,16 +303,16 @@ class TestPartnerMetaDataRepository:
 
     async def test_get_by_partner_id_not_found(self):
         """Test case when partner metadata is not found, expecting PartnerMetaDataNotFoundError."""
-        partner_id = 999
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
 
         self.partner_metadata_repository_mock.get_by_partner_id = AsyncMock(
-            side_effect=PartnerMetaDataNotFoundError(1)
+            side_effect=PartnerMetaDataNotFoundError(UUID("11111111-1111-1111-1111-111111111111"))
         )
 
         with pytest.raises(PartnerMetaDataNotFoundError) as exc:
             await self.partner_metadata_repository_mock.get_by_partner_id(partner_id)
 
-        assert str(exc.value) == "Partner Meta Data not found, id: 1"
+        assert str(exc.value) == "Partner Meta Data not found, id: 11111111-1111-1111-1111-111111111111"
 
     async def test_get_by_partner_id_meta_data_generic_exception(self):
         # Mock generic Exception
@@ -349,10 +350,10 @@ class TestPartnerMetaDataRepository:
     # New tests for get_partner_meta_data_by_partner_ids
     async def test_get_partner_meta_data_by_partner_ids_success_multiple(self):
         """Test fetching multiple partner metadata by partner_ids (multiple results)."""
-        partner_ids = [1, 2]
+        partner_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
         partner_meta_1 = self.partner_metadata
         partner_meta_2 = PartnerMetaData(
-            id=2, partner_id=2, api_key="key2", timezone="UTC", number_of_users=10
+            id= UUID("22222222-2222-2222-2222-222222222222"), partner_id= UUID("22222222-2222-2222-2222-222222222222"), api_key="key2", timezone="UTC", number_of_users=10
         )
 
         mock_scalars = MagicMock()
@@ -401,7 +402,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_get_partner_meta_data_by_partner_ids_none_found(self):
         """Test when partner_ids provided but no metadata found (empty result)."""
-        partner_ids = [999]
+        partner_ids = [UUID("99999999-9999-9999-9999-999999999999")]
 
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
@@ -425,7 +426,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_get_partner_meta_data_by_partner_ids_partial_found(self):
         """Test when some partner_ids have metadata and some do not."""
-        partner_ids = [1, 999]
+        partner_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("99999999-9999-9999-9999-999999999999")]
         partner_meta_1 = self.partner_metadata
 
         mock_scalars = MagicMock()
@@ -450,7 +451,7 @@ class TestPartnerMetaDataRepository:
 
     async def test_get_partner_meta_data_by_partner_ids_exception(self):
         """Test that exceptions during DB execution are logged and re-raised."""
-        partner_ids = [1, 2]
+        partner_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         self.session.execute = AsyncMock(side_effect=Exception("DB Error"))
 

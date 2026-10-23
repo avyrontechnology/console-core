@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, Iterator, Optional
 from asyncpg.exceptions import UniqueViolationError
@@ -35,7 +36,7 @@ class PartnerPermissionRepository:
     async def add_partner_permission(
         self,
         add_data: PartnerPermissionData,
-        user_id: int,
+        user_id: UUID,
     ) -> PartnerRolePermission:
         try:
             async with self.__session_factory() as session:
@@ -160,7 +161,7 @@ class PartnerPermissionRepository:
             )
             raise exc
 
-    async def get_partner_role_permission_by_id(self, id: int) -> PartnerRolePermission:
+    async def get_partner_role_permission_by_id(self, id: UUID) -> PartnerRolePermission:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -211,7 +212,7 @@ class PartnerPermissionRepository:
             raise exc
 
     async def get_by_partner_id(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> Iterator[PartnerRolePermission]:
         try:
             async with self.__session_factory() as session:
@@ -267,7 +268,7 @@ class PartnerPermissionRepository:
             )
             raise exc
 
-    async def delete_partner_role_permission(self, id: int) -> None:
+    async def delete_partner_role_permission(self, id: UUID) -> None:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -316,7 +317,7 @@ class PartnerPermissionRepository:
             )
             raise exc
         
-    async def get_partner_role_permission_matrix(self, key: str, partner_id: int, is_internal_partner: bool)-> Iterator[tuple]:
+    async def get_partner_role_permission_matrix(self, key: str, partner_id: UUID, is_internal_partner: bool)-> Iterator[tuple]:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info("Fetching full partner permission matrix for all the partners with config key: {}".format(key))

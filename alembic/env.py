@@ -52,7 +52,6 @@ from src.components.db_constants.models import (
 )
 from src.components.release_note.models import ReleaseNotes
 from src.components.default_role_permission.models import DefaultRolePermission
-from src.components.digital_assets.models import DigitalAssets
 from src.components.location.models import Cities, Countries, States
 from src.components.partner.models import Partner
 from src.components.partner_config.models import PartnerConfig
@@ -65,7 +64,6 @@ from src.components.wallet.models import Wallet, WalletTransaction
 from src.components.plan.models import Plan
 from src.components.order.models import Order
 from src.components.entitlement.models import Entitlement
-from src.components.team.models import Team, TeamMember
 from src.components.notifications.models import NotificationHistory, NotificationSubscription
 from src.components.grace.models import GracePeriod
 

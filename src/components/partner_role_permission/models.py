@@ -1,5 +1,7 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, UniqueConstraint, func
+import uuid
+from sqlalchemy import Column, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.auth.models import Permission, Role
 from src.components.database.base_model import MetaData
@@ -12,25 +14,25 @@ class PartnerRolePermission(MetaData):
     __tablename__ = "console_partner_role_permission"
 
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )  # FK
     permission_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_permission.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )  # FK
     role_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_role.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )  # FK
     created_by = Column(
-        Integer, ForeignKey("console_users.id", ondelete="RESTRICT")
+        UUID(as_uuid=True), ForeignKey("console_users.id", ondelete="RESTRICT")
     )  # FK
 
     # unidirectional relation

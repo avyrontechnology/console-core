@@ -10,5 +10,4 @@ class ServiceAccessDTO:
     partner_config_map: dict = field(default_factory=dict)
     is_assume_user: Optional[bool] = False
     trial_expiry: Optional[int] = None
-    is_maglo_enabled: Optional[bool] = None
     is_trial_active: Optional[bool] = None

@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, List, Optional
 
@@ -34,7 +35,7 @@ class UserMetadataRepository:
         ] = session_factory
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
-    async def _check_user_exists(self, session: AsyncSession, user_id: int) -> bool:
+    async def _check_user_exists(self, session: AsyncSession, user_id: UUID) -> bool:
         """
         Check if the user exists in the User table.
         """
@@ -47,7 +48,7 @@ class UserMetadataRepository:
 
         return result.scalar_one_or_none() is not None
 
-    async def _check_metadata_exists(self, session: AsyncSession, user_id: int) -> bool:
+    async def _check_metadata_exists(self, session: AsyncSession, user_id: UUID) -> bool:
         """
         Check if metadata already exists for the user in UserMetadata table.
         """
@@ -105,7 +106,7 @@ class UserMetadataRepository:
                 )
 
     async def get_user_metadata_by_user_id(
-        self, user_id: int
+        self, user_id: UUID
     ) -> Optional[List[UserMetadata]]:
         """
         Fetch metadata by user ID.
@@ -150,7 +151,7 @@ class UserMetadataRepository:
             raise ex
 
     async def add_user_metadata(
-        self, user_id: int, user_metadata: CreateUserMetaDataSchema
+        self, user_id: UUID, user_metadata: CreateUserMetaDataSchema
     ) -> UserMetadata:
         """
         Add user metadata after validating the user and checking for duplicate entries.
@@ -200,7 +201,7 @@ class UserMetadataRepository:
 
     async def update_user_meta_data(
         self,
-        user_id: int,
+        user_id: UUID,
         user_metadata: UpdateUserMetadataSchema,
     ) -> UserMetadata:
         try:
@@ -260,7 +261,7 @@ class UserMetadataRepository:
             raise
 
     async def delete_umetadata_by_user_id(
-        self, current_user: dict, user_id: int
+        self, current_user: dict, user_id: UUID
     ) -> None:
         """
         Delete metadata by user_id.

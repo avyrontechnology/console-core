@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import src.pub.partner_wallet_pb2 as partner__wallet__pb2
+from . import partner_wallet_pb2 as partner__wallet__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -40,6 +40,11 @@ class WalletRPCServiceStub(object):
                 request_serializer=partner__wallet__pb2.GetWalletsByPartnerIdsRequest.SerializeToString,
                 response_deserializer=partner__wallet__pb2.GetWalletsByPartnerIdsResponse.FromString,
                 _registered_method=True)
+        self.WalletDebit = channel.unary_unary(
+                '/wallet.WalletRPCService/WalletDebit',
+                request_serializer=partner__wallet__pb2.WalletDebitRequest.SerializeToString,
+                response_deserializer=partner__wallet__pb2.WalletDebitResponse.FromString,
+                _registered_method=True)
 
 
 class WalletRPCServiceServicer(object):
@@ -53,6 +58,13 @@ class WalletRPCServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def WalletDebit(self, request, context):
+        """Idempotent per-call debit (talko ledger unification).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_WalletRPCServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -60,6 +72,11 @@ def add_WalletRPCServiceServicer_to_server(servicer, server):
                     servicer.GetWalletsByPartnerIds,
                     request_deserializer=partner__wallet__pb2.GetWalletsByPartnerIdsRequest.FromString,
                     response_serializer=partner__wallet__pb2.GetWalletsByPartnerIdsResponse.SerializeToString,
+            ),
+            'WalletDebit': grpc.unary_unary_rpc_method_handler(
+                    servicer.WalletDebit,
+                    request_deserializer=partner__wallet__pb2.WalletDebitRequest.FromString,
+                    response_serializer=partner__wallet__pb2.WalletDebitResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -90,6 +107,33 @@ class WalletRPCService(object):
             '/wallet.WalletRPCService/GetWalletsByPartnerIds',
             partner__wallet__pb2.GetWalletsByPartnerIdsRequest.SerializeToString,
             partner__wallet__pb2.GetWalletsByPartnerIdsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def WalletDebit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/wallet.WalletRPCService/WalletDebit',
+            partner__wallet__pb2.WalletDebitRequest.SerializeToString,
+            partner__wallet__pb2.WalletDebitResponse.FromString,
             options,
             channel_credentials,
             insecure,

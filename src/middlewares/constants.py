@@ -1,22 +1,17 @@
-from typing import List, Tuple
+from typing import FrozenSet
 
-DEV_ERROR_MAIL_RECIPENTS: List[str] = ["sahil.jha@makunaiglobal.ai"]
-QA_ERROR_MAIL_RECIPENTS: List[str] = ["sahil.jha@makunaiglobal.ai"]
-PROD_ERROR_MAIL_RECIPENTS: List[str] = [
-    "abhinay.singh@makunaiglobal.ai",
-    "aditya.tiwari@makunaiglobal.ai",
-    "aditya@makunaiglobal.ai",
-    "afzal.ahmad@makunaiglobal.ai",
-    "anmol.tanwar@makunaiglobal.ai",
-    "naved.ahemd@makunaiglobal.ai",
-    "roshan.singh@makunaiglobal.ai",
-    "sahil.jha@makunaiglobal.ai",
-    "santosh.mishra@makunaiglobal.ai",
-    "vinayakp.tripathi@makunaiglobal.ai",
-    "shashank@makunaiglobal.ai",
-]
+# Public-catalog routes that work without a token (pricing pages etc.).
+# Matched by ROUTE NAME (function name), never by substring — see middleware.
+OPTIONAL_AUTH_ROUTES: FrozenSet[str] = frozenset(
+    {
+        "get_active_plans",  # GET /get-plans
+        "get_billing_details",  # POST /billing-details
+        "get_modules",  # GET /get-modules
+    }
+)
 
-OPTIONAL_AUTH_PATHS: Tuple[str, ...] = (
+# Kept for backward-compat importers; prefer OPTIONAL_AUTH_ROUTES.
+OPTIONAL_AUTH_PATHS: tuple = (
     "get-plans",
     "billing-details",
     "get-modules",
@@ -24,12 +19,10 @@ OPTIONAL_AUTH_PATHS: Tuple[str, ...] = (
 
 
 class Product:
-    MAGLO = "maglo"
-    BABBLER = "babbler"
     TALKO = "talko"
     CONSOLE = "console"
 
-    VALID_VALUES = frozenset({MAGLO, BABBLER, TALKO, CONSOLE})
+    VALID_VALUES = frozenset({TALKO, CONSOLE})
 
 
 class Platform:

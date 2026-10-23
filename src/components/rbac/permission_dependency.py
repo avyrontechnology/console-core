@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 
 from dependency_injector.wiring import Provide, inject
@@ -5,7 +6,11 @@ from fastapi import Depends, HTTPException, Request
 
 from src.components.auth.repositories import AuthRepository
 from src.components.auth.util import AuthUtility
+from src.components.audit_log.schema import AuditLogSchema
+from src.components.audit_log.services import AuditService
+from src.components.common.actions import AuditActions
 from src.components.common.constants import CurrentUserMap
+from src.components.common.resources import Resource
 from src.components.partner_config.constants import PartnerConfigEnum
 from src.components.partner_config.schemas import PartnerConfigResponse
 from src.components.partner_config.services import PartnerConfigService
@@ -34,6 +39,7 @@ class PermissionDependency:
         ),
         redis_pool: RedisCache = Provide[Container.redis_pool],
         logger: ConsoleServiceLogger = Provide[Container.console_service_logger],
+        audit_service: AuditService = Depends(Provide[Container.audit_service]),
     ):
 
         logger.debug("checking permission: {}".format(self.permission_name))
@@ -48,16 +54,32 @@ class PermissionDependency:
             return
 
         try:
+            # API-key requests: the key's scopes gate FIRST (deny-all when
+            # empty/missing), then the normal user-permission check runs on
+            # the impersonated user_id.
+            api_key_ctx = getattr(request.state, "api_key", None)
+            if isinstance(api_key_ctx, dict):
+                key_scopes = api_key_ctx.get("scopes") or []
+                if self.permission_name not in key_scopes:
+                    logger.error(
+                        f"Permission denied by API-key scopes: {self.permission_name} not in key scopes"
+                    )
+                    raise HTTPException(
+                        status_code=403, detail=PermissionErrorText.PERMISSION_DENIED
+                    )
+
             # current_user is available in request's state (Extracted from the token)
             current_user: dict = await AuthUtility.get_current_user(request)
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             permission_list: list[str] = (
                 await partner_config_service.custom_role_permission_check(
                     current_user_id
                 )
             )
-            logger.info(
-                "user-{} have permissions {}".format(current_user_id, permission_list)
+            logger.debug(
+                "user-{} has {} permissions".format(
+                    current_user_id, len(permission_list)
+                )
             )
 
             # Check if the required permission is in the user's permissions list
@@ -65,6 +87,20 @@ class PermissionDependency:
                 logger.error(
                     f"Permission denied: {self.permission_name} not in user's permissions"
                 )
+                try:
+                    await audit_service.log_action(
+                        AuditLogSchema(
+                            action=AuditActions.deny,
+                            resource=Resource.authentication,
+                            resource_id=self.permission_name,
+                            performed_by=current_user_id,
+                            details="Permission denied for user {} on {}".format(
+                                current_user_id, self.permission_name
+                            ),
+                        )
+                    )
+                except Exception:
+                    pass
                 raise HTTPException(
                     status_code=403, detail=PermissionErrorText.PERMISSION_DENIED
                 )
@@ -77,7 +113,16 @@ class PermissionDependency:
             raise http_forbidden
 
         except Exception as exc:
+            # Auth failures (missing/invalid identity) are 401; anything
+            # else (DB/Redis down) is 503 — never 404, which misdirects
+            # clients into retrying the wrong thing and misfires alerts.
+            from src.components.common.response import UnauthorizedResponse
+
             logger.error(f"Permission check failed: {str(exc)}")
+            if isinstance(exc, UnauthorizedResponse) or "unauthorized" in str(
+                exc
+            ).lower():
+                raise HTTPException(status_code=401, detail="Unauthorized User")
             raise HTTPException(
-                status_code=404, detail=PermissionErrorText.INTERNAL_SERVER_ERROR
+                status_code=503, detail=PermissionErrorText.INTERNAL_SERVER_ERROR
             )

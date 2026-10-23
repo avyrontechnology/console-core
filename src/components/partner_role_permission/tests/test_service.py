@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 import collections
 from src.components.auth.constant import PermissionAttributes
@@ -24,24 +25,22 @@ class TestPartnerPermissionService:
         self.audit_service_mock = AsyncMock()
         self.logger_mock = mock_logger
         self.partner_perm_repository_mock = AsyncMock()
-        self.cache_helper_mock = AsyncMock()
 
         self.partner_role_perm_service_mock = PartnerPermissionService(
             audit_service=self.audit_service_mock,
             console_service_logger=self.logger_mock,
             partner_perm_repository=self.partner_perm_repository_mock,
-            cache_helper=self.cache_helper_mock,
         )
 
-        self.add_data = PartnerPermissionData(partner_id=1, role_id=2, permission_id=3)
+        self.add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("22222222-2222-2222-2222-222222222222"), permission_id= UUID("33333333-3333-3333-3333-333333333333"))
 
         # Mock data
         self.partner_permission_data = PartnerPermissionData(
-            partner_id=1, role_id=2, permission_id=3
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("22222222-2222-2222-2222-222222222222"), permission_id= UUID("33333333-3333-3333-3333-333333333333")
         )
         self.current_user = {"id": None}
         self.partner_role_permission = PartnerRolePermission(
-            id=1, partner_id=1, role_id=2, permission_id=3
+            id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("22222222-2222-2222-2222-222222222222"), permission_id= UUID("33333333-3333-3333-3333-333333333333")
         )
 
     async def test_add_partner_permission(self):
@@ -67,7 +66,7 @@ class TestPartnerPermissionService:
         role_service_mock.get_role_by_id.return_value = MagicMock(is_internal=False)
 
         # Update current_user to include required keys
-        self.current_user = {"user_id": 42, "partner_id": 1}
+        self.current_user = {"user_id": UUID("42424242-4242-4242-4242-424242424242"), "partner_id": UUID("11111111-1111-1111-1111-111111111111")}
 
         # Call the method
         result = await self.partner_role_perm_service_mock.add_partner_permission(
@@ -89,8 +88,6 @@ class TestPartnerPermissionService:
             self.current_user["partner_id"],
             PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED,
         )
-        # Granting a permission must bust maglo's per-user RBAC cache.
-        self.cache_helper_mock.invalidate_user_permissions_cache.assert_awaited_once()
 
     async def test_get_partner_role_permission(self):
         # Mock repository response
@@ -178,7 +175,7 @@ class TestPartnerPermissionService:
         role_service_mock.get_role_by_id.return_value = MagicMock(is_internal=False)
 
         # Update current_user to include required keys
-        self.current_user = {"user_id": 42, "partner_id": 1}
+        self.current_user = {"user_id": UUID("42424242-4242-4242-4242-424242424242"), "partner_id": UUID("11111111-1111-1111-1111-111111111111")}
 
         # Call the method and expect an exception
         with pytest.raises(PartnerRolePermissionException):
@@ -251,7 +248,7 @@ class TestPartnerPermissionService:
 
         with pytest.raises(Exception):
             await self.partner_role_perm_service_mock.get_partner_role_permission_by_id(
-                id=1
+                id= UUID("11111111-1111-1111-1111-111111111111")
             )
 
     async def test_get_by_partner_id_general_exception(self):
@@ -261,7 +258,7 @@ class TestPartnerPermissionService:
         )
 
         with pytest.raises(Exception):
-            await self.partner_role_perm_service_mock.get_by_partner_id(id=1)
+            await self.partner_role_perm_service_mock.get_by_partner_id(id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_delete_partner_role_permission_general_exception(self):
 
@@ -302,7 +299,7 @@ class TestPartnerPermissionService:
             )
         )
 
-        self.current_user = {"user_id": 42, "partner_id": 1}
+        self.current_user = {"user_id": UUID("42424242-4242-4242-4242-424242424242"), "partner_id": UUID("11111111-1111-1111-1111-111111111111")}
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock(
             is_internal=False
@@ -347,7 +344,7 @@ class TestPartnerPermissionService:
             role_name="Admin",
             category="Category1",
             slug="perm_slug",
-            permission_id=101,
+            permission_id= UUID("10110110-1101-1011-0110-110110110110"),
             created_at=1234567890,
             description="desc",
             display_text="Permission Display",
@@ -375,7 +372,7 @@ class TestPartnerPermissionService:
 
         # Call the method under test
         result = await self.partner_role_perm_service_mock.get_partner_permissions_matrix_by_config(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_config_service=mock_partner_config_service,
             partner_service=mock_partner_service,
         )
@@ -387,7 +384,7 @@ class TestPartnerPermissionService:
         assert "perm_slug" in result["PartnerA"]["Admin"]["Category1"]
 
         perm = result["PartnerA"]["Admin"]["Category1"]["perm_slug"]
-        assert perm[PermissionAttributes.ID] == 101
+        assert perm[PermissionAttributes.ID] == UUID("10110110-1101-1011-0110-110110110110")
         assert perm[PermissionAttributes.CREATED_AT] == 1234567890
         assert perm[PermissionAttributes.DESCRIPTION] == "desc"
         assert perm[PermissionAttributes.DISPLAY_TEXT] == "Permission Display"
@@ -416,13 +413,13 @@ class TestPartnerPermissionService:
 
         with pytest.raises(PartnerConfigException):
             await self.partner_role_perm_service_mock.get_partner_permissions_matrix_by_config(
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 partner_service=mock_partner_service,
                 partner_config_service=partner_config_service_mock_none,
             )
 
         partner_config_service_mock_none.get_partner_config_by_key.assert_called_once_with(
-            1, PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED.value
+            UUID("11111111-1111-1111-1111-111111111111"), PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED.value
         )
         self.logger_mock.error.assert_called()
 
@@ -434,13 +431,13 @@ class TestPartnerPermissionService:
 
         with pytest.raises(PartnerConfigException):
             await self.partner_role_perm_service_mock.get_partner_permissions_matrix_by_config(
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 partner_service=mock_partner_service,
                 partner_config_service=partner_config_service_mock_false,
             )
 
         partner_config_service_mock_false.get_partner_config_by_key.assert_called_with(
-            1, PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED.value
+            UUID("11111111-1111-1111-1111-111111111111"), PartnerConfigEnum.IS_CUSTOM_ROLE_PERMISSION_ENABLED.value
         )
         self.logger_mock.error.assert_called()
 
@@ -455,7 +452,7 @@ class TestPartnerPermissionService:
 
         with pytest.raises(PartnerRolePermissionException) as exc_info:
             await self.partner_role_perm_service_mock.get_partner_permissions_matrix_by_config(
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 partner_service=mock_partner_service,
                 partner_config_service=mock_partner_config_service,
             )
@@ -472,7 +469,7 @@ class TestPartnerPermissionService:
         mock_partner_service.get_partner_by_id.side_effect = MagicMock(is_internal=False)
         with pytest.raises(Exception):
             await self.partner_role_perm_service_mock.get_partner_permissions_matrix_by_config(
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 is_internal_permission=True,
                 partner_service=mock_partner_service,
             )

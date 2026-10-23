@@ -1,13 +1,7 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Enum,
-    ForeignKey,
-    Integer,
-    String,
-    UniqueConstraint,
-)
+import uuid
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils import force_auto_coercion
 
 from src.components.database.base_model import MetaData
@@ -29,7 +23,7 @@ class PartnerAddress(MetaData):
     pincode = Column(String, nullable=False)
     is_address_same = Column(Boolean, default=False, nullable=True)
     partner_id = Column(
-        Integer, ForeignKey("console_partners.id", ondelete="RESTRICT"), nullable=False
+        UUID(as_uuid=True), ForeignKey("console_partners.id", ondelete="RESTRICT"), nullable=False
     )
     # bidirectional relation to partner
     partner = relationship("Partner", back_populates="addresses")

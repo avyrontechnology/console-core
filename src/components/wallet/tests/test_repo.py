@@ -1,3 +1,4 @@
+from uuid import UUID
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
@@ -27,16 +28,16 @@ class TestWalletRepository:
 
         # Sample wallet and transaction
         self.wallet = Wallet(
-            id=1,
-            partner_id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             balance=Decimal("100.00"),
             frozen_balance=Decimal("20.00"),
         )
 
         self.mock_transaction = WalletTransaction(
-            id=1,
-            wallet_id=1,
-            service_name="Babbler",
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            wallet_id= UUID("11111111-1111-1111-1111-111111111111"),
+            service_name="Talko",
             transaction_type="CREDIT",
             description="Test transaction",
             amount=100.0,
@@ -55,7 +56,7 @@ class TestWalletRepository:
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result = await self.wallet_repository.fetch_transactions(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=0,
             end_date=9999999999,
             service_name=None,
@@ -63,7 +64,7 @@ class TestWalletRepository:
         )
 
         assert isinstance(result, list)
-        assert result[0]["service_name"] == "Babbler"
+        assert result[0]["service_name"] == "Talko"
         assert result[0]["transaction_type"] == "CREDIT"
         assert result[0]["amount"] == 100.0
         assert result[0]["remaining_balance"] == 900.0
@@ -78,15 +79,15 @@ class TestWalletRepository:
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result = await self.wallet_repository.fetch_transactions(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=0,
             end_date=9999999999,
-            service_name="Babbler",
+            service_name="Talko",
             transaction_type="CREDIT",
         )
 
         assert len(result) == 1
-        assert result[0]["service_name"] == "Babbler"
+        assert result[0]["service_name"] == "Talko"
         assert result[0]["transaction_type"] == "CREDIT"
 
     async def test_fetch_transactions_no_transactions(self):
@@ -99,7 +100,7 @@ class TestWalletRepository:
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result = await self.wallet_repository.fetch_transactions(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             start_date=0,
             end_date=9999999999,
             service_name=None,
@@ -114,7 +115,7 @@ class TestWalletRepository:
 
         with pytest.raises(Exception) as exc_info:
             await self.wallet_repository.fetch_transactions(
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 start_date=0,
                 end_date=9999999999,
                 service_name=None,
@@ -123,7 +124,7 @@ class TestWalletRepository:
 
         assert str(exc_info.value) == "Unexpected Error"
         self.mock_logger.error.assert_called_with(
-            "Error fetching transactions for partner_id=1 | Error: Unexpected Error"
+            "Error fetching transactions for partner_id=11111111-1111-1111-1111-111111111111 | Error: Unexpected Error"
         )
 
     async def test_perform_wallet_transaction_credit_success(self):
@@ -143,11 +144,11 @@ class TestWalletRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.wallet_repository.perform_wallet_transaction(
-            current_user_id=1,
-            partner_id=1,
+            current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             transaction_type=TransactionType.CREDIT,
             amount=Decimal("50.00"),
-            service_name=ServiceName.BABBLER,
+            service_name=ServiceName.TALKO,
             description="Credit test",
         )
 
@@ -156,21 +157,21 @@ class TestWalletRepository:
         assert result.currency == "INR"
         self.session.commit.assert_awaited_once()
         self.mock_logger.info.assert_any_call(
-            "Transaction committed successfully for partner_id=1"
+            "Transaction committed successfully for partner_id=11111111-1111-1111-1111-111111111111"
         )
 
 
     async def test_get_wallets_by_partner_ids_success(self):
         wallet_1 = Wallet(
-            id=1,
-            partner_id=101,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("10110110-1101-1011-0110-110110110110"),
             balance=Decimal("100.00"),
             frozen_balance=Decimal("10.00"),
         )
 
         wallet_2 = Wallet(
-            id=2,
-            partner_id=102,
+            id= UUID("22222222-2222-2222-2222-222222222222"),
+            partner_id= UUID("10210210-2102-1021-0210-210210210210"),
             balance=Decimal("200.00"),
             frozen_balance=Decimal("20.00"),
         )
@@ -184,15 +185,15 @@ class TestWalletRepository:
         self.session.execute = AsyncMock(return_value=mock_result)
 
         result = await self.wallet_repository.get_wallets_by_partner_ids(
-            [101, 102]
+            [UUID("10110110-1101-1011-0110-110110110110"), UUID("10210210-2102-1021-0210-210210210210")]
         )
 
         assert len(result) == 2
-        assert result[0].partner_id == 101
-        assert result[1].partner_id == 102
+        assert result[0].partner_id== UUID("10110110-1101-1011-0110-110110110110")
+        assert result[1].partner_id== UUID("10210210-2102-1021-0210-210210210210")
 
         self.mock_logger.info.assert_called_with(
-            "Fetching wallets for partner_ids=[101, 102]"
+            "Fetching wallets for partner_ids=[10110110-1101-1011-0110-110110110110, 10210210-2102-1021-0210-210210210210]"
         )
 
     async def test_get_wallets_by_partner_ids_empty_result(self):
@@ -205,13 +206,13 @@ class TestWalletRepository:
         self.session.execute = AsyncMock(return_value=mock_result)
 
         result = await self.wallet_repository.get_wallets_by_partner_ids(
-            [999]
+            [UUID("99999999-9999-9999-9999-999999999999")]
         )
 
         assert result == []
 
         self.mock_logger.info.assert_called_with(
-            "Fetching wallets for partner_ids=[999]"
+            "Fetching wallets for partner_ids=[99999999-9999-9999-9999-999999999999]"
         )
 
     async def test_get_wallets_by_partner_ids_database_exception(self):
@@ -238,7 +239,7 @@ class TestWalletRepository:
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        await self.wallet_repository.get_wallets_by_partner_ids([1])
+        await self.wallet_repository.get_wallets_by_partner_ids([UUID("11111111-1111-1111-1111-111111111111")])
 
         self.session.execute.assert_awaited_once()
 
@@ -253,11 +254,11 @@ class TestWalletRepository:
 
         with pytest.raises(InsufficientBalanceError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=1,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 transaction_type=TransactionType.DEBIT,
                 amount=Decimal("1190.00"),
-                service_name=ServiceName.BABBLER,
+                service_name=ServiceName.TALKO,
             )
 
     async def test_perform_wallet_transaction_wallet_not_found(self):
@@ -268,11 +269,11 @@ class TestWalletRepository:
 
         with pytest.raises(WalletNotFoundError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=99,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("99999999-9999-9999-9999-999999999999"),
                 transaction_type=TransactionType.CREDIT,
                 amount=Decimal("10.00"),
-                service_name=ServiceName.BABBLER,
+                service_name=ServiceName.TALKO,
             )
 
     async def test_perform_wallet_transaction_sqlalchemy_error(self):
@@ -281,11 +282,11 @@ class TestWalletRepository:
 
         with pytest.raises(SQLAlchemyError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=1,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 transaction_type=TransactionType.CREDIT,
                 amount=Decimal("10.00"),
-                service_name=ServiceName.BABBLER,
+                service_name=ServiceName.TALKO,
             )
         self.mock_logger.error.assert_called()
 
@@ -304,11 +305,11 @@ class TestWalletRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.wallet_repository.perform_wallet_transaction(
-            current_user_id=1,
-            partner_id=1,
+            current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             transaction_type=TransactionType.DEBIT,
             amount=Decimal("50.00"),
-            service_name=ServiceName.BABBLER,
+            service_name=ServiceName.TALKO,
             description="Debit test",
             debit_from_wallet=True,
         )
@@ -331,11 +332,11 @@ class TestWalletRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.wallet_repository.perform_wallet_transaction(
-            current_user_id=1,
-            partner_id=1,
+            current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             transaction_type=TransactionType.FREEZE,
             amount=Decimal("30.00"),
-            service_name=ServiceName.MAGLO,
+            service_name=ServiceName.TALKO,
             description="Freeze test",
         )
 
@@ -357,8 +358,8 @@ class TestWalletRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.wallet_repository.perform_wallet_transaction(
-            current_user_id=1,
-            partner_id=1,
+            current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             transaction_type=TransactionType.UNFREEZE,
             amount=Decimal("20.00"),
             service_name=ServiceName.TALKO,
@@ -380,11 +381,11 @@ class TestWalletRepository:
 
         with pytest.raises(InsufficientBalanceError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=1,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 transaction_type=TransactionType.DEBIT,
                 amount=Decimal("150.00"),
-                service_name=ServiceName.BABBLER,
+                service_name=ServiceName.TALKO,
             )
 
     @pytest.mark.asyncio
@@ -399,11 +400,11 @@ class TestWalletRepository:
 
         with pytest.raises(InsufficientBalanceError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=1,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 transaction_type=TransactionType.FREEZE,
                 amount=Decimal("110.00"),
-                service_name=ServiceName.MAGLO,
+                service_name=ServiceName.TALKO,
             )
 
     @pytest.mark.asyncio
@@ -418,8 +419,8 @@ class TestWalletRepository:
 
         with pytest.raises(InsufficientBalanceError):
             await self.wallet_repository.perform_wallet_transaction(
-                current_user_id=1,
-                partner_id=1,
+                current_user_id= UUID("11111111-1111-1111-1111-111111111111"),
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 transaction_type=TransactionType.UNFREEZE,
                 amount=Decimal("50.00"),
                 service_name=ServiceName.TALKO,
@@ -476,7 +477,7 @@ class TestWalletRepository:
                 "partner_id": 1,
                 "balance": Decimal("100.00"),
                 "frozen_balance": Decimal("20.00"),
-                "service": "Babbler",
+                "service": "Talko",
                 "amount": 100.0,
                 "description": "Test transaction",
                 "type": "CREDIT",
@@ -530,7 +531,7 @@ class TestWalletRepository:
         await self.wallet_repository.fetch_wallet_transaction_report(
             start_date=123,
             end_date=456,
-            service_name="Babbler",
+            service_name="Talko",
         )
 
         self.session.execute.assert_awaited_once()
@@ -570,7 +571,7 @@ class TestWalletRepository:
         await self.wallet_repository.fetch_wallet_transaction_report(
             start_date=123,
             end_date=456,
-            service_name="Babbler",
+            service_name="Talko",
             transaction_type="CREDIT",
         )
 
@@ -590,7 +591,7 @@ class TestWalletRepository:
         await self.wallet_repository.fetch_wallet_transaction_report(
             start_date=123,
             end_date=456,
-            service_name="Babbler",
+            service_name="Talko",
         )
 
         query = self.session.execute.call_args.args[0]
@@ -601,7 +602,7 @@ class TestWalletRepository:
             )
         )
 
-        assert "Babbler" in sql
+        assert "Talko" in sql
 
     @pytest.mark.asyncio
     async def test_fetch_wallet_transaction_report_service_filter_query(self):
@@ -615,14 +616,14 @@ class TestWalletRepository:
         await self.wallet_repository.fetch_wallet_transaction_report(
             start_date=123,
             end_date=456,
-            service_name="Babbler",
+            service_name="Talko",
         )
 
         query = self.session.execute.call_args.args[0]
 
         compiled = query.compile()
 
-        assert "Babbler" in compiled.params.values()
+        assert "Talko" in compiled.params.values()
 
 
     @pytest.mark.asyncio

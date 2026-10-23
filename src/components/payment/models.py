@@ -1,5 +1,7 @@
-from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Numeric, String
+import uuid
+from sqlalchemy import JSON, Column, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 
@@ -12,13 +14,13 @@ class Payment(MetaData):
     __tablename__ = "console_payments"
 
     partner_id = Column(
-        BigInteger,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     order_id = Column(
-        BigInteger,
+        UUID(as_uuid=True),
         ForeignKey("console_orders.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

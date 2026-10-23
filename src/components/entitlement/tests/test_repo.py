@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -26,15 +27,15 @@ class TestEntitlementRepository:
     # -------------------------------------------------------------------------
     async def test_create_entitlement_success(self):
         data = EntitlementCreate(
-            order_id=10,
-            partner_id=1,
+            order_id= UUID("10101010-1010-1010-1010-101010101010"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             service_name="TEST_SERVICE",
             modules=["mod1", "mod2"],
             limits={"A": "B"},
             start_date=1234567890,
             end_date=1234567999,
             is_active=True,
-            created_by=100,
+            created_by= UUID("10010010-0100-1001-0010-010010010010"),
         )
 
         self.session.add = MagicMock()
@@ -130,7 +131,7 @@ class TestEntitlementRepository:
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.ent_repo.get_all_active_entitlements(partner_id=1)
+        result = await self.ent_repo.get_all_active_entitlements(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.session.execute.assert_awaited_once()
         assert result == []
@@ -139,7 +140,7 @@ class TestEntitlementRepository:
         self.session.execute = AsyncMock(side_effect=Exception("DB failure"))
 
         with pytest.raises(Exception, match="DB failure"):
-            await self.ent_repo.get_all_active_entitlements(partner_id=1)
+            await self.ent_repo.get_all_active_entitlements(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_get_all_active_entitlements_success(self):
         mock_ent1 = MagicMock(spec=Entitlement)
@@ -153,7 +154,7 @@ class TestEntitlementRepository:
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.ent_repo.get_all_active_entitlements(partner_id=1)
+        result = await self.ent_repo.get_all_active_entitlements(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         self.session.execute.assert_awaited_once()
         assert result == [mock_ent1, mock_ent2]
@@ -162,18 +163,18 @@ class TestEntitlementRepository:
         """Should return entitlement when found by order_id."""
         mock_ent = MagicMock(spec=Entitlement)
         mock_ent.id = 1
-        mock_ent.order_id = 100
+        mock_ent.order_id= UUID("10010010-0100-1001-0010-010010010010")
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_ent
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.ent_repo.get_entitlement_by_order_id(order_id=100)
+        result = await self.ent_repo.get_entitlement_by_order_id(order_id= UUID("10010010-0100-1001-0010-010010010010"))
 
         self.session.execute.assert_awaited_once()
         assert result == mock_ent
-        assert result.order_id == 100
+        assert result.order_id== UUID("10010010-0100-1001-0010-010010010010")
 
     async def test_get_entitlement_by_order_id_not_found(self):
         """Should return None when entitlement not found by order_id."""
@@ -182,7 +183,7 @@ class TestEntitlementRepository:
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.ent_repo.get_entitlement_by_order_id(order_id=999)
+        result = await self.ent_repo.get_entitlement_by_order_id(order_id= UUID("99999999-9999-9999-9999-999999999999"))
 
         self.session.execute.assert_awaited_once()
         assert result is None
@@ -198,7 +199,7 @@ class TestEntitlementRepository:
 
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.ent_repo.get_entitlement_by_order_id(order_id=100)
+        result = await self.ent_repo.get_entitlement_by_order_id(order_id= UUID("10010010-0100-1001-0010-010010010010"))
 
         assert result == mock_ent
         assert result.order == mock_order
@@ -210,7 +211,7 @@ class TestEntitlementRepository:
         )
 
         with pytest.raises(Exception, match="Database connection error"):
-            await self.ent_repo.get_entitlement_by_order_id(order_id=100)
+            await self.ent_repo.get_entitlement_by_order_id(order_id= UUID("10010010-0100-1001-0010-010010010010"))
 
     async def test_update_entitlement_start_date_success(self):
         """Should successfully update start date, end date, and increment counter."""
@@ -220,7 +221,7 @@ class TestEntitlementRepository:
         mock_ent.end_date = 3000000000000
         mock_ent.is_active = False
         mock_ent.start_date_update_count = 1
-        mock_ent.updated_by = 50
+        mock_ent.updated_by= UUID("50505050-5050-5050-5050-505050505050")
 
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = mock_ent
@@ -230,10 +231,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=2000000000000,
             new_end_date=3000000000000,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         self.session.execute.assert_awaited_once()
@@ -245,7 +246,7 @@ class TestEntitlementRepository:
         assert result.end_date == 3000000000000
         assert result.is_active is False
         assert result.start_date_update_count == 1
-        assert result.updated_by == 50
+        assert result.updated_by== UUID("50505050-5050-5050-5050-505050505050")
 
     async def test_update_entitlement_start_date_first_update(self):
         """Should increment counter from 0 to 1 on first update."""
@@ -261,10 +262,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=5,
+            entitlement_id= UUID("55555555-5555-5555-5555-555555555555"),
             new_start_date=1500000000000,
             new_end_date=1600000000000,
-            user_id=100,
+            user_id= UUID("10010010-0100-1001-0010-010010010010"),
         )
 
         assert result.start_date_update_count == 1
@@ -283,10 +284,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=10,
+            entitlement_id= UUID("10101010-1010-1010-1010-101010101010"),
             new_start_date=2500000000000,
             new_end_date=2600000000000,
-            user_id=200,
+            user_id= UUID("20020020-0200-2002-0020-020020020020"),
         )
 
         assert result.start_date_update_count == 3
@@ -304,10 +305,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1000000000000,
             new_end_date=2000000000000,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         assert result.is_active is False
@@ -315,7 +316,7 @@ class TestEntitlementRepository:
     async def test_update_entitlement_start_date_updates_user_id(self):
         """Should set updated_by field to user_id."""
         mock_ent = MagicMock(spec=Entitlement)
-        mock_ent.updated_by = 999
+        mock_ent.updated_by= UUID("99999999-9999-9999-9999-999999999999")
 
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = mock_ent
@@ -325,13 +326,13 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1000000000000,
             new_end_date=2000000000000,
-            user_id=999,
+            user_id= UUID("99999999-9999-9999-9999-999999999999"),
         )
 
-        assert result.updated_by == 999
+        assert result.updated_by== UUID("99999999-9999-9999-9999-999999999999")
 
     async def test_update_entitlement_start_date_handles_none_counter(self):
         """Should handle None start_date_update_count using coalesce."""
@@ -347,10 +348,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1000000000000,
             new_end_date=2000000000000,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         assert result.start_date_update_count == 1
@@ -367,10 +368,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1000000000000,
             new_end_date=2000000000000,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         self.session.commit.assert_awaited_once()
@@ -387,10 +388,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1000000000000,
             new_end_date=2000000000000,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         self.session.refresh.assert_awaited_once_with(mock_ent)
@@ -403,10 +404,10 @@ class TestEntitlementRepository:
 
         with pytest.raises(Exception, match="Database error"):
             await self.ent_repo.update_entitlement_start_date(
-                entitlement_id=1,
+                entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
                 new_start_date=1000000000000,
                 new_end_date=2000000000000,
-                user_id=50,
+                user_id= UUID("50505050-5050-5050-5050-505050505050"),
             )
 
         # Commit should not be called if execute fails
@@ -425,10 +426,10 @@ class TestEntitlementRepository:
 
         with pytest.raises(Exception, match="Commit failed"):
             await self.ent_repo.update_entitlement_start_date(
-                entitlement_id=1,
+                entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
                 new_start_date=1000000000000,
                 new_end_date=2000000000000,
-                user_id=50,
+                user_id= UUID("50505050-5050-5050-5050-505050505050"),
             )
 
     async def test_update_entitlement_start_date_different_dates(self):
@@ -445,10 +446,10 @@ class TestEntitlementRepository:
         self.session.refresh = AsyncMock()
 
         result = await self.ent_repo.update_entitlement_start_date(
-            entitlement_id=1,
+            entitlement_id= UUID("11111111-1111-1111-1111-111111111111"),
             new_start_date=1111111111111,
             new_end_date=9999999999999,
-            user_id=50,
+            user_id= UUID("50505050-5050-5050-5050-505050505050"),
         )
 
         assert result.start_date == 1111111111111

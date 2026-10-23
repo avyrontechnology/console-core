@@ -1,3 +1,4 @@
+from uuid import UUID
 import time
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -63,13 +64,13 @@ class TestOrderService:
             logger=self.logger,
         )
 
-        self.user_context = {"partner_id": 1, "user_id": 1}
+        self.user_context = {"partner_id": UUID("11111111-1111-1111-1111-111111111111"), "user_id": UUID("11111111-1111-1111-1111-111111111111")}
         self.order_data = OrderBase(
-            plan_id=1, amount=100.0, currency="INR", source="maglo"
+            plan_id= UUID("11111111-1111-1111-1111-111111111111"), amount=100.0, currency="INR", source="console"
         )
 
         self.mock_plan = Mock(spec=Plan)
-        self.mock_plan.id = 1
+        self.mock_plan.id = UUID("11111111-1111-1111-1111-111111111111")
         self.mock_plan.name = "Test Plan"
         self.mock_plan.is_free_trial = False
         self.mock_plan.plan_type = PlanType.STANDARD
@@ -83,13 +84,13 @@ class TestOrderService:
         self.mock_plan.hierarchy = 1
 
         self.mock_order = Mock(spec=Order)
-        self.mock_order.id = 1
-        self.mock_order.plan_id = 1
+        self.mock_order.id = UUID("11111111-1111-1111-1111-111111111111")
+        self.mock_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_order.plan = self.mock_plan
         self.mock_order.amount = 100.0
         self.mock_order.status = PaymentStatusEnum.PENDING
-        self.mock_order.partner_id = 1
-        self.mock_order.created_by = 1
+        self.mock_order.partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        self.mock_order.created_by= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_order.currency = "INR"
 
         # Default sales_managed config mock
@@ -121,33 +122,33 @@ class TestOrderService:
             await self.service._validate_plan(1, self.plan_repo)
 
     def test_validate_authentication_unauthenticated_with_plan_id(self):
-        order_data = OrderBillingDetailsRequest(plan_id=1)
+        order_data = OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111"))
         # Should not raise
         self.service._validate_authentication(order_data, None)
 
     def test_validate_authentication_unauthenticated_without_plan_id(self):
         order_data = OrderBillingDetailsRequest(
-            plan_id=None, add_ons={"SERVICE_BOARDS": 1}
+            plan_id=None, add_ons={"ACTIVE_USERS": 1}
         )
         with pytest.raises(AuthenticationRequiredError):
             self.service._validate_authentication(order_data, None)
 
     def test_validate_addons_entitlement_with_active_entitlement(self):
-        add_ons = {"SERVICE_BOARDS": 2}
-        active_entitlements = {"maglo": Mock()}
+        add_ons = {"ACTIVE_USERS": 2}
+        active_entitlements = {"console": Mock()}
         with patch.object(self.service, "_split_addons_by_service") as mock_split:
-            mock_split.return_value = {"maglo": {"SERVICE_BOARDS": 2}}
+            mock_split.return_value = {"console": {"ACTIVE_USERS": 2}}
             self.service._validate_addons_entitlement(add_ons, active_entitlements)
 
     def test_validate_addons_entitlement_no_entitlements(self):
         with pytest.raises(NoActiveEntitlementError):
-            self.service._validate_addons_entitlement({"SERVICE_BOARDS": 2}, {})
+            self.service._validate_addons_entitlement({"ACTIVE_USERS": 2}, {})
 
     def test_validate_addons_entitlement_missing_service_entitlement(self):
-        add_ons = {"SERVICE_BOARDS": 2}
+        add_ons = {"ACTIVE_USERS": 2}
         active_entitlements = {"console": Mock()}
         with patch.object(self.service, "_split_addons_by_service") as mock_split:
-            mock_split.return_value = {"maglo": {"SERVICE_BOARDS": 2}}
+            mock_split.return_value = {"talko": {"ACTIVE_USERS": 2}}
             with pytest.raises(NoActiveEntitlementError):
                 self.service._validate_addons_entitlement(add_ons, active_entitlements)
 
@@ -181,7 +182,7 @@ class TestOrderService:
     async def test_classify_fresh_no_history(self):
         self.order_repo.get_latest_order_by_partner.return_value = None
         order_type, latest = await self.service._classify_manual_order(
-            partner_id=1, new_plan=self.mock_plan
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), new_plan=self.mock_plan
         )
         assert order_type == OrderType.FRESH
         assert latest is None
@@ -195,7 +196,7 @@ class TestOrderService:
         mock_latest.plan.hierarchy = 2
         self.order_repo.get_latest_order_by_partner.return_value = mock_latest
         order_type, latest = await self.service._classify_manual_order(
-            partner_id=1, new_plan=self.mock_plan
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), new_plan=self.mock_plan
         )
         assert order_type == OrderType.UPGRADE
 
@@ -205,7 +206,7 @@ class TestOrderService:
         mock_latest.plan = None  # plan deleted
         self.order_repo.get_latest_order_by_partner.return_value = mock_latest
         order_type, latest = await self.service._classify_manual_order(
-            partner_id=1, new_plan=self.mock_plan
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), new_plan=self.mock_plan
         )
         assert order_type == OrderType.FRESH
 
@@ -218,7 +219,7 @@ class TestOrderService:
         mock_latest.plan.hierarchy = 1
         self.order_repo.get_latest_order_by_partner.return_value = mock_latest
         order_type, latest = await self.service._classify_manual_order(
-            partner_id=1, new_plan=self.mock_plan
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), new_plan=self.mock_plan
         )
         assert order_type == OrderType.RENEWAL
         assert latest == mock_latest
@@ -233,7 +234,7 @@ class TestOrderService:
         mock_latest.plan.hierarchy = 5  # higher → new plan is a downgrade
         self.order_repo.get_latest_order_by_partner.return_value = mock_latest
         order_type, latest = await self.service._classify_manual_order(
-            partner_id=1, new_plan=self.mock_plan
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), new_plan=self.mock_plan
         )
         assert order_type == OrderType.DOWNGRADE
         assert latest == mock_latest
@@ -337,16 +338,16 @@ class TestOrderService:
         self.order_repo.update_order.return_value = approved
         result = await self.service._approve_and_provision_manual_order(
             self.mock_order,
-            sales_user_id=1,
+            sales_user_id= UUID("11111111-1111-1111-1111-111111111111"),
             entitlement_service=self.entitlement_service,
         )
         assert result == approved
         self.order_repo.update_order.assert_called_once_with(
             order_id=self.mock_order.id,
             update_data={"status": PaymentStatusEnum.SUCCESS},
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
-        self.entitlement_service.upsert_entitlement.assert_called_once_with(approved, 1)
+        self.entitlement_service.upsert_entitlement.assert_called_once_with(approved, UUID("11111111-1111-1111-1111-111111111111"))
 
     # =========================================================================
     # _resolve_order_type
@@ -371,15 +372,9 @@ class TestOrderService:
     # _get_addon_price
     # =========================================================================
 
-    def test_get_addon_price_known_key(self):
-        with patch(
-            "src.components.order.services.DbConstants.SERVICE_BOARD_ADD_ON_PRICE",
-            100,
-        ):
-            result = self.service._get_addon_price(
-                PlanCustomLimitKeys.Maglo.SERVICE_BOARDS
-            )
-            assert result == 100
+    def test_get_addon_price_empty_table_returns_zero(self):
+        # Priced add-on table is empty (only priced add-on retired).
+        assert self.service._get_addon_price("ACTIVE_USERS") == 0
 
     def test_get_addon_price_unknown_key_returns_zero(self):
         result = self.service._get_addon_price("UNKNOWN_ADDON_KEY")
@@ -390,20 +385,20 @@ class TestOrderService:
     # =========================================================================
 
     def test_resolve_services_with_plan_and_addons(self):
-        self.mock_plan.modules = {"console": ["dashboard"], "maglo": ["boards"]}
-        add_ons_by_service = {"maglo": {"SERVICE_BOARDS": 1}}
+        self.mock_plan.modules = {"console": ["dashboard"], "talko": ["boards"]}
+        add_ons_by_service = {"console": {"ACTIVE_USERS": 1}, "talko": {"ACTIVE_USERS": 1}}
         with patch(
             "src.components.order.services.PlanUtils.split_modules_by_service"
         ) as mock_split:
-            mock_split.return_value = {"console": [], "maglo": []}
+            mock_split.return_value = {"console": [], "talko": []}
             result = self.service._resolve_services(self.mock_plan, add_ons_by_service)
-        assert "maglo" in result
         assert "console" in result
+        assert "talko" in result
 
     def test_resolve_services_no_plan(self):
-        add_ons_by_service = {"maglo": {"SERVICE_BOARDS": 1}}
+        add_ons_by_service = {"console": {"ACTIVE_USERS": 1}}
         result = self.service._resolve_services(None, add_ons_by_service)
-        assert result == {"maglo"}
+        assert result == {"console"}
 
     def test_resolve_services_no_addons_no_plan(self):
         result = self.service._resolve_services(None, {})
@@ -415,9 +410,9 @@ class TestOrderService:
 
     def test_validate_services_entitlements_addons_only_no_plan(self):
         order_data = OrderBillingDetailsRequest(
-            plan_id=None, add_ons={"SERVICE_BOARDS": 1}
+            plan_id=None, add_ons={"ACTIVE_USERS": 1}
         )
-        active_entitlements = {"maglo": Mock()}
+        active_entitlements = {"console": Mock()}
         with patch.object(self.service, "_validate_addons_entitlement") as mock_val:
             self.service._validate_services_entitlements(
                 active_entitlements, order_data
@@ -426,18 +421,18 @@ class TestOrderService:
 
     def test_validate_services_entitlements_plan_and_addons_service_present(self):
         order_data = OrderBillingDetailsRequest(
-            plan_id=1, add_ons={"SERVICE_BOARDS": 1}
+            plan_id= UUID("11111111-1111-1111-1111-111111111111"), add_ons={"ACTIVE_USERS": 1}
         )
-        active_entitlements = {"maglo": Mock()}
+        active_entitlements = {"console": Mock()}
         with patch.object(self.service, "_split_addons_by_service") as mock_split:
-            mock_split.return_value = {"maglo": {"SERVICE_BOARDS": 1}}
+            mock_split.return_value = {"console": {"ACTIVE_USERS": 1}}
             # Should not raise
             self.service._validate_services_entitlements(
                 active_entitlements, order_data
             )
 
     def test_validate_services_entitlements_plan_only_no_addons(self):
-        order_data = OrderBillingDetailsRequest(plan_id=1)
+        order_data = OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111"))
         # Neither branch executes with empty add_ons
         self.service._validate_services_entitlements({}, order_data)
 
@@ -457,7 +452,7 @@ class TestOrderService:
         assert result == mock_plan
 
     def test_get_current_plan_from_entitlement_service_not_found(self):
-        result = self.service._get_current_plan_from_entitlement("maglo", {})
+        result = self.service._get_current_plan_from_entitlement("console", {})
         assert result is None
 
     def test_get_current_plan_from_entitlement_order_has_no_plan(self):
@@ -487,7 +482,7 @@ class TestOrderService:
         result = await self.service._create_gateway_order(
             order=self.mock_order,
             order_data=payload_dict,
-            user_context={"partner_id": 1, "user_id": 1},
+            user_context={"partner_id": UUID("11111111-1111-1111-1111-111111111111"), "user_id": UUID("11111111-1111-1111-1111-111111111111")},
         )
         assert result == {"id": "gw_001"}
         self.payment_service.create_order.assert_called_once()
@@ -499,7 +494,7 @@ class TestOrderService:
         await self.service._create_gateway_order(
             order=self.mock_order,
             order_data=payload_dict,
-            user_context={"partner_id": 1, "user_id": 1},
+            user_context={"partner_id": UUID("11111111-1111-1111-1111-111111111111"), "user_id": UUID("11111111-1111-1111-1111-111111111111")},
         )
         call_args = self.payment_service.create_order.call_args[0][0]
         assert call_args.currency == self.mock_order.currency
@@ -509,7 +504,7 @@ class TestOrderService:
         result = await self.service._create_gateway_order(
             order=self.mock_order,
             order_data=self.order_data,  # OrderBase instance
-            user_context={"partner_id": 1, "user_id": 1},
+            user_context={"partner_id": UUID("11111111-1111-1111-1111-111111111111"), "user_id": UUID("11111111-1111-1111-1111-111111111111")},
         )
         assert result == {"id": "gw_003"}
         call_args = self.payment_service.create_order.call_args[0][0]
@@ -523,14 +518,14 @@ class TestOrderService:
     async def test_handle_wallet_transaction_non_wallet_plan_skipped(self):
         self.mock_order.plan.plan_type = PlanType.STANDARD
         await self.service._handle_wallet_transaction(
-            self.mock_order, user_id=1, partner_id=1, wallet_service=self.wallet_service
+            self.mock_order, user_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), wallet_service=self.wallet_service
         )
         self.wallet_service.perform_transaction.assert_not_called()
 
     async def test_handle_wallet_transaction_no_plan_id_skipped(self):
         self.mock_order.plan_id = None
         await self.service._handle_wallet_transaction(
-            self.mock_order, user_id=1, partner_id=1, wallet_service=self.wallet_service
+            self.mock_order, user_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), wallet_service=self.wallet_service
         )
         self.wallet_service.perform_transaction.assert_not_called()
 
@@ -543,33 +538,33 @@ class TestOrderService:
         self.mock_order.plan.modules = None  # skip grace settlement
         await self.service._provision_on_payment_success(
             order=self.mock_order,
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             entitlement_service=self.entitlement_service,
             wallet_service=self.wallet_service,
         )
         self.entitlement_service.upsert_entitlement.assert_called_once_with(
-            self.mock_order, 1
+            self.mock_order, UUID("11111111-1111-1111-1111-111111111111")
         )
         self.wallet_service.perform_transaction.assert_not_called()
 
     async def test_handle_wallet_transaction_wallet_plan_executes(self):
-        self.mock_order.plan_id = 1
+        self.mock_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_order.plan.plan_type = PlanType.WALLET
         self.mock_order.additional_info = None
         self.mock_order.amount = 10000
         await self.service._handle_wallet_transaction(
-            self.mock_order, user_id=1, partner_id=1, wallet_service=self.wallet_service
+            self.mock_order, user_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), wallet_service=self.wallet_service
         )
         self.wallet_service.perform_transaction.assert_called_once()
 
     async def test_provision_on_payment_success_wallet_plan_tops_up_wallet(self):
-        self.mock_order.plan_id = 1
+        self.mock_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_order.plan.plan_type = PlanType.WALLET
         self.mock_order.additional_info = None
         self.mock_order.amount = 10000
         await self.service._provision_on_payment_success(
             order=self.mock_order,
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             entitlement_service=self.entitlement_service,
             wallet_service=self.wallet_service,
         )
@@ -583,7 +578,7 @@ class TestOrderService:
         self.mock_order.plan.modules = None  # skip grace settlement
         await self.service._provision_on_payment_success(
             order=self.mock_order,
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             entitlement_service=self.entitlement_service,
             wallet_service=self.wallet_service,
         )
@@ -626,11 +621,11 @@ class TestOrderService:
         )
         updated = Mock(spec=Order)
         updated.status = PaymentStatusEnum.SUCCESS
-        updated.plan_id = 1
+        updated.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         updated.plan = Mock()
         updated.plan.plan_type = PlanType.STANDARD
         updated.plan.modules = None  # skip grace settlement
-        updated.partner_id = 1
+        updated.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.order_repo.update_order.return_value = updated
 
         await self.service.handle_webhook(
@@ -724,19 +719,19 @@ class TestOrderService:
         self.payment_service.create_order.return_value = {"id": "gw_001"}
 
         payload = {
-            "partner_id": 1,
-            "plan_id": 1,
+            "partner_id": UUID("11111111-1111-1111-1111-111111111111"),
+            "plan_id": UUID("11111111-1111-1111-1111-111111111111"),
             "amount": 10000,
             "payment_method": PaymentMethod.GATEWAY,
             "add_ons": {},
         }
-
+    
         with patch.object(
             self.service, "_build_order_response", return_value={"order": {}}
         ):
             result = await self.service.create_manual_order(
                 payload=payload,
-                current_user={"user_id": 1},
+                current_user={"user_id": UUID("11111111-1111-1111-1111-111111111111")},
                 plan_repo=self.plan_repo,
                 partner_repo=self.partner_repo,
                 entitlement_repo=self.entitlement_repo,
@@ -922,7 +917,7 @@ class TestOrderService:
     def test_build_billing_breakdown_addons_only(self):
         with patch.object(self.service, "_calculate_service_addons") as mock_calc:
             mock_calc.return_value = {
-                "service_name": "maglo",
+                "service_name": "console",
                 "items": [],
                 "service_total": Decimal("600"),
                 "total_discount": Decimal("0"),
@@ -930,8 +925,8 @@ class TestOrderService:
             result = self.service._build_billing_breakdown(
                 plan=None,
                 billing_days=30,
-                add_ons_by_service={"maglo": {"SERVICE_BOARDS": 2}},
-                services={"maglo"},
+                add_ons_by_service={"console": {"ACTIVE_USERS": 2}},
+                services={"console"},
                 active_entitlements={},
             )
         assert result["plan_details"] is None
@@ -953,16 +948,16 @@ class TestOrderService:
         assert float(item["subtotal"]) == pytest.approx(300.0, abs=0.01)
         assert float(result["service_total"]) == pytest.approx(300.0, abs=0.01)
 
-    def test_calculate_service_addons_regular_addon(self):
-        with patch.object(self.service, "_get_addon_price") as mock_price:
-            mock_price.return_value = 10
-            result = self.service._calculate_service_addons(
-                service="maglo",
-                add_ons={"SERVICE_BOARDS": 2},
-                billing_days=30,
-                plan=self.mock_plan,
-            )
-        assert result["service_total"] == 600
+    def test_calculate_service_addons_unknown_addon_zero(self):
+        # No priced add-ons remain (only priced add-on retired):
+        # unknown keys price 0 via the real table (no mock).
+        result = self.service._calculate_service_addons(
+            service="console",
+            add_ons={"UNKNOWN_ADDON": 2},
+            billing_days=30,
+            plan=self.mock_plan,
+        )
+        assert result["service_total"] == 0
 
     def test_calculate_service_addons_active_users_no_plan_raises(self):
         with pytest.raises(MissingPlanIdError):
@@ -990,14 +985,13 @@ class TestOrderService:
 
     def test_calculate_service_addons_non_active_users_no_discount(self):
         """Non-ACTIVE_USERS addons receive no discount even when percentage is set."""
-        with patch.object(self.service, "_get_addon_price", return_value=10):
-            result = self.service._calculate_service_addons(
-                service="maglo",
-                add_ons={"SERVICE_BOARDS": 1},
-                billing_days=30,
-                plan=self.mock_plan,
-                discount_percentage=Decimal("50.0"),
-            )
+        result = self.service._calculate_service_addons(
+            service="console",
+            add_ons={"UNKNOWN_ADDON": 1},
+            billing_days=30,
+            plan=self.mock_plan,
+            discount_percentage=Decimal("50.0"),
+        )
         item = result["items"][0]
         assert item["discount_amount"] == 0
         assert item["discount_percentage"] == Decimal("0")
@@ -1201,8 +1195,8 @@ class TestOrderService:
             plan_id=None,
             amount=100.0,
             currency="INR",
-            add_ons={"SERVICE_BOARDS": 1},
-            source="maglo",
+            add_ons={"ACTIVE_USERS": 1},
+            source="console",
         )
         future_timestamp = (datetime.now(timezone.utc).timestamp() + 86400 * 30) * 1000
         mock_entitlement = Mock()
@@ -1238,11 +1232,11 @@ class TestOrderService:
         )
         updated_order = Mock(spec=Order)
         updated_order.status = PaymentStatusEnum.SUCCESS
-        updated_order.plan_id = 1
+        updated_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         updated_order.plan = Mock()
         updated_order.plan.plan_type = PlanType.STANDARD
         updated_order.plan.modules = None  # skip grace settlement
-        updated_order.partner_id = 1
+        updated_order.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.order_repo.update_order_if_not_finalized.return_value = updated_order
         self.payment_service.validate_order.return_value = {
             "status": "success",
@@ -1300,11 +1294,11 @@ class TestOrderService:
         )
         updated_order = Mock(spec=Order)
         updated_order.status = PaymentStatusEnum.SUCCESS
-        updated_order.plan_id = 1
+        updated_order.plan_id= UUID("11111111-1111-1111-1111-111111111111")
         updated_order.plan = Mock()
         updated_order.plan.plan_type = PlanType.STANDARD
         updated_order.plan.modules = None
-        updated_order.partner_id = 1
+        updated_order.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.order_repo.update_order_if_not_finalized.return_value = updated_order
         self.payment_service.validate_order.return_value = {
             "status": "success",
@@ -1377,7 +1371,7 @@ class TestOrderService:
         with patch.object(self.service, "_calculate_final_totals") as mock_calc:
             mock_calc.return_value = {"summary": {"total_payable": 10000}}
             result = await self.service.get_billing_details(
-                OrderBillingDetailsRequest(plan_id=1),
+                OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111")),
                 partner_id=None,
                 plan_repo=self.plan_repo,
                 entitlement_repo=self.entitlement_repo,
@@ -1389,7 +1383,7 @@ class TestOrderService:
         self.plan_repo.get_plan_by_id.return_value = self.mock_plan
         with pytest.raises(NoBillingForWalletError):
             await self.service.get_billing_details(
-                OrderBillingDetailsRequest(plan_id=1),
+                OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111")),
                 partner_id=None,
                 plan_repo=self.plan_repo,
                 entitlement_repo=self.entitlement_repo,
@@ -1400,7 +1394,7 @@ class TestOrderService:
         self.plan_repo.get_plan_by_id.return_value = self.mock_plan
         with pytest.raises(NoBillingForWalletError):
             await self.service.get_billing_details(
-                OrderBillingDetailsRequest(plan_id=1),
+                OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111")),
                 partner_id=None,
                 plan_repo=self.plan_repo,
                 entitlement_repo=self.entitlement_repo,
@@ -1554,7 +1548,7 @@ class TestOrderService:
     async def test_load_plan_success(self):
         self.plan_repo.get_plan_by_id.return_value = self.mock_plan
         result = await self.service._load_plan(
-            OrderBillingDetailsRequest(plan_id=1), self.plan_repo
+            OrderBillingDetailsRequest(plan_id= UUID("11111111-1111-1111-1111-111111111111")), self.plan_repo
         )
         assert result == self.mock_plan
 
@@ -1562,12 +1556,12 @@ class TestOrderService:
         self.plan_repo.get_plan_by_id.return_value = None
         with pytest.raises(PlanInactiveError):
             await self.service._load_plan(
-                OrderBillingDetailsRequest(plan_id=99), self.plan_repo
+                OrderBillingDetailsRequest(plan_id= UUID("99999999-9999-9999-9999-999999999999")), self.plan_repo
             )
 
     async def test_load_plan_no_plan_id(self):
         result = await self.service._load_plan(
-            OrderBillingDetailsRequest(plan_id=None, add_ons={"SERVICE_BOARDS": 1}),
+            OrderBillingDetailsRequest(plan_id=None, add_ons={"ACTIVE_USERS": 1}),
             self.plan_repo,
         )
         assert result is None
@@ -1575,11 +1569,11 @@ class TestOrderService:
     def test_split_addons_by_service_success(self):
         result = self.service._split_addons_by_service(
             {
-                PlanCustomLimitKeys.Maglo.SERVICE_BOARDS: 2,
+                PlanCustomLimitKeys.Console.ACTIVE_USERS: 2,
                 PlanCustomLimitKeys.Console.ACTIVE_USERS: 1,
             }
         )
-        assert "maglo" in result
+        assert "console" in result
         assert "console" in result
 
     def test_split_addons_by_service_empty(self):

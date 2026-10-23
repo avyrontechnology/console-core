@@ -1,3 +1,4 @@
+from uuid import UUID
 from collections import namedtuple
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import json
@@ -7,7 +8,7 @@ from src.components.user.constants import UserRoles
 from src.components.common.errors import NotFoundError
 
 
-from src.components.user.errors import UserNotFoundError, PublisherExistsError
+from src.components.user.errors import UserNotFoundError
 from src.components.user.repositories import UserRepository
 from src.exceptions import UserException
 
@@ -29,12 +30,12 @@ class TestUserRepository:
 
     async def test_get_user_details(self):
 
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = AsyncMock(
             user_id=user_id,
             name="test user",
             email="test@example.com",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             role_hierarchy_level=1,
         )
 
@@ -50,7 +51,7 @@ class TestUserRepository:
         assert result == mock_user
 
     async def test_get_user_details_generic_exception(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
 
         with pytest.raises(Exception) as exc_info:
@@ -59,7 +60,7 @@ class TestUserRepository:
         assert str(exc_info.value) == "Unexpected Error"
 
     async def test_get_service_board_users_details_success(self):
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         # Mock User data
         mock_user1 = {
@@ -93,7 +94,7 @@ class TestUserRepository:
         assert result[1]["email"] == "user2@example.com"
 
     async def test_get_service_board_users_details_generic_exception(self):
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         # Mock the execute method to raise an exception
         self.session.execute = AsyncMock(side_effect=Exception("Database Error"))
@@ -104,7 +105,7 @@ class TestUserRepository:
         assert str(exc_info.value) == "Database Error"
 
     async def test_get_users_availability_status_success(self):
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         mock_users_status = [
             {"user_id": 1, "current_status": "Active"},
@@ -125,7 +126,7 @@ class TestUserRepository:
         assert result[1]["current_status"] == "Offline"
 
     async def test_get_users_availability_status_generic_exception(self):
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         self.session.execute = AsyncMock(side_effect=Exception("Database Error"))
 
@@ -136,13 +137,13 @@ class TestUserRepository:
 
     async def test_get_all_success(self):
         """Test successful retrieval of paginated users in a user's hierarchy."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
         # Mock User objects
         mock_user1 = MagicMock()
-        mock_user1.id = 1
+        mock_user1.id = UUID("11111111-1111-1111-1111-111111111111")
         mock_user1.name = "User One"
         mock_user1.email = "user1@example.com"
         mock_user1.is_active = True
@@ -150,11 +151,11 @@ class TestUserRepository:
         mock_user1.country = MagicMock(name="USA")
         mock_user1.country.name = "USA"
         mock_user1.parent = None
-        mock_user1.role_id = 1
-        mock_user1.partner_id = 1
+        mock_user1.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_user1.partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_user2 = MagicMock()
-        mock_user2.id = 2
+        mock_user2.id = UUID("22222222-2222-2222-2222-222222222222")
         mock_user2.name = "User Two"
         mock_user2.email = "user2@example.com"
         mock_user2.is_active = True
@@ -162,8 +163,8 @@ class TestUserRepository:
         mock_user2.country = MagicMock(name="Canada")
         mock_user2.country.name = "Canada"
         mock_user2.parent = mock_user1
-        mock_user2.role_id = 2
-        mock_user2.partner_id = 1
+        mock_user2.role_id= UUID("22222222-2222-2222-2222-222222222222")
+        mock_user2.partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_users = [mock_user1, mock_user2]
 
@@ -197,12 +198,12 @@ class TestUserRepository:
         # Assertions
         assert isinstance(users, list)
         assert len(users) == 2
-        assert users[0].id == 1
+        assert users[0].id == UUID("11111111-1111-1111-1111-111111111111")
         assert users[0].name == "User One"
         assert users[0].email == "user1@example.com"
         assert users[0].country.name == "USA"
         assert users[0].parent is None
-        assert users[1].id == 2
+        assert users[1].id == UUID("22222222-2222-2222-2222-222222222222")
         assert users[1].name == "User Two"
         assert users[1].email == "user2@example.com"
         assert users[1].country.name == "Canada"
@@ -222,7 +223,7 @@ class TestUserRepository:
 
     async def test_get_all_exception(self):
         """Test handling of SQLAlchemyError in get_all method."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
@@ -235,8 +236,8 @@ class TestUserRepository:
         # Mock current user query to return a user
         mock_user = MagicMock()
         mock_user.id = 1
-        mock_user.role_id = 1
-        mock_user.partner_id = 1
+        mock_user.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_user.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_current_user_result = MagicMock()
         mock_current_user_result.scalars.return_value.one_or_none.return_value = (
             mock_user
@@ -275,7 +276,7 @@ class TestUserRepository:
         """A filter on a plain User column (no role join) should still build and count correctly."""
         from src.components.filters.criteria import BaseFilterCriteria
 
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
@@ -284,8 +285,8 @@ class TestUserRepository:
 
         mock_user = MagicMock()
         mock_user.id = 1
-        mock_user.role_id = 1
-        mock_user.partner_id = 1
+        mock_user.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_user.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user.country = None
         mock_user.parent = None
 
@@ -326,7 +327,7 @@ class TestUserRepository:
         """A filter on a role_* alias must trigger the Role join before building/counting."""
         from src.components.filters.criteria import BaseFilterCriteria
 
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
@@ -335,8 +336,8 @@ class TestUserRepository:
 
         mock_user = MagicMock()
         mock_user.id = 1
-        mock_user.role_id = 1
-        mock_user.partner_id = 1
+        mock_user.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_user.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user.country = None
         mock_user.parent = None
 
@@ -379,14 +380,14 @@ class TestUserRepository:
 
     async def test_get_all_without_filter_criteria_skips_filter_builder(self):
         """Passing no filter_criteria keeps the original, unfiltered hierarchy query."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
         mock_user = MagicMock()
         mock_user.id = 1
-        mock_user.role_id = 1
-        mock_user.partner_id = 1
+        mock_user.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_user.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user.country = None
         mock_user.parent = None
 
@@ -426,8 +427,8 @@ class TestUserRepository:
     async def test_update_user_success(self):
         """Test successful update of a user."""
         # Arrange
-        user_id = 1
-        current_user_id = 33
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user_id= UUID("33333333-3333-3333-3333-333333333333")
         update_fields = {"name": "Updated Name", "email": "updated@example.com"}
         mock_user = MagicMock(
             id=user_id, name="Old Name", email="old@example.com", is_active=True, is_deleted=False,
@@ -456,8 +457,8 @@ class TestUserRepository:
     async def test_update_user_sqlalchemy_error(self):
         """Test handling of SQLAlchemyError during user update."""
         # Arrange
-        user_id = 1
-        current_user_id = 33
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user_id= UUID("33333333-3333-3333-3333-333333333333")
         update_fields = {"name": "Updated Name"}
         self.session.execute = AsyncMock(side_effect=SQLAlchemyError("Database error"))
 
@@ -473,7 +474,7 @@ class TestUserRepository:
     async def test_get_admin_credentials_by_hierarchy_success(self):
         """Test successful retrieval of admin credentials by hierarchy."""
         user_hierarchy = 1
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock admin credentials
         mock_admin_credentials = {
@@ -499,7 +500,7 @@ class TestUserRepository:
     async def test_get_admin_credentials_by_hierarchy_not_found(self):
         """Test case where no admin credentials are found."""
         user_hierarchy = 1
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock database execution and response
         mock_result = MagicMock()
@@ -517,7 +518,7 @@ class TestUserRepository:
     async def test_get_admin_credentials_by_hierarchy_exception(self):
         """Test handling of unexpected exceptions."""
         user_hierarchy = 1
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock the execute method to raise an exception
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected Error"))
@@ -533,8 +534,8 @@ class TestUserRepository:
 
     async def test_check_admin_exists_exception(self):
         """Test handling of unexpected exceptions."""
-        role_id = 1
-        partner_id = 123
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Simulate an exception during execution
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected DB error"))
@@ -546,8 +547,8 @@ class TestUserRepository:
 
     async def test_check_admin_not_found(self):
         """Test case where no admin credentials are found."""
-        role_id = 1
-        partner_id = 123
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock database execution and response
         mock_result = MagicMock()
@@ -562,8 +563,8 @@ class TestUserRepository:
 
     async def test_check_admin_success(self):
         """Test successful check if admin exists for given role and partner."""
-        role_id = 1
-        partner_id = 123
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock user to be returned by scalars().all()
         mock_user = MagicMock()
@@ -587,8 +588,8 @@ class TestUserRepository:
         self.mock_logger.info.assert_called()
 
     async def test_get_user_by_user_id_success(self):
-        user_id = 1
-        partner_id = 10
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10101010-1010-1010-1010-101010101010")
         user_mock = MagicMock()
         result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user_mock
@@ -601,8 +602,8 @@ class TestUserRepository:
         self.mock_logger.info.assert_any_call(f"user_fetched_successfully: {user_mock}")
 
     async def test_get_user_by_user_id_not_found(self):
-        user_id = 2
-        partner_id = 20
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
+        partner_id= UUID("20202020-2020-2020-2020-202020202020")
         result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = None
         self.session.execute = AsyncMock(return_value=result_mock)
@@ -612,8 +613,8 @@ class TestUserRepository:
         self.mock_logger.error.assert_any_call(f"User with id: {user_id} is not found.")
 
     async def test_get_user_by_user_id_unexpected_exception(self):
-        user_id = 3
-        partner_id = 30
+        user_id= UUID("33333333-3333-3333-3333-333333333333")
+        partner_id= UUID("30303030-3030-3030-3030-303030303030")
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
         with pytest.raises(Exception, match="DB error"):
@@ -623,7 +624,7 @@ class TestUserRepository:
         )
 
     async def test_get_admin_details_by_partner_id_success(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         mock_admin_role = MagicMock()
         mock_admin_role.id = 1
         mock_admin_role.slug = "ADMIN"
@@ -649,7 +650,7 @@ class TestUserRepository:
         await self.user_repository.get_admin_details_by_partner_id(partner_id)
 
     async def test_get_admin_details_by_partner_id_role_not_found(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         # Mock admin role query returns None
         mock_admin_role_result = MagicMock()
         mock_admin_role_result.scalars.return_value.first.return_value = None
@@ -660,7 +661,7 @@ class TestUserRepository:
         self.mock_logger.error.assert_any_call("Admin role not found in the database.")
 
     async def test_get_admin_details_by_partner_id_unexpected_exception(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
         with pytest.raises(Exception, match="DB error"):
             await self.user_repository.get_admin_details_by_partner_id(partner_id)
@@ -673,7 +674,7 @@ class TestUserRepository:
         be preferred over the shared default — the two can have different ids,
         and the partner's users are repointed to the partner-owned copy on
         materialization, so matching the wrong one silently finds no admin."""
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         partner_admin_role = MagicMock()
         partner_admin_role.id = 105
 
@@ -704,7 +705,7 @@ class TestUserRepository:
         """If the partner has never materialized its own "admin" role, fall
         back to the shared default one (today's behavior for un-customized
         partners)."""
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         default_admin_role = MagicMock()
         default_admin_role.id = 22
 
@@ -731,7 +732,7 @@ class TestUserRepository:
         assert self.session.execute.await_count == 3
 
     async def test_get_users_by_partner_id_success(self):
-        partner_id = 101
+        partner_id= UUID("10110110-1101-1011-0110-110110110110")
 
         # Define a named tuple to simulate result row
         MockRow = namedtuple(
@@ -787,7 +788,7 @@ class TestUserRepository:
         )
 
     async def test_get_users_by_partner_id_unexpected_exception(self):
-        partner_id = 202
+        partner_id= UUID("20220220-2202-2022-0220-220220220220")
         self.session.execute = AsyncMock(side_effect=Exception("DB failure"))
 
         with pytest.raises(Exception) as exc_info:
@@ -842,7 +843,7 @@ class TestUserRepository:
         )
 
     async def test_get_service_board_users_details_inactive_user(self):
-        user_ids = [3]
+        user_ids = [UUID("33333333-3333-3333-3333-333333333333")]
 
         # Mock inactive user data
         mock_user_inactive = {
@@ -879,7 +880,7 @@ class TestUserRepository:
         self.mock_logger.reset_mock()
         mock_user = MagicMock()
         mock_user.id = 10
-        mock_user.role_id = 1
+        mock_user.role_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_scalars = MagicMock()
         mock_scalars.first = MagicMock(return_value=mock_user)
@@ -923,7 +924,7 @@ class TestUserRepository:
         )
 
     async def test_toggle_walkthrough_key_activation_success(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = MagicMock()
         mock_user.id = user_id
         mock_user.is_active = True
@@ -949,7 +950,7 @@ class TestUserRepository:
         self.mock_logger.info.assert_called()
 
     async def test_toggle_walkthrough_key_activation_user_not_found_raises(self):
-        user_id = 2
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
@@ -966,7 +967,7 @@ class TestUserRepository:
         self.mock_logger.error.assert_any_call(f"User with ID {user_id} not found")
 
     async def test_toggle_walkthrough_key_activation_inactive_user_raises(self):
-        user_id = 3
+        user_id= UUID("33333333-3333-3333-3333-333333333333")
         mock_user = MagicMock()
         mock_user.is_active = False
 
@@ -984,7 +985,7 @@ class TestUserRepository:
         self.mock_logger.error.assert_any_call(f"User with ID {user_id} not found")
 
     async def test_toggle_walkthrough_key_activation_unexpected_exception(self):
-        user_id = 4
+        user_id= UUID("44444444-4444-4444-4444-444444444444")
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
         with pytest.raises(Exception, match="DB error"):
@@ -997,7 +998,7 @@ class TestUserRepository:
     async def test_get_by_id_masks_password(self):
         """Test that password/hashed_password is masked in logs when fetching user by ID."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = MagicMock()
         mock_user.id = user_id
         mock_user.name = "Test User"
@@ -1038,10 +1039,10 @@ class TestUserRepository:
             email="new@example.com",
             password="Test@123456",
             phone_number="+1234567890",
-            role_id=1,
-            partner_id=1,
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             parent_id=None,
-            country_id=1,
+            country_id= UUID("11111111-1111-1111-1111-111111111111"),
             is_active=True
         )
 
@@ -1074,8 +1075,8 @@ class TestUserRepository:
     async def test_update_user_masks_password_in_logs(self):
         """Test that password is masked in logs when updating user."""
         # Arrange
-        user_id = 1
-        current_user_id = 33
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user_id= UUID("33333333-3333-3333-3333-333333333333")
         update_fields = {"name": "Updated Name", "password": "new_secret_password"}
 
         mock_user = MagicMock()
@@ -1119,7 +1120,7 @@ class TestUserRepository:
     async def test_delete_by_id_masks_password_in_logs(self):
         """Test that password is masked in logs when deleting user."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = MagicMock()
         mock_user.id = user_id
         mock_user.name = "User To Delete"
@@ -1158,7 +1159,7 @@ class TestUserRepository:
     async def test_update_popup_last_closed_success_new_key(self):
         """User has no existing popup_last_closed — creates it fresh."""
         self.mock_logger.reset_mock()
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         service_name = "console"
 
         mock_user = MagicMock()
@@ -1183,8 +1184,8 @@ class TestUserRepository:
 
     async def test_update_popup_last_closed_success_existing_keys_preserved(self):
         """Other keys in additional_info and popup_last_closed are not overwritten."""
-        user_id = 1
-        service_name = "maglo"
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        service_name = "talko"
 
         mock_user = MagicMock()
         mock_user.additional_info = {
@@ -1208,8 +1209,8 @@ class TestUserRepository:
 
     async def test_update_popup_last_closed_success_additional_info_none(self):
         """User.additional_info is None — treated as empty dict."""
-        user_id = 1
-        service_name = "babbler"
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        service_name = "talko"
 
         mock_user = MagicMock()
         mock_user.additional_info = None
@@ -1228,7 +1229,7 @@ class TestUserRepository:
 
     async def test_update_popup_last_closed_overwrites_existing_service_timestamp(self):
         """Calling again for same service updates the timestamp."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         service_name = "console"
         old_ts = 1000000
 
@@ -1252,7 +1253,7 @@ class TestUserRepository:
     async def test_update_popup_last_closed_db_exception_rolls_back(self):
         """DB error triggers rollback and re-raises."""
         self.mock_logger.reset_mock()
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         service_name = "console"
 
         self.session.execute = AsyncMock(side_effect=Exception("DB write failed"))
@@ -1285,8 +1286,7 @@ missing key branches:
   * get_users_id_hierarchy_by_emails  -> 0% (no tests)
   * get_all                           -> MAINTAINER branch + filter_criteria
                                           branch untested
-  * add_user                          -> PublisherExistsError branch,
-                                          generic SQLAlchemyError branch,
+  * add_user                          -> generic SQLAlchemyError branch,
                                           explicit `services` param branch
                                           untested
   * delete_by_id                      -> not-found / exception branches
@@ -1320,7 +1320,7 @@ class TestUserRepositoryMissingCoverage:
     # =====================================================================
 
     async def test_get_by_id_success(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = MagicMock(id=user_id, is_active=True)
         self.session.get = AsyncMock(return_value=mock_user)
 
@@ -1337,7 +1337,7 @@ class TestUserRepositoryMissingCoverage:
             await self.user_repository.get_by_id(99)
 
     async def test_get_by_id_inactive_raises(self):
-        mock_user = MagicMock(id=1, is_active=False)
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False)
         self.session.get = AsyncMock(return_value=mock_user)
 
         with pytest.raises(UserNotFoundError):
@@ -1359,7 +1359,7 @@ class TestUserRepositoryMissingCoverage:
             await self.user_repository.get_user_by_field("not_a_real_field", "x")
 
     async def test_get_user_by_field_found(self):
-        mock_user = MagicMock(id=1, email="a@x.com")
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), email="a@x.com")
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_user
         self.session.execute = AsyncMock(return_value=mock_result)
@@ -1419,7 +1419,7 @@ class TestUserRepositoryMissingCoverage:
     # =====================================================================
 
     async def test_partner_user_limit_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_partner = MagicMock(active_license=50)
         self.session.get = AsyncMock(return_value=mock_partner)
         self.session.scalar = AsyncMock(return_value=12)
@@ -1453,12 +1453,12 @@ class TestUserRepositoryMissingCoverage:
     # =====================================================================
 
     async def test_get_users_by_user_ids_success(self):
-        mock_users = [MagicMock(id=1), MagicMock(id=2)]
+        mock_users = [MagicMock(id= UUID("11111111-1111-1111-1111-111111111111")), MagicMock(id= UUID("22222222-2222-2222-2222-222222222222"))]
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = mock_users
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.user_repository.get_users_by_user_ids(1, [1, 2])
+        result = await self.user_repository.get_users_by_user_ids(1, [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")])
 
         assert result == mock_users
 
@@ -1466,7 +1466,7 @@ class TestUserRepositoryMissingCoverage:
         self.session.execute = AsyncMock(side_effect=Exception("db failure"))
 
         with pytest.raises(Exception, match="db failure"):
-            await self.user_repository.get_users_by_user_ids(1, [1, 2])
+            await self.user_repository.get_users_by_user_ids(1, [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")])
         self.mock_logger.error.assert_called()
 
     # =====================================================================
@@ -1580,8 +1580,8 @@ class TestUserRepositoryMissingCoverage:
     # =====================================================================
 
     async def test_get_all_maintainer_with_admin_found_excludes_both(self):
-        current_user_id = 5
-        mock_current_user = MagicMock(id=current_user_id, role_id=1, partner_id=10)
+        current_user_id= UUID("55555555-5555-5555-5555-555555555555")
+        mock_current_user = MagicMock(id=current_user_id, role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10101010-1010-1010-1010-101010101010"))
         current_user_result = MagicMock()
         current_user_result.scalars.return_value.one_or_none.return_value = mock_current_user
 
@@ -1589,11 +1589,11 @@ class TestUserRepositoryMissingCoverage:
         maintainer_role = MagicMock(slug=UserRoles.MAINTAINER)
         mock_auth_repository.get_role_by_id = AsyncMock(return_value=maintainer_role)
 
-        admin_role = MagicMock(id=77)
+        admin_role = MagicMock(id= UUID("77777777-7777-7777-7777-777777777777"))
         admin_role_result = MagicMock()
         admin_role_result.scalars.return_value.first.return_value = admin_role
 
-        admin_user = MagicMock(id=8)
+        admin_user = MagicMock(id= UUID("88888888-8888-8888-8888-888888888888"))
         admin_user_result = MagicMock()
         admin_user_result.scalars.return_value.first.return_value = admin_user
 
@@ -1621,8 +1621,8 @@ class TestUserRepositoryMissingCoverage:
         assert total == 3
 
     async def test_get_all_maintainer_admin_role_missing_raises(self):
-        current_user_id = 5
-        mock_current_user = MagicMock(id=current_user_id, role_id=1, partner_id=10)
+        current_user_id= UUID("55555555-5555-5555-5555-555555555555")
+        mock_current_user = MagicMock(id=current_user_id, role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10101010-1010-1010-1010-101010101010"))
         current_user_result = MagicMock()
         current_user_result.scalars.return_value.one_or_none.return_value = mock_current_user
 
@@ -1643,8 +1643,8 @@ class TestUserRepositoryMissingCoverage:
             )
 
     async def test_get_all_maintainer_no_admin_user_found_uses_self_as_root(self):
-        current_user_id = 5
-        mock_current_user = MagicMock(id=current_user_id, role_id=1, partner_id=10)
+        current_user_id= UUID("55555555-5555-5555-5555-555555555555")
+        mock_current_user = MagicMock(id=current_user_id, role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10101010-1010-1010-1010-101010101010"))
         current_user_result = MagicMock()
         current_user_result.scalars.return_value.one_or_none.return_value = mock_current_user
 
@@ -1652,7 +1652,7 @@ class TestUserRepositoryMissingCoverage:
         maintainer_role = MagicMock(slug=UserRoles.MAINTAINER)
         mock_auth_repository.get_role_by_id = AsyncMock(return_value=maintainer_role)
 
-        admin_role = MagicMock(id=77)
+        admin_role = MagicMock(id= UUID("77777777-7777-7777-7777-777777777777"))
         admin_role_result = MagicMock()
         admin_role_result.scalars.return_value.first.return_value = admin_role
 
@@ -1682,8 +1682,8 @@ class TestUserRepositoryMissingCoverage:
         assert total == 0
 
     async def test_get_all_with_filter_criteria_applies_filters(self):
-        current_user_id = 1
-        mock_current_user = MagicMock(id=current_user_id, role_id=1, partner_id=10)
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
+        mock_current_user = MagicMock(id=current_user_id, role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("10101010-1010-1010-1010-101010101010"))
         current_user_result = MagicMock()
         current_user_result.scalars.return_value.one_or_none.return_value = mock_current_user
 
@@ -1732,32 +1732,13 @@ class TestUserRepositoryMissingCoverage:
     # add_user — untested branches
     # =====================================================================
 
-    async def test_add_user_publisher_exists_error(self):
-        from src.components.auth.schema import UserData
-
-        user_data = UserData(
-            name="New User", email="new@example.com", password="Test@123456",
-            phone_number="+1234567890", role_id=1, partner_id=1,
-            parent_id=None, country_id=1, is_active=True,
-        )
-
-        self.session.add = MagicMock()
-        self.session.flush = AsyncMock(
-            side_effect=IntegrityError(
-                "stmt", "params", Exception('duplicate key value violates unique constraint "uq_partner_maglo_publisher"')
-            )
-        )
-
-        with pytest.raises(PublisherExistsError):
-            await self.user_repository.add_user(user_data)
-
     async def test_add_user_generic_sqlalchemy_error(self):
         from src.components.auth.schema import UserData
 
         user_data = UserData(
             name="New User", email="new@example.com", password="Test@123456",
-            phone_number="+1234567890", role_id=1, partner_id=1,
-            parent_id=None, country_id=1, is_active=True,
+            phone_number="+1234567890", role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            parent_id=None, country_id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True,
         )
 
         self.session.add = MagicMock()
@@ -1772,8 +1753,8 @@ class TestUserRepositoryMissingCoverage:
 
         user_data = UserData(
             name="New User", email="new@example.com", password="Test@123456",
-            phone_number="+1234567890", role_id=1, partner_id=1,
-            parent_id=None, country_id=1, is_active=True,
+            phone_number="+1234567890", role_id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            parent_id=None, country_id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True,
         )
 
         self.session.add = MagicMock()
@@ -1783,7 +1764,7 @@ class TestUserRepositoryMissingCoverage:
         self.session.execute = AsyncMock(return_value=MagicMock())
 
         result = await self.user_repository.add_user(
-            user_data, services=SignupConfigKeys.MAGLO
+            user_data, services=SignupConfigKeys.TALKO
         )
 
         # Explicit `services` -> exactly one config-flag insert (vs. three
@@ -1817,7 +1798,7 @@ class TestUserRepositoryMissingCoverage:
 
     async def test_update_user_email_change_resets_verification(self):
         mock_user = MagicMock(
-            id=1, is_active=True, is_deleted=False, email="old@example.com", phone_number="+911111111111",
+            id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True, is_deleted=False, email="old@example.com", phone_number="+911111111111",
         )
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_user
@@ -1826,13 +1807,13 @@ class TestUserRepositoryMissingCoverage:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
-        await self.user_repository.update_user(1, 33, email="new@example.com")
+        await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), email="new@example.com")
 
         assert mock_user.is_email_verified is False
 
     async def test_update_user_phone_change_resets_verification(self):
         mock_user = MagicMock(
-            id=1, is_active=True, is_deleted=False, email="a@example.com", phone_number="+911111111111",
+            id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True, is_deleted=False, email="a@example.com", phone_number="+911111111111",
         )
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_user
@@ -1841,13 +1822,13 @@ class TestUserRepositoryMissingCoverage:
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
-        await self.user_repository.update_user(1, 33, phone_number="+922222222222")
+        await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), phone_number="+922222222222")
 
         assert mock_user.is_phone_number_verified is False
 
     async def test_update_user_unchanged_email_does_not_reset_verification(self):
         mock_user = MagicMock(
-            id=1, is_active=True, is_deleted=False, email="same@example.com", phone_number="+911111111111",
+            id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True, is_deleted=False, email="same@example.com", phone_number="+911111111111",
         )
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_user
@@ -1859,7 +1840,7 @@ class TestUserRepositoryMissingCoverage:
         # Explicitly set to a sentinel first so we can detect "untouched".
         mock_user.is_email_verified = "untouched"
 
-        await self.user_repository.update_user(1, 33, email="same@example.com")
+        await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), email="same@example.com")
 
         assert mock_user.is_email_verified == "untouched"
 
@@ -1867,12 +1848,12 @@ class TestUserRepositoryMissingCoverage:
         self.session.execute = AsyncMock(side_effect=Exception("weird failure"))
 
         with pytest.raises(Exception, match="weird failure"):
-            await self.user_repository.update_user(1, 33, name="X")
+            await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), name="X")
         self.mock_logger.error.assert_called()
 
     # ---- get_by_id with show_inactive_users=True ----
     async def test_get_by_id_show_inactive_returns_active_user(self):
-        mock_user = MagicMock(id=1, is_active=True, is_deleted=False)
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True, is_deleted=False)
         self.session.get = AsyncMock(return_value=mock_user)
 
         result = await self.user_repository.get_by_id(1, show_inactive_users=True)
@@ -1880,7 +1861,7 @@ class TestUserRepositoryMissingCoverage:
         assert result == mock_user
 
     async def test_get_by_id_show_inactive_returns_inactive_user(self):
-        mock_user = MagicMock(id=1, is_active=False, is_deleted=False)
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=False)
         self.session.get = AsyncMock(return_value=mock_user)
 
         result = await self.user_repository.get_by_id(1, show_inactive_users=True)
@@ -1889,7 +1870,7 @@ class TestUserRepositoryMissingCoverage:
 
     async def test_get_by_id_show_inactive_deleted_raises(self):
         self.session.get = AsyncMock(
-            return_value=MagicMock(id=1, is_active=False, is_deleted=True)
+            return_value=MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=True)
         )
 
         with pytest.raises(UserNotFoundError):
@@ -1920,37 +1901,37 @@ class TestUserRepositoryMissingCoverage:
     async def test_update_user_missing_user_raises(self):
         self._stub_update_session(None)
         with pytest.raises(NotFoundError):
-            await self.user_repository.update_user(1, 33, name="X")
+            await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), name="X")
 
     async def test_update_user_deleted_user_raises_even_when_reactivating(self):
-        self._stub_update_session(MagicMock(id=1, is_active=False, is_deleted=True))
+        self._stub_update_session(MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=True))
         with pytest.raises(NotFoundError):
-            await self.user_repository.update_user(1, 33, is_active=True)
+            await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), is_active=True)
         self.session.commit.assert_not_awaited()
 
     async def test_update_user_inactive_user_non_reactivating_raises(self):
-        self._stub_update_session(MagicMock(id=1, is_active=False, is_deleted=False))
+        self._stub_update_session(MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=False))
         with pytest.raises(NotFoundError):
-            await self.user_repository.update_user(1, 33, name="X")
+            await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), name="X")
         self.session.commit.assert_not_awaited()
 
     async def test_update_user_inactive_user_with_is_active_false_raises(self):
-        self._stub_update_session(MagicMock(id=1, is_active=False, is_deleted=False))
+        self._stub_update_session(MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=False))
         with pytest.raises(NotFoundError):
-            await self.user_repository.update_user(1, 33, is_active=False)
+            await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), is_active=False)
 
     async def test_update_user_reactivates_inactive_user(self):
-        mock_user = MagicMock(id=1, is_active=False, is_deleted=False)
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, is_deleted=False)
         self._stub_update_session(mock_user)
-        result = await self.user_repository.update_user(1, 33, is_active=True)
+        result = await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), is_active=True)
         assert result.is_active is True
-        assert mock_user.updated_by == 33
+        assert mock_user.updated_by== UUID("33333333-3333-3333-3333-333333333333")
         self.session.commit.assert_awaited_once()
 
     async def test_update_user_deactivates_active_user(self):
-        mock_user = MagicMock(id=1, is_active=True, is_deleted=False)
+        mock_user = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True, is_deleted=False)
         self._stub_update_session(mock_user)
-        result = await self.user_repository.update_user(1, 33, is_active=False)
+        result = await self.user_repository.update_user(UUID("11111111-1111-1111-1111-111111111111"), UUID("33333333-3333-3333-3333-333333333333"), is_active=False)
         assert result.is_active is False
         self.session.commit.assert_awaited_once()
 

@@ -1,13 +1,7 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    UniqueConstraint,
-)
+import uuid
+from sqlalchemy import Boolean, Column, ForeignKey, Index, String, text
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils import EmailType, force_auto_coercion
 
 from src.components.database.base_model import MetaData
@@ -19,13 +13,13 @@ force_auto_coercion()
 class User(MetaData):
     __tablename__ = "console_users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
     name = Column(String(56))
     phone_number = Column(String(200), unique=True)
     email = Column(EmailType, unique=True)
     hashed_password = Column(String(128), nullable=False, default="")
-    partner_id = Column(Integer, ForeignKey("console_partners.id"), index=True)
-    role_id = Column(Integer, ForeignKey("console_role.id"), index=True)
+    partner_id = Column(UUID(as_uuid=True), ForeignKey("console_partners.id"), index=True)
+    role_id = Column(UUID(as_uuid=True), ForeignKey("console_role.id"), index=True)
     is_active = Column(Boolean, default=True, index=True)
     is_deleted = Column(Boolean, default=False)
     is_staff = Column(Boolean, default=False)
@@ -36,26 +30,22 @@ class User(MetaData):
     is_phone_number_verified = Column(Boolean, default=False)
 
     # User Enabled Services Info
-    is_maglo_enabled = Column(Boolean, default=False, index=True)
     is_talko_enabled = Column(Boolean, default=False, index=True)
-    is_babbler_enabled = Column(Boolean, default=False, index=True)
 
     description = Column(String(200))
     designation = Column(String)
-    parent_id = Column(Integer, ForeignKey("console_users.id"), nullable=True)
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("console_users.id"), nullable=True)
     alternate_phone_number = Column(String(200), unique=True, nullable=True)
     is_walkthrough_completed = Column(Boolean, default=False, index=True)
     country_id = Column(
-        Integer, ForeignKey("console_countries.id"), index=True, nullable=True
+        UUID(as_uuid=True), ForeignKey("console_countries.id"), index=True, nullable=True
     )
     state_id = Column(
-        Integer, ForeignKey("console_states.id"), index=True, nullable=True
+        UUID(as_uuid=True), ForeignKey("console_states.id"), index=True, nullable=True
     )
     city_id = Column(
-        Integer, ForeignKey("console_cities.id"), index=True, nullable=True
+        UUID(as_uuid=True), ForeignKey("console_cities.id"), index=True, nullable=True
     )
-
-    is_maglo_publisher = Column(Boolean, default=False)
 
     cloud_agent_number = Column(String, nullable=True)
     current_status = Column(String(50), nullable=True, default="Away", index=True)
@@ -100,10 +90,6 @@ class User(MetaData):
     partner = relationship("Partner", foreign_keys=[partner_id], back_populates="users")
 
     __table_args__ = (
-        # Ensures only one user per partner_id can have is_maglo_publisher=True
-        UniqueConstraint(
-            "partner_id", "is_maglo_publisher", name="uq_partner_maglo_publisher"
-        ),
         # created_at/updated_at are inherited from MetaData; indexed here
         # only (not on MetaData itself) since the User Listing filters
         # (MGL-9482) are the only range-scan users of these columns.

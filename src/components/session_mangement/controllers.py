@@ -7,12 +7,14 @@ from typing import List
 from src.components.session_mangement.services import UserSessionService
 from src.components.auth.constant import ServiceNames
 from src.components.common.response import SuccessResponse, InternalServerErrorResponse
+from src.components.rbac.permission_injector import permission_check
 
 class UserSessionController:
 
     user_session_router = APIRouter()
 
     @user_session_router.post("/deactive-user-session")
+    @permission_check("console:deactivate_sessions_by_service_name")
     @inject
     async def deactivate_sessions_by_service_name(
         request: Request,

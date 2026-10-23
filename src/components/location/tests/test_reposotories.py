@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -38,7 +39,7 @@ class TestLocationRepository:
         """Test fetching all countries without a search filter."""
         # Mock the database response - needs to mimic result.mappings().all()
         mock_mappings = MagicMock()
-        mock_mappings.all.return_value = [MockRow(id=1, name="India", slug="india")]
+        mock_mappings.all.return_value = [MockRow(id= UUID("11111111-1111-1111-1111-111111111111"), name="India", slug="india")]
         mock_execute = MagicMock()
         mock_execute.mappings.return_value = mock_mappings
         self.session.execute = AsyncMock(return_value=mock_execute)
@@ -46,7 +47,7 @@ class TestLocationRepository:
         result = await self.location_repository.get_all_countries(search_by="")
 
         assert len(result) == 1
-        assert result[0]["id"] == 1
+        assert result[0]["id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["name"] == "India"
         self.mock_logger.info.assert_called_with(
             "Attempting Fetching all countries from database"
@@ -56,7 +57,7 @@ class TestLocationRepository:
         """Test fetching countries with a search filter."""
         # Mock the database response - needs to mimic result.mappings().all()
         mock_mappings = MagicMock()
-        mock_mappings.all.return_value = [MockRow(id=1, name="India", slug="india")]
+        mock_mappings.all.return_value = [MockRow(id= UUID("11111111-1111-1111-1111-111111111111"), name="India", slug="india")]
         mock_execute = MagicMock()
         mock_execute.mappings.return_value = mock_mappings
         self.session.execute = AsyncMock(return_value=mock_execute)
@@ -64,7 +65,7 @@ class TestLocationRepository:
         result = await self.location_repository.get_all_countries(search_by="Ind")
 
         assert len(result) == 1
-        assert result[0]["id"] == 1
+        assert result[0]["id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["name"] == "India"
         self.mock_logger.info.assert_called_with(
             "Attempting Fetching all countries from database"
@@ -74,17 +75,17 @@ class TestLocationRepository:
         """Test fetching states for a given country."""
         # Mock the database response - needs to mimic result.mappings().all()
         mock_mappings = MagicMock()
-        mock_mappings.all.return_value = [MockRow(id=1, name="Maharashtra", slug="maharashtra")]
+        mock_mappings.all.return_value = [MockRow(id= UUID("11111111-1111-1111-1111-111111111111"), name="Maharashtra", slug="maharashtra")]
         mock_execute = MagicMock()
         mock_execute.mappings.return_value = mock_mappings
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result, total_count = await self.location_repository.get_states_by_country(
-            country_id=1, search_by=""
+            country_id= UUID("11111111-1111-1111-1111-111111111111"), search_by=""
         )
 
         assert len(result) == 1
-        assert result[0]["id"] == 1
+        assert result[0]["id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["name"] == "Maharashtra"
         assert total_count == 1
 
@@ -92,17 +93,17 @@ class TestLocationRepository:
         """Test fetching states with a search filter."""
         # Mock the database response - needs to mimic result.mappings().all()
         mock_mappings = MagicMock()
-        mock_mappings.all.return_value = [MockRow(id=1, name="Maharashtra", slug="maharashtra")]
+        mock_mappings.all.return_value = [MockRow(id= UUID("11111111-1111-1111-1111-111111111111"), name="Maharashtra", slug="maharashtra")]
         mock_execute = MagicMock()
         mock_execute.mappings.return_value = mock_mappings
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result, total_count = await self.location_repository.get_states_by_country(
-            country_id=1, search_by="Maha"
+            country_id= UUID("11111111-1111-1111-1111-111111111111"), search_by="Maha"
         )
 
         assert len(result) == 1
-        assert result[0]["id"] == 1
+        assert result[0]["id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["name"] == "Maharashtra"
         assert total_count == 1
 
@@ -110,17 +111,17 @@ class TestLocationRepository:
         """Test fetching cities for a given state."""
         # Mock the database response - needs to mimic result.mappings().all()
         mock_mappings = MagicMock()
-        mock_mappings.all.return_value = [MockRow(id=1, name="Mumbai", slug="mumbai")]
+        mock_mappings.all.return_value = [MockRow(id= UUID("11111111-1111-1111-1111-111111111111"), name="Mumbai", slug="mumbai")]
         mock_execute = MagicMock()
         mock_execute.mappings.return_value = mock_mappings
         self.session.execute = AsyncMock(return_value=mock_execute)
 
         result, total_count = await self.location_repository.get_cities_by_state(
-            state_id=1, search_by="Mum"
+            state_id= UUID("11111111-1111-1111-1111-111111111111"), search_by="Mum"
         )
 
         assert len(result) == 1
-        assert result[0]["id"] == 1
+        assert result[0]["id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["name"] == "Mumbai"
         assert total_count == 1
 
@@ -141,7 +142,7 @@ class TestLocationRepository:
 
         with pytest.raises(Exception, match="Database error"):
             await self.location_repository.get_states_by_country(
-                country_id=1, search_by=""
+                country_id= UUID("11111111-1111-1111-1111-111111111111"), search_by=""
             )
 
         self.mock_logger.error.assert_called_with(
@@ -153,7 +154,7 @@ class TestLocationRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
 
         with pytest.raises(Exception, match="Unexpected error"):
-            await self.location_repository.get_cities_by_state(state_id=1, search_by="")
+            await self.location_repository.get_cities_by_state(state_id= UUID("11111111-1111-1111-1111-111111111111"), search_by="")
 
         self.mock_logger.error.assert_called_with(
             "Unexpected error fetching cities: Unexpected error"
@@ -165,7 +166,7 @@ class TestLocationRepository:
         mock_result.scalar.return_value = 1  # Simulate country ID found
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.location_repository.is_country_exists(country_id=1)
+        result = await self.location_repository.is_country_exists(country_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result is True
 
@@ -175,7 +176,7 @@ class TestLocationRepository:
         mock_result.scalar.return_value = None
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.location_repository.is_country_exists(country_id=999)
+        result = await self.location_repository.is_country_exists(country_id= UUID("99999999-9999-9999-9999-999999999999"))
 
         assert result is False
 
@@ -184,7 +185,7 @@ class TestLocationRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(Exception, match="Database error"):
-            await self.location_repository.is_country_exists(country_id=1)
+            await self.location_repository.is_country_exists(country_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_is_state_exists_found(self):
         """Test if a state exists (returns True)."""
@@ -192,7 +193,7 @@ class TestLocationRepository:
         mock_result.scalar.return_value = 1
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.location_repository.is_state_exists(state_id=1)
+        result = await self.location_repository.is_state_exists(state_id= UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result is True
 
@@ -202,7 +203,7 @@ class TestLocationRepository:
         mock_result.scalar.return_value = None
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.location_repository.is_state_exists(state_id=999)
+        result = await self.location_repository.is_state_exists(state_id= UUID("99999999-9999-9999-9999-999999999999"))
 
         assert result is False
 
@@ -211,12 +212,12 @@ class TestLocationRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(Exception, match="Database error"):
-            await self.location_repository.is_state_exists(state_id=1)
+            await self.location_repository.is_state_exists(state_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_get_state_by_id(self):
         """Test fetching a state by ID."""
         # Arrange
-        mock_state = MagicMock(id=1, country_id=174)
+        mock_state = MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), country_id= UUID("17417417-4174-1741-7417-417417417417"))
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_state
         self.session.execute = AsyncMock(return_value=mock_result)
@@ -227,13 +228,13 @@ class TestLocationRepository:
         # Assert
         assert result == mock_state
         self.mock_logger.info.assert_called_with(
-            "Attempting fetching cities for state_id: 1"
+            "Attempting fetching cities for state_id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_get_city_by_id_success(self):
         """Test fetching a city by ID."""
         # Arrange
-        mock_city = MagicMock(id=2, state_id=1)
+        mock_city = MagicMock(id= UUID("22222222-2222-2222-2222-222222222222"), state_id= UUID("11111111-1111-1111-1111-111111111111"))
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_city
         self.session.execute = AsyncMock(return_value=mock_result)
@@ -244,7 +245,7 @@ class TestLocationRepository:
         # Assert
         assert result == mock_city
         self.mock_logger.info.assert_called_with(
-            "Attempting fetching cities for state_id: 1"
+            "Attempting fetching cities for state_id: 11111111-1111-1111-1111-111111111111"
         )
 
     async def test_get_state_by_id_exception(self):

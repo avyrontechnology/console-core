@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, select
@@ -45,7 +46,7 @@ class PaymentRepository:
                 self.logger.error("Error fetching payment {}: {}".format(order_id, e))
                 raise
 
-    async def update_payment(self, payment_id: int, data: Dict[str, Any]) -> Payment:
+    async def update_payment(self, payment_id: UUID, data: Dict[str, Any]) -> Payment:
         async with self.session_factory() as session:
             try:
                 payment = await session.get(Payment, payment_id)
@@ -68,7 +69,7 @@ class PaymentRepository:
 
     async def get_payments_by_partner(
         self,
-        partner_id: int,
+        partner_id: UUID,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> tuple[List[Payment], int]:

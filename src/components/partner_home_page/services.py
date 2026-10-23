@@ -1,3 +1,4 @@
+from uuid import UUID
 import asyncio
 from typing import Dict, List
 
@@ -45,8 +46,8 @@ class PartnerHomePageService:
 
     async def get_partner_homepage_details(
         self,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
@@ -92,8 +93,6 @@ class PartnerHomePageService:
 
             subscription_status = {
                 Platform.CONSOLE: default_service_info.copy(),
-                Platform.MAGLO: default_service_info.copy(),
-                Platform.BABBLER: default_service_info.copy(),
                 Platform.OBOTAAI: default_service_info.copy(),
             }
 
@@ -163,7 +162,6 @@ class PartnerHomePageService:
                 RoleActionFlagKeys.CAN_ASSUME_USER: current_user_hierarchy == 0,
                 RoleActionFlagKeys.CAN_VIEW_PLANS: False,
                 RoleActionFlagKeys.CAN_VIEW_ORDER_HISTORY: False,
-                RoleActionFlagKeys.CAN_EDIT_BABBLER_PRICING: False,
                 RoleActionFlagKeys.CAN_VIEW_API_ADMIN: False,
             }
             role_action_response = RoleActionFlagResponse(
@@ -185,9 +183,7 @@ class PartnerHomePageService:
                 services_dict = {}
 
             services_info = SusbscribedServices(
-                is_maglo_enabled=services_dict.get("is_maglo_enabled", False),
                 is_talko_enabled=services_dict.get("is_talko_enabled", False),
-                is_babbler_enabled=services_dict.get("is_babbler_enabled", False),
                 is_obotaai_enabled=services_dict.get("is_obotaai_enabled", False),
                 is_add_number_enabled=services_dict.get("is_add_number_enabled", False),
 
@@ -213,7 +209,7 @@ class PartnerHomePageService:
             )
             raise ex
 
-    async def partner_dashboard_cards(self, current_user_id: int) -> List[dict]:
+    async def partner_dashboard_cards(self, current_user_id: UUID) -> List[dict]:
         try:
             self.__console_service_logger.info(
                 "trying to get partner dashboard card counts."

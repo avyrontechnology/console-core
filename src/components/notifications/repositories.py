@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, Dict, List, Optional, Tuple
 from sqlalchemy import select, update, func
@@ -23,23 +24,9 @@ CONFIG_KEY_TO_SOURCE_SCOPE: Dict[str, Tuple[str, Optional[str]]] = {
     value: key for key, value in SOURCE_SCOPE_TO_CONFIG_KEY.items()
 }
 
-MAGLO_EVENT_TO_SCOPE: Dict[str, NotificationScopeEnum] = {
-    # One single Maglo event can map to a dedicated scope, which keeps the
-    # queue payload stable while still allowing fine-grained user preferences.
-    "LEAD_ASSIGNED": NotificationScopeEnum.LEAD_ASSIGNED,
-    "BULK_LEAD_ASSIGNED": NotificationScopeEnum.BULK_LEAD_ASSIGNED,
-    "UPCOMING_FOLLOWUP": NotificationScopeEnum.FOLLOWUP,
-    "MISSED_FOLLOWUP": NotificationScopeEnum.FOLLOWUP,
-}
-
-BABBLER_EVENT_TO_SCOPE: Dict[str, NotificationScopeEnum] = {
-    # fill in with the actual event_name(s) babbler sends for whatsapp messages
-    "WHATSAPP_MESSAGE_RECEIVED": NotificationScopeEnum.WHATSAPP,
-}
-
 EVENT_TO_SCOPE: Dict[str, NotificationScopeEnum] = {
-    **MAGLO_EVENT_TO_SCOPE,
-    **BABBLER_EVENT_TO_SCOPE,
+    # event_name(s) producers send for whatsapp messages
+    "WHATSAPP_MESSAGE_RECEIVED": NotificationScopeEnum.WHATSAPP,
 }
 from src.components.notifications.constants import NotificationServiceType 
 
@@ -48,13 +35,13 @@ class NotificationRepository:
     def __init__(
         self,
         session_factory: Callable[..., AbstractAsyncContextManager[AsyncSession]],
-        maglo_service_logger: ConsoleServiceLogger,
+        console_service_logger: ConsoleServiceLogger,
     ):
         self.__session_factory = session_factory
-        self.__logger = maglo_service_logger
+        self.__logger = console_service_logger
 
     async def upsert_subscription(
-        self, user_id: int, channel_type: str, identifier: str, meta_data: dict, service_type: NotificationServiceType,
+        self, user_id: UUID, channel_type: str, identifier: str, meta_data: dict, service_type: NotificationServiceType,
     ) -> None:
         async with self.__session_factory() as session:
             stmt = insert(NotificationSubscription).values(
@@ -80,7 +67,7 @@ class NotificationRepository:
 
             await session.commit()
 
-    async def get_active_subscriptions(self, user_id: int, service_type: str | None = None,) -> List[NotificationSubscription]:
+    async def get_active_subscriptions(self, user_id: UUID, service_type: str | None = None,) -> List[NotificationSubscription]:
         async with self.__session_factory() as session:
             query = select(NotificationSubscription).where(
                 NotificationSubscription.user_id == user_id,
@@ -98,7 +85,7 @@ class NotificationRepository:
             return rows
 
 
-    async def deactivate_subscription(self, user_id: int, identifier: str, service_type: NotificationServiceType) -> None:
+    async def deactivate_subscription(self, user_id: UUID, identifier: str, service_type: NotificationServiceType) -> None:
         async with self.__session_factory() as session:
             stmt = update(NotificationSubscription).where(
                 NotificationSubscription.user_id == user_id,
@@ -108,7 +95,7 @@ class NotificationRepository:
             await session.execute(stmt)
             await session.commit()
 
-    async def insert_history(self, user_id: int, title: str, body: str, data: dict, service_type: NotificationServiceType) -> None:
+    async def insert_history(self, user_id: UUID, title: str, body: str, data: dict, service_type: NotificationServiceType) -> None:
         async with self.__session_factory() as session:
             history = NotificationHistory(
                 user_id=user_id,
@@ -127,10 +114,10 @@ class NotificationRepository:
             return history
 
     async def get_notification_preferences(
-        self, user_id: int
+        self, user_id: UUID
     ) -> List[NotificationPreferenceItem]:
         """
-        Resolve the source-level and Maglo sub-scope delivery state from the
+        Resolve the source-level and sub-scope delivery state from the
         shared user-config table.
 
         We default to ENABLED for missing rows so existing users keep the current
@@ -180,7 +167,7 @@ class NotificationRepository:
         ]
 
     async def upsert_notification_preferences(
-        self, user_id: int, preferences: List[NotificationPreferenceItem]
+        self, user_id: UUID, preferences: List[NotificationPreferenceItem]
     ) -> List[NotificationPreferenceItem]:
         """
         Store application-level preferences in the shared user-config table.
@@ -234,7 +221,7 @@ class NotificationRepository:
 
         return await self.get_notification_preferences(user_id)
 
-    async def get_user_history(self, user_id: int, limit: int = 50, offset: int = 0, state:Optional[str] = None, service_type: NotificationServiceType = NotificationServiceType.BABBLER,) -> Tuple[List[NotificationHistory], int]:
+    async def get_user_history(self, user_id: UUID, limit: int = 50, offset: int = 0, state:Optional[str] = None, service_type: NotificationServiceType = NotificationServiceType.TALKO,) -> Tuple[List[NotificationHistory], int]:
         async with self.__session_factory() as session:
         
             # Base query
@@ -274,7 +261,7 @@ class NotificationRepository:
 
             return data, total_count
 
-    async def get_unread_count(self, user_id: int, service_type: NotificationServiceType) -> int:
+    async def get_unread_count(self, user_id: UUID, service_type: NotificationServiceType) -> int:
         async with self.__session_factory() as session:
             query = select(func.count(NotificationHistory.id)).where(
                 NotificationHistory.user_id == user_id,
@@ -284,7 +271,7 @@ class NotificationRepository:
             result = await session.execute(query)
             return result.scalar() or 0
 
-    async def mark_as_read(self, user_id: int, notification_ids: List[int]) -> None:
+    async def mark_as_read(self, user_id: UUID, notification_ids: List[UUID]) -> None:
         async with self.__session_factory() as session:
             stmt = update(NotificationHistory).where(NotificationHistory.user_id == user_id)
             
@@ -298,7 +285,7 @@ class NotificationRepository:
             await session.execute(stmt)
             await session.commit()
 
-    async def unsubscribe_all_users_from_partner(self, partner_id:int):
+    async def unsubscribe_all_users_from_partner(self, partner_id: UUID):
         try:
             async with self.__session_factory() as session:
                 stmt = (
@@ -318,7 +305,7 @@ class NotificationRepository:
             self.__logger.info(f"got an error while deactivating FCM tokens for partner : {exp}")
             ...
     async def is_notification_enabled(
-        self, user_id: int, source: str, event_name: Optional[str] = None
+        self, user_id: UUID, source: str, event_name: Optional[str] = None
     ) -> bool:
         source_key = self._resolve_config_key(source=source)
         if not source_key:
@@ -371,7 +358,7 @@ class NotificationRepository:
     def _resolve_scope_from_event(event_name: Optional[str]) -> Optional[str]:
         if not event_name:
             return None
-        scope = MAGLO_EVENT_TO_SCOPE.get(event_name)
+        scope = EVENT_TO_SCOPE.get(event_name)
         return scope.value if scope else None
 
     @staticmethod

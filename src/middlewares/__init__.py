@@ -7,15 +7,6 @@ from .context import ContextMiddleware
 from .logging_request_and_response import RequestResponseLoggingMiddleware
 from src.config.settings import local_settings
 
-# from src.components.services.email_service import EmailService
-# from src.core.container import Container
-# from src.middlewares.exception import ErrorHandlingMiddleware
-
-
-# container = Container()
-
-# email_service_instance: EmailService = container.email_service()
-
 # All these values will come from env file
 
 allow_methods = ["*"]
@@ -36,5 +27,4 @@ allowed_middlewares = [
     Middleware(AllowedHostsMiddleware, allowed_hosts=allow_hosts),
     Middleware(AuthMiddleware),
     Middleware(RequestResponseLoggingMiddleware),
-    # Middleware(ErrorHandlingMiddleware, error_email_service=email_service_instance),
 ]

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,7 +24,7 @@ class TestPartnerConfigRepository:
 
     async def test_create_partner_config_success(self):
         partner_config_data = PartnerConfigBase(key="test_key", value="test_value")
-        partner_id = 10
+        partner_id= UUID("10101010-1010-1010-1010-101010101010")
         partner_config_mock = MagicMock()
 
         with patch(
@@ -48,7 +49,7 @@ class TestPartnerConfigRepository:
 
     async def test_create_partner_config_integrity_error(self):
         partner_config_data = PartnerConfigBase(key="key", value="val")
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         with patch(
             "src.components.partner_config.repositories.PartnerConfig", MagicMock()
@@ -70,7 +71,7 @@ class TestPartnerConfigRepository:
 
     async def test_create_partner_config_general_exception(self):
         partner_config_data = PartnerConfigBase(key="key", value="val")
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         with patch(
             "src.components.partner_config.repositories.PartnerConfig", MagicMock()
@@ -84,7 +85,7 @@ class TestPartnerConfigRepository:
 
     @pytest.mark.asyncio
     async def test_get_partner_config_by_key_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "test_key"
 
         fake_result = MagicMock()
@@ -107,7 +108,7 @@ class TestPartnerConfigRepository:
         )
 
     async def test_get_partner_config_by_key_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "error_key"
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
@@ -118,8 +119,8 @@ class TestPartnerConfigRepository:
         )
 
     async def test_update_partner_config_update_existing(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=True)
 
         existing_config = MagicMock(
@@ -144,8 +145,8 @@ class TestPartnerConfigRepository:
 
     @pytest.mark.asyncio
     async def test_update_partner_config_add_new(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=True)
 
         # Simulate no existing configs in DB
@@ -166,8 +167,8 @@ class TestPartnerConfigRepository:
         self.session.refresh.assert_awaited_once()
 
     async def test_update_partner_config_exception(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=True)
         self.session.execute = AsyncMock(side_effect=Exception("Update error"))
 
@@ -178,7 +179,7 @@ class TestPartnerConfigRepository:
         )
 
     async def test_get_partner_configs_by_partner_id_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         config_mock = MagicMock()
         execute_mock = AsyncMock()
         scalars_mock = MagicMock()
@@ -194,7 +195,7 @@ class TestPartnerConfigRepository:
         )
 
     async def test_get_partner_configs_by_partner_id_exception(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session.execute = AsyncMock(side_effect=Exception("DB Error"))
 
         with pytest.raises(Exception):
@@ -205,7 +206,7 @@ class TestPartnerConfigRepository:
 
     async def test_create_partner_config_commit_failure(self):
         partner_config_data = PartnerConfigBase(key="k1", value="v1")
-        partner_id = 5
+        partner_id= UUID("55555555-5555-5555-5555-555555555555")
 
         with patch("src.components.partner_config.repositories.PartnerConfig"):
             self.session.add = MagicMock()
@@ -219,7 +220,7 @@ class TestPartnerConfigRepository:
             )
 
     async def test_get_partner_config_by_key_with_list_partner_ids(self):
-        partner_ids = [2, 3]
+        partner_ids = [UUID("22222222-2222-2222-2222-222222222222"), UUID("33333333-3333-3333-3333-333333333333")]
         key = "abc"
 
         fake_result = MagicMock()
@@ -243,8 +244,8 @@ class TestPartnerConfigRepository:
         assert result == []
 
     async def test_update_partner_config_none_value_ignored(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=None)
 
         scalars_mock = MagicMock()
@@ -263,8 +264,8 @@ class TestPartnerConfigRepository:
         self.session.commit.assert_awaited_once()
 
     async def test_update_partner_config_multiple_keys(self):
-        partner_id = 1
-        user_id = 99
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("99999999-9999-9999-9999-999999999999")
         update_data = PartnerConfigData(
             is_custom_role_permission_enabled=True,
             is_talko_enabled=False,  # <-- use a real field instead
@@ -291,7 +292,7 @@ class TestPartnerConfigRepository:
         existing2.update_history.assert_called_once()
 
     async def test_update_partner_config_commit_failure(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=True)
 
         scalars_mock = MagicMock()
@@ -321,7 +322,7 @@ class TestPartnerConfigRepository:
         assert result == enum_values
 
     async def test_upsert_partner_config_updates_existing(self):
-        current_user = {CurrentUserMap.PARTNER_ID: 10}
+        current_user = {CurrentUserMap.PARTNER_ID: UUID("10101010-1010-1010-1010-101010101010")}
         key, value = "x", "y"
 
         existing = MagicMock()
@@ -340,7 +341,7 @@ class TestPartnerConfigRepository:
 
         assert result is True
         assert existing.value == value
-        assert existing.updated_by == 10
+        assert existing.updated_by== UUID("10101010-1010-1010-1010-101010101010")
 
     async def test_upsert_partner_config_creates_new(self):
         current_user = {CurrentUserMap.PARTNER_ID: 5}
@@ -399,8 +400,8 @@ class TestPartnerConfigRepository:
         self.session.add.assert_called_once()
 
     async def test_update_partner_config_existing_no_change(self):
-        partner_id = 1
-        user_id = 2
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = PartnerConfigData(is_custom_role_permission_enabled=True)
 
         existing = MagicMock(key="is_custom_role_permission_enabled", value=True)

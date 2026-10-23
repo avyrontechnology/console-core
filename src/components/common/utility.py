@@ -2,6 +2,7 @@ import json
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
+from uuid import UUID
 
 from sqlalchemy.inspection import inspect
 
@@ -213,6 +214,7 @@ class SchemaValidator:
             FieldType.FLOAT: SchemaValidator._check_float_type,
             FieldType.BOOLEAN: SchemaValidator._check_boolean_type,
             FieldType.DICT: SchemaValidator._check_dict_type,
+            FieldType.UUID: SchemaValidator._check_uuid_type,
         }
 
         checker = type_checkers.get(field_type)
@@ -238,6 +240,24 @@ class SchemaValidator:
             return None, f"{field_name} must be an integer"
 
         return value, None
+
+    @staticmethod
+    def _check_uuid_type(
+        field_name: str, value: Any, auto_convert: bool
+    ) -> Tuple[Any, Optional[str]]:
+        """Check UUID type: accept UUID objects and canonical UUID strings.
+
+        Plain ints/floats are rejected (no silent int->UUID coercion at the
+        API boundary); strings are parsed strictly.
+        """
+        if isinstance(value, UUID):
+            return value, None
+        if isinstance(value, str):
+            try:
+                return UUID(value), None
+            except (ValueError, AttributeError, TypeError):
+                return None, f"{field_name} must be a valid UUID"
+        return None, f"{field_name} must be a valid UUID"
 
     @staticmethod
     def _check_string_type(

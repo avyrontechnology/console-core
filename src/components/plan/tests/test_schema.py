@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
@@ -10,6 +11,22 @@ from src.components.plan.schema import (
     PlanValidationMixin,
 )
 from src.components.wallet.enum import Currency
+
+
+# Prod mapper is empty (retired platforms removed). Tests that
+# exercise validator *logic* inject a sample mapper instead of
+# depending on product data.
+TEST_MAPPER = {"console": {"Dashboard": {"Chat": {"endpoints": [], "flags": []}}}}
+
+
+@pytest.fixture
+def mapper(monkeypatch):
+    monkeypatch.setattr(
+        "src.components.plan.schema.SERVICE_FEATURE_MAPPER", TEST_MAPPER
+    )
+    monkeypatch.setattr(
+        "src.components.plan.controllers.SERVICE_FEATURE_MAPPER", TEST_MAPPER
+    )
 
 
 class TestPlanValidationMixin:
@@ -204,8 +221,8 @@ class TestPlanValidationMixin:
     # _validate_service_name tests
     def test_validate_service_name_valid(self, mixin):
         """Should validate valid service name."""
-        result = mixin._validate_service_name(Platform.MAGLO)
-        assert result == Platform.MAGLO
+        result = mixin._validate_service_name(Platform.CONSOLE)
+        assert result == Platform.CONSOLE
 
     def test_validate_service_name_invalid(self, mixin):
         """Should raise error for invalid service name."""
@@ -254,14 +271,14 @@ class TestPlanValidationMixin:
     # _parse_module tests
     def test_parse_module_valid(self, mixin):
         """Should parse valid module string."""
-        service, feature = mixin._parse_module("maglo:campaign")
-        assert service == "maglo"
+        service, feature = mixin._parse_module("talko:campaign")
+        assert service == "talko"
         assert feature == "campaign"
 
     def test_parse_module_with_spaces(self, mixin):
         """Should parse module with spaces and strip them."""
-        service, feature = mixin._parse_module("  maglo : campaign  ")
-        assert service == "maglo"
+        service, feature = mixin._parse_module("  talko : campaign  ")
+        assert service == "talko"
         assert feature == "campaign"
 
     def test_parse_module_not_string(self, mixin):
@@ -274,14 +291,14 @@ class TestPlanValidationMixin:
         with pytest.raises(
             ValueError, match="must be in format 'service:feature_name'"
         ):
-            mixin._parse_module("maglocampaign")
+            mixin._parse_module("talkocampaign")
 
     def test_parse_module_multiple_colons(self, mixin):
         """Should raise error for module with multiple colons."""
         with pytest.raises(
             ValueError, match="must be in format 'service:feature_name'"
         ):
-            mixin._parse_module("maglo:campaign:extra")
+            mixin._parse_module("talko:campaign:extra")
 
     def test_parse_module_empty_service(self, mixin):
         """Should raise error for empty service."""
@@ -295,35 +312,35 @@ class TestPlanValidationMixin:
         with pytest.raises(
             ValueError, match="must have non-empty service and feature name"
         ):
-            mixin._parse_module("maglo:")
+            mixin._parse_module("talko:")
 
     # _validate_service tests
     def test_validate_service_valid(self, mixin):
         """Should validate valid service."""
-        allowed = {"maglo", "babbler"}
-        mixin._validate_service("maglo", "maglo:campaign", allowed)
+        allowed = {"console", "console"}
+        mixin._validate_service("console", "console:campaign", allowed)
 
     def test_validate_service_invalid(self, mixin):
         """Should raise error for invalid service."""
-        allowed = {"maglo", "babbler"}
+        allowed = {"console", "console"}
 
         with pytest.raises(ValueError, match="Invalid service 'invalid'"):
             mixin._validate_service("invalid", "invalid:campaign", allowed)
 
     # _validate_feature_name tests
-    def test_validate_feature_name_valid(self, mixin):
+    def test_validate_feature_name_valid(self, mixin, mapper):
         """Should validate valid feature name."""
-        mixin._validate_feature_name("maglo", "Performance_Overview")
+        mixin._validate_feature_name("console", "Chat")
 
     def test_validate_feature_name_invalid(self, mixin):
         """Should raise error for invalid feature name."""
         with pytest.raises(ValueError, match="Invalid feature"):
-            mixin._validate_feature_name("maglo", "invalid_feature_xyz")
+            mixin._validate_feature_name("console", "invalid_feature_xyz")
 
     # _get_allowed_features tests
-    def test_get_allowed_features_existing_service(self, mixin):
+    def test_get_allowed_features_existing_service(self, mixin, mapper):
         """Should return allowed features for existing service."""
-        features = mixin._get_allowed_features("maglo")
+        features = mixin._get_allowed_features("console")
         assert isinstance(features, set)
 
     def test_get_allowed_features_non_existing_service(self, mixin):
@@ -332,9 +349,9 @@ class TestPlanValidationMixin:
         assert features == set()
 
     # _validate_modules tests
-    def test_validate_modules_valid(self, mixin):
+    def test_validate_modules_valid(self, mixin, mapper):
         """Should validate valid modules list."""
-        modules = ["maglo:Performance_Overview"]
+        modules = ["console:Chat"]
         mixin._validate_modules(modules)
 
     def test_validate_modules_invalid_service(self, mixin):
@@ -344,9 +361,9 @@ class TestPlanValidationMixin:
         with pytest.raises(ValueError, match="Invalid service"):
             mixin._validate_modules(modules)
 
-    def test_validate_modules_invalid_feature(self, mixin):
+    def test_validate_modules_invalid_feature(self, mixin, mapper):
         """Should raise error for invalid feature in modules."""
-        modules = ["maglo:invalid_feature_xyz"]
+        modules = ["console:invalid_feature_xyz"]
 
         with pytest.raises(ValueError, match="Invalid feature"):
             mixin._validate_modules(modules)
@@ -355,7 +372,7 @@ class TestPlanValidationMixin:
 class TestPlanBase:
     """Test PlanBase model."""
 
-    def test_plan_base_valid_standard(self):
+    def test_plan_base_valid_standard(self, mapper):
         """Should create valid STANDARD plan."""
         plan = PlanBase(
             name="Premium Plan",
@@ -364,11 +381,11 @@ class TestPlanBase:
             discount_percentage=10.0,
             currency=Currency.INDIA,
             duration=1,  # ADDED: duration is required
-            modules=["maglo:Performance_Overview"],
+            modules=["console:Chat"],
             plan_type=PlanType.STANDARD,
             tag="premium",
             hierarchy=1,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         assert plan.name == "Premium Plan"
@@ -387,7 +404,7 @@ class TestPlanBase:
             plan_type=PlanType.WALLET,
             tag="wallet",
             hierarchy=2,
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
         )
 
         assert plan.name == "Wallet Plan"
@@ -402,7 +419,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=None,
             )
 
@@ -414,7 +431,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
             )
 
@@ -426,7 +443,7 @@ class TestPlanBase:
                 tag="",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
             )
 
@@ -438,7 +455,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1000,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
             )
 
@@ -462,7 +479,7 @@ class TestPlanBase:
             tag="test",
             hierarchy=1,
             duration=1,  # ADDED: duration is required
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
             plan_type=PlanType.WALLET,
         )
 
@@ -477,7 +494,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.STANDARD,
             )
 
@@ -490,7 +507,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
             )
 
@@ -503,19 +520,19 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
             )
 
-    def test_plan_base_with_modules(self):
+    def test_plan_base_with_modules(self, mapper):
         """Should validate plan with modules."""
         plan = PlanBase(
             name="Test Plan",
-            modules=["maglo:Performance_Overview"],
+            modules=["console:Chat"],
             tag="test",
             hierarchy=1,
             duration=1,  # ADDED: duration is required
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
             plan_type=PlanType.WALLET,
         )
 
@@ -531,7 +548,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.STANDARD,
             )
 
@@ -543,7 +560,7 @@ class TestPlanBase:
                 tag="test",
                 hierarchy=1,
                 duration=1,  # ADDED: duration is required
-                service_name=Platform.MAGLO,
+                service_name=Platform.CONSOLE,
                 plan_type=PlanType.WALLET,
                 extra_field="not allowed",
             )
@@ -555,7 +572,7 @@ class TestPlanBase:
             tag="trial",
             hierarchy=0,
             duration=1,  # ADDED: duration is required
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
             plan_type=PlanType.WALLET,
             is_free_trial=True,
         )
@@ -569,7 +586,7 @@ class TestPlanBase:
             tag="test",
             hierarchy=1,
             duration=1,  # ADDED: duration is required
-            service_name=Platform.MAGLO,
+            service_name=Platform.CONSOLE,
             plan_type=PlanType.WALLET,
             otc_charge=100.0,
         )
@@ -651,9 +668,9 @@ class TestPlanUpdate:
         with pytest.raises(ValueError, match="Invalid currency"):
             PlanUpdate(currency="INVALID")
 
-    def test_plan_update_validate_modules(self):
+    def test_plan_update_validate_modules(self, mapper):
         """Should validate modules when provided."""
-        update = PlanUpdate(modules=["maglo:Performance_Overview"])
+        update = PlanUpdate(modules=["console:Chat"])
         assert len(update.modules) == 1
 
     def test_plan_update_validate_plan_type(self):
@@ -688,8 +705,8 @@ class TestPlanUpdate:
 
     def test_plan_update_validate_service_name(self):
         """Should validate service_name when provided."""
-        update = PlanUpdate(service_name=Platform.MAGLO)
-        assert update.service_name == Platform.MAGLO
+        update = PlanUpdate(service_name=Platform.CONSOLE)
+        assert update.service_name == Platform.CONSOLE
 
     def test_plan_update_invalid_service_name(self):
         """Should raise error for invalid service_name."""
@@ -727,7 +744,7 @@ class TestPlanResponse:
         """Should create PlanResponse from ORM model."""
 
         class MockPlan:
-            id = 1
+            id= UUID("11111111-1111-1111-1111-111111111111")
             name = "Test Plan"
             description = "Test"
             price = 1000.0
@@ -738,13 +755,13 @@ class TestPlanResponse:
             modules = []
             plan_type = PlanType.WALLET
             is_active = True
-            created_by = 1
+            created_by= UUID("11111111-1111-1111-1111-111111111111")
             created_at = 1234567890
             updated_by = None
             updated_at = None
             tag = "test"
             hierarchy = 1
-            service_name = Platform.MAGLO
+            service_name = Platform.CONSOLE
             is_free_trial = False
             otc_charge = None
 
@@ -757,7 +774,7 @@ class TestPlanResponse:
         """Should handle optional fields correctly."""
 
         class MockPlan:
-            id = 1
+            id= UUID("11111111-1111-1111-1111-111111111111")
             name = "Test Plan"
             description = "Description"
             price = 1000.0
@@ -765,16 +782,16 @@ class TestPlanResponse:
             currency = Currency.INDIA
             duration = 3  # ADDED: duration is required
             limits = {"campaigns": 100}
-            modules = ["maglo:campaigns"]
+            modules = ["talko:campaigns"]
             plan_type = PlanType.STANDARD
             is_active = True
-            created_by = 1
+            created_by= UUID("11111111-1111-1111-1111-111111111111")
             created_at = 1234567890
-            updated_by = 2
+            updated_by= UUID("22222222-2222-2222-2222-222222222222")
             updated_at = 1234567900
             tag = "premium"
             hierarchy = 5
-            service_name = Platform.MAGLO
+            service_name = Platform.CONSOLE
             is_free_trial = True
             otc_charge = 50.0
 
@@ -782,7 +799,7 @@ class TestPlanResponse:
         response = PlanResponse.model_validate(plan)
 
         assert response.description == "Description"
-        assert response.updated_by == 2
+        assert response.updated_by== UUID("22222222-2222-2222-2222-222222222222")
         assert response.updated_at == 1234567900
         assert response.is_free_trial is True
         assert response.otc_charge == 50.0
@@ -796,14 +813,13 @@ class TestDisallowedLimitKeys:
 
     def test_disallowed_limit_keys_contains_expected(self):
         """Should contain expected disallowed keys."""
-        assert PlanCustomLimitKeys.Maglo.SERVICE_BOARDS in DISALLOWED_LIMIT_KEYS
         assert PlanCustomLimitKeys.Console.ACTIVE_USERS in DISALLOWED_LIMIT_KEYS
 
     def test_plan_response_discounted_price_with_price_and_discount(self):
         """Should calculate discounted price when price and discount present."""
 
         class MockPlan:
-            id = 1
+            id= UUID("11111111-1111-1111-1111-111111111111")
             name = "Test Plan"
             description = None
             price = 1000.0
@@ -814,13 +830,13 @@ class TestDisallowedLimitKeys:
             modules = []
             plan_type = PlanType.STANDARD
             is_active = True
-            created_by = 1
+            created_by= UUID("11111111-1111-1111-1111-111111111111")
             created_at = 1234567890
             updated_by = None
             updated_at = None
             tag = "test"
             hierarchy = 1
-            service_name = Platform.MAGLO
+            service_name = Platform.CONSOLE
             is_free_trial = False
             otc_charge = None
 
@@ -834,7 +850,7 @@ class TestDisallowedLimitKeys:
         """Should return None for discounted price when price is None."""
 
         class MockPlan:
-            id = 1
+            id= UUID("11111111-1111-1111-1111-111111111111")
             name = "Test Plan"
             description = None
             price = None
@@ -845,13 +861,13 @@ class TestDisallowedLimitKeys:
             modules = []
             plan_type = PlanType.WALLET
             is_active = True
-            created_by = 1
+            created_by= UUID("11111111-1111-1111-1111-111111111111")
             created_at = 1234567890
             updated_by = None
             updated_at = None
             tag = "test"
             hierarchy = 1
-            service_name = Platform.MAGLO
+            service_name = Platform.CONSOLE
             is_free_trial = False
             otc_charge = None
 
@@ -864,7 +880,7 @@ class TestDisallowedLimitKeys:
         """Should default is_purchased to False."""
 
         class MockPlan:
-            id = 1
+            id= UUID("11111111-1111-1111-1111-111111111111")
             name = "Test Plan"
             description = None
             price = 1000.0
@@ -875,13 +891,13 @@ class TestDisallowedLimitKeys:
             modules = []
             plan_type = PlanType.STANDARD
             is_active = True
-            created_by = 1
+            created_by= UUID("11111111-1111-1111-1111-111111111111")
             created_at = 1234567890
             updated_by = None
             updated_at = None
             tag = "test"
             hierarchy = 1
-            service_name = Platform.MAGLO
+            service_name = Platform.CONSOLE
             is_free_trial = False
             otc_charge = None
 

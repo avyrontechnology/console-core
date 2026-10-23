@@ -1,5 +1,6 @@
 """Plan Repository layer."""
 
+from uuid import UUID
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -29,7 +30,7 @@ class PlanRepository:
         self.__session_factory = session_factory
         self.__logger = logger
 
-    async def create_plan(self, plan_data: PlanBase, user_id: int) -> Plan:
+    async def create_plan(self, plan_data: PlanBase, user_id: UUID) -> Plan:
         self.__logger.info(
             "Repository: create_plan started for name={}".format(plan_data.name)
         )
@@ -67,7 +68,6 @@ class PlanRepository:
 
                 default_plan_limits: Dict[str, int] = {
                     PlanCustomLimitKeys.Console.ACTIVE_USERS: 1,
-                    PlanCustomLimitKeys.Maglo.SERVICE_BOARDS: 1,
                 }
 
                 plan = Plan(
@@ -112,7 +112,7 @@ class PlanRepository:
             raise
 
     async def get_plan_by_id(
-        self, plan_id: int, active_only: bool = False, partner_id: Optional[int] = None
+        self, plan_id: UUID, active_only: bool = False, partner_id: Optional[UUID] = None
     ) -> Optional[Plan]:
         """Fetch a single plan by ID."""
         self.__logger.info("Repository: get_plan_by_id started id={}".format(plan_id))
@@ -138,7 +138,7 @@ class PlanRepository:
 
     async def get_active_plans(
         self,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         service_name: Optional[str] = None,
         plan_type: Optional[str] = None,
         duration: Optional[int] = None,
@@ -176,7 +176,7 @@ class PlanRepository:
             raise
 
     async def update_plan(
-        self, plan_id: int, plan_data: PlanUpdate, user_id: Optional[int] = None
+        self, plan_id: UUID, plan_data: PlanUpdate, user_id: Optional[UUID] = None
     ) -> Optional[Plan]:
         self.__logger.info("Repository: update_plan started id={}".format(plan_id))
         try:
@@ -279,7 +279,7 @@ class PlanRepository:
             )
             raise
 
-    async def delete_plan(self, plan_id: int, user_id: int) -> bool:
+    async def delete_plan(self, plan_id: UUID, user_id: UUID) -> bool:
         self.__logger.info("Repository: delete_plan started id={}".format(plan_id))
         try:
             # Validate existence
@@ -320,7 +320,7 @@ class PlanRepository:
             raise
 
     async def _check_purchase_status(
-        self, session, plans: List[Plan], partner_id: Optional[int] = None
+        self, session, plans: List[Plan], partner_id: Optional[UUID] = None
     ) -> List[Plan]:
         """Helper method to check and set purchase status for plans."""
         if partner_id:

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from src.components.audit_log.repositories import AuditLogRepository
 from src.components.audit_log.schema import AuditLogSchema
 
@@ -27,4 +29,21 @@ class AuditService:
         self.__audit_log_repository = audit_log_repository
 
     async def log_action(self, log_entry: AuditLogSchema):
+        # resource_id column is String(36): stringify UUIDs at the boundary.
+        if log_entry.resource_id is not None:
+            log_entry.resource_id = str(log_entry.resource_id)
         await self.__audit_log_repository.create_audit_log(log_entry)
+
+    async def get_audit_logs(
+        self,
+        resource: Optional[str] = None,
+        action: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ):
+        from src.components.audit_log.schema import AuditLogResponse
+
+        rows = await self.__audit_log_repository.list_audit_logs(
+            resource=resource, action=action, limit=limit, offset=offset
+        )
+        return [AuditLogResponse.model_validate(row) for row in rows]

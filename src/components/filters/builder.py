@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import Integer, String, func, select, Boolean
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Query
 from sqlalchemy.sql.elements import ClauseElement
 from sqlalchemy.sql.expression import and_, exists, literal, not_, or_
@@ -170,6 +172,8 @@ class BaseFilterBuilder:
                     return [self._coerce_boolean(item) for item in value]
                 elif isinstance(column_type, Integer):
                     return [int(item) for item in value]
+                elif isinstance(column_type, PG_UUID):
+                    return [UUID(str(item)) for item in value]
                 elif isinstance(column_type, String):
                     return [
                         item.lower() if isinstance(item, str) else item
@@ -182,6 +186,8 @@ class BaseFilterBuilder:
 
             if isinstance(column_type, Integer):
                 return int(value)
+            elif isinstance(column_type, PG_UUID):
+                return UUID(str(value))
             elif isinstance(column_type, String):
                 return value.lower()
 

@@ -13,7 +13,7 @@ class TestFCMChannelSend:
 
     def test_send_success_with_data(self):
         mock_app = MagicMock(name="firebase_app")
-        mock_app.name = "maglo"
+        mock_app.name = "talko"
 
         with patch(
             "src.components.notifications.channels.fcm_channel.firebase_init",
@@ -31,11 +31,11 @@ class TestFCMChannelSend:
                 title="Hello",
                 body="World",
                 data={"key": "value", "count": 3},
-                service_type=NotificationServiceType.MAGLO,
+                service_type=NotificationServiceType.TALKO,
             )
 
         assert result == "SUCCESS"
-        mock_firebase_init.assert_called_once_with(NotificationServiceType.MAGLO)
+        mock_firebase_init.assert_called_once_with(NotificationServiceType.TALKO)
         mock_notification.assert_called_once_with(title="Hello", body="World")
         mock_message.assert_called_once_with(
             notification=mock_notification.return_value,
@@ -46,7 +46,7 @@ class TestFCMChannelSend:
 
     def test_send_success_without_data(self):
         mock_app = MagicMock()
-        mock_app.name = "babbler"
+        mock_app.name = "talko"
 
         with patch(
             "src.components.notifications.channels.fcm_channel.firebase_init",
@@ -64,7 +64,7 @@ class TestFCMChannelSend:
                 title="Hello",
                 body="World",
                 data=None,
-                service_type=NotificationServiceType.BABBLER,
+                service_type=NotificationServiceType.TALKO,
             )
 
         assert result == "SUCCESS"
@@ -76,7 +76,7 @@ class TestFCMChannelSend:
 
     def test_send_unregistered_token(self):
         mock_app = MagicMock()
-        mock_app.name = "maglo"
+        mock_app.name = "talko"
 
         with patch(
             "src.components.notifications.channels.fcm_channel.firebase_init",
@@ -94,14 +94,14 @@ class TestFCMChannelSend:
                 title="Hello",
                 body="World",
                 data={"key": "value"},
-                service_type=NotificationServiceType.MAGLO,
+                service_type=NotificationServiceType.TALKO,
             )
 
         assert result == "UNREGISTERED"
 
     def test_send_generic_exception(self):
         mock_app = MagicMock()
-        mock_app.name = "maglo"
+        mock_app.name = "talko"
 
         with patch(
             "src.components.notifications.channels.fcm_channel.firebase_init",
@@ -119,7 +119,7 @@ class TestFCMChannelSend:
                 title="Hello",
                 body="World",
                 data={"key": "value"},
-                service_type=NotificationServiceType.MAGLO,
+                service_type=NotificationServiceType.TALKO,
             )
 
         assert result == "ERROR"

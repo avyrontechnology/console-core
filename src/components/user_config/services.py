@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide
@@ -7,6 +8,10 @@ from sqlalchemy.exc import IntegrityError
 from src.components.cache import TTL
 from src.components.cache import Keys as CacheKeys
 from src.components.cache.helper import CacheHelper
+from src.components.audit_log.schema import AuditLogSchema
+from src.components.audit_log.services import AuditService
+from src.components.common.actions import AuditActions
+from src.components.common.resources import Resource
 from src.components.common.constants import CurrentUserMap
 from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
@@ -35,10 +40,64 @@ class UserConfigService:
         user_config_repository: UserConfigRepository,
         console_service_logger: ConsoleServiceLogger,
         console_service_cache: CacheHelper,
+        user_repository=None,
+        audit_service=None,
     ) -> None:
         self.__user_config_repository = user_config_repository
         self.__console_service_logger = console_service_logger
         self.__console_service_cache = console_service_cache
+        self.__user_repository = user_repository
+        self.__audit_service = audit_service
+
+    async def __assert_can_grant_super_admin(self, granter_id: UUID) -> None:
+        """Only an existing super-admin or the system-admin may grant
+        is_super_admin. Fail-closed: anything unreadable denies."""
+        try:
+            cfg = await self.__user_config_repository.get_user_config_by_key(
+                granter_id, UserConfigEnum.IS_SUPER_ADMIN.value
+            )
+            if cfg is not None and getattr(cfg, "value", False) is True:
+                return
+        except Exception:
+            pass
+        try:
+            if self.__user_repository is not None:
+                sys_admin = await self.__user_repository.get_system_admin_user()
+                if sys_admin is not None and granter_id == sys_admin.id:
+                    return
+        except Exception:
+            pass
+        self.__console_service_logger.error(
+            "Refusing is_super_admin grant by non-privileged user: {}".format(
+                granter_id
+            )
+        )
+        raise UserConfigException(
+            "Only a super-admin or system-admin can grant super-admin."
+        )
+
+    async def __audit_grant(
+        self, granter_id: UUID, target_id: UUID, granted: bool
+    ) -> None:
+        """Persist GRANT/REVOKE audit rows for super-admin changes."""
+        if self.__audit_service is None:
+            return
+        try:
+            await self.__audit_service.log_action(
+                AuditLogSchema(
+                    action=AuditActions.grant if granted else AuditActions.revoke,
+                    resource=Resource.user,
+                    resource_id=target_id,
+                    performed_by=granter_id,
+                    details="super-admin {} for user {} by {}".format(
+                        "granted to" if granted else "revoked from",
+                        target_id,
+                        granter_id,
+                    ),
+                )
+            )
+        except Exception:
+            pass
 
     async def create_user_config(
         self,
@@ -67,6 +126,11 @@ class UserConfigService:
                     "cant create the user config for different partner's user"
                 )
 
+            if user_config_data.key == UserConfigEnum.IS_SUPER_ADMIN.value:
+                await self.__assert_can_grant_super_admin(
+                    current_user.get(CurrentUserMap.USER_ID)
+                )
+
             request_data: UserConfigBase = UserConfigBase(
                 user_id=user_config_data.user_id,
                 key=user_config_data.key,
@@ -91,6 +155,19 @@ class UserConfigService:
                 prefix=RedisCache.KeysPrefix.CONSOLE,
                 pattern=cache_patterns,
             )
+            if user_config_data.key == UserConfigEnum.IS_SUPER_ADMIN.value:
+                # Super-admin flag changed: drop cached permission list.
+                try:
+                    await self.__console_service_cache.delete_cache(
+                        key=CacheKeys.USER_PERMISSIONS.format(user_config_data.user_id)
+                    )
+                except Exception:
+                    pass
+                await self.__audit_grant(
+                    granter_id=current_user.get(CurrentUserMap.USER_ID),
+                    target_id=user_config_data.user_id,
+                    granted=bool(user_config_data.value),
+                )
 
             return user_config_response
 
@@ -116,7 +193,7 @@ class UserConfigService:
             raise exec
 
     async def get_user_config_by_key(
-        self, user_id: int, key: str
+        self, user_id: UUID, key: str
     ) -> UserConfigResponse:
         try:
             self.__console_service_logger.info(
@@ -156,16 +233,16 @@ class UserConfigService:
 
     async def update_user_config(
         self,
-        partner_id: int,
-        user_ids: List[int],
+        partner_id: UUID,
+        user_ids: List[UUID],
         update_user_config_data: UserConfigData,
         current_user: dict,
         user_service: UserService = Depends(Provide["console_service"]),
         user_session_service: UserSessionService = Depends(Provide["user_session_service"])
     ) -> List[UpdateUserConfigResponse]:
         try:
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             if (
                 current_user_partner_id != partner_id
@@ -200,6 +277,10 @@ class UserConfigService:
             # validate config input
 
             await self.validate_config_values(partner_id, update_user_config_data)
+            if "is_super_admin" in update_user_config_data.model_dump(
+                exclude_unset=True
+            ):
+                await self.__assert_can_grant_super_admin(current_user_id)
             response_data: List[UserConfig] = (
                 await self.__user_config_repository.update_user_config(
                     user_ids, update_user_config_data
@@ -217,11 +298,29 @@ class UserConfigService:
                     prefix=RedisCache.KeysPrefix.CONSOLE,
                     pattern=cache_patterns,
                 )
-
-                await self.__console_service_cache.clear_pattern(
-                    prefix=RedisCache.KeysPrefix.MAGLO,
-                    pattern=CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-                )
+                # Super-admin flag may have changed: drop permission cache.
+                try:
+                    await self.__console_service_cache.delete_cache(
+                        key=CacheKeys.USER_PERMISSIONS.format(user_id)
+                    )
+                except Exception:
+                    pass
+            if "is_super_admin" in update_user_config_data.model_dump(
+                exclude_unset=True
+            ) and self.__audit_service is not None:
+                try:
+                    await self.__audit_service.log_action(
+                        AuditLogSchema(
+                            action=AuditActions.grant,
+                            resource=Resource.user,
+                            performed_by=current_user_id,
+                            details="super-admin bulk update for users {} by {}".format(
+                                [str(u) for u in user_ids], current_user_id
+                            ),
+                        )
+                    )
+                except Exception:
+                    pass
             services_to_deactivate = self._extract_disabled_services(update_user_config_data)
             if services_to_deactivate:
                 await user_session_service.deactivate_user_sessions(
@@ -250,7 +349,7 @@ class UserConfigService:
 
     async def get_user_configs_by_user_id(
         self,
-        user_id: int,
+        user_id: UUID,
     ) -> List[UserConfigResponse]:
         try:
             self.__console_service_logger.info(
@@ -259,29 +358,18 @@ class UserConfigService:
 
             REQUIRED_KEYS = [
                 UserConfigEnum.IS_SUPER_ADMIN,
-                UserConfigEnum.IS_MAGLO_ENABLED,
-                UserConfigEnum.IS_BABBLER_ENABLED,
                 UserConfigEnum.IS_TALKO_ENABLED,
-                UserConfigEnum.IS_MAGLO_APP_ENABLED,
                 UserConfigEnum.IS_GSM_CALLING_ENABLED,
                 UserConfigEnum.IS_MEETING_LOG_ENABLED,
                 UserConfigEnum.CAN_VIEW_CONTACT,
                 UserConfigEnum.CAN_VIEW_ORGANIZATION,
                 UserConfigEnum.IS_OBOTAAI_ENABLED,
                 UserConfigEnum.ENABLE_DIALER,
-                UserConfigEnum.IS_BABBLER_APP_ENABLED,
                 UserConfigEnum.CAN_VIEW_PRODUCTS,
                 UserConfigEnum.CAN_VIEW_INVENTORY,
                 # Notification preferences are included here so the legacy
                 # user-config listing stays aligned with the new notification
                 # preference API and still surfaces user-level state.
-                UserConfigEnum.NOTIFICATION_MAGLO,
-                UserConfigEnum.NOTIFICATION_MAGLO_LEAD_ASSIGNED,
-                UserConfigEnum.NOTIFICATION_MAGLO_BULK_LEAD_ASSIGNED,
-                UserConfigEnum.NOTIFICATION_MAGLO_FOLLOWUP,
-                UserConfigEnum.NOTIFICATION_MAGLO_APP,
-                UserConfigEnum.NOTIFICATION_BABBLER,
-                UserConfigEnum.NOTIFICATION_BABBLER_APP,
                 UserConfigEnum.NOTIFICATION_TALKO,
                 UserConfigEnum.NOTIFICATION_WHATSAPP,
                 UserConfigEnum.NOTIFICATION_OBOTAAI,
@@ -341,57 +429,14 @@ class UserConfigService:
             )
             raise exec
 
-    async def update_is_maglo_app_config(
-        self, user_id: int, is_maglo_app_enabled: Optional[bool]
-    ) -> UserConfigResponse:
-        KEY = "is_maglo_app_enabled"
-
-        try:
-            self.__console_service_logger.info(
-                f"Trying to update '{KEY}' for user id: {user_id}"
-            )
-
-            updated_data = (
-                await self.__user_config_repository.update_is_maglo_app_config(
-                    user_id=user_id, is_maglo_app_enabled=is_maglo_app_enabled
-                )
-            )
-
-            # Prepare service-level response
-            response = UserConfigResponse(
-                id=updated_data.id,
-                user_id=updated_data.user_id,
-                key=updated_data.key,
-                value=updated_data.value,
-                history=updated_data.history[-5:] if updated_data.history else None,
-                created_at=updated_data.created_at,
-            )
-
-            self.__console_service_logger.info(
-                f"'{KEY}' updated successfully for user id: {user_id}"
-            )
-
-            return response
-
-        except Exception as exec:
-            self.__console_service_logger.error(
-                f"Unexpected error while updating '{KEY}' for user id {user_id}: {exec}"
-            )
-            raise exec
-
     async def validate_config_values(
         self,
-        partner_id: int,
+        partner_id: UUID,
         update_user_config_data: UserConfigData,
         partner_config_service: PartnerConfigService = Depends(
             Provide["partner_config_service"]
         ),
     ):
-        if update_user_config_data.is_maglo_app_enabled:
-            result = await partner_config_service.get_partner_config_by_key(partner_id=partner_id, key="is_maglo_app_enabled")
-            if not result or result.value != True:
-                raise UserConfigException("Maglo App is not enabled.")
-        
         if update_user_config_data.is_meeting_log_enabled:
             result = await partner_config_service.get_partner_config_by_key(
                 partner_id=partner_id, key=UserConfigEnum.IS_MEETING_LOG_ENABLED
@@ -405,12 +450,8 @@ class UserConfigService:
     def _extract_disabled_services(self, dto: UserConfigData) -> list[str]:
         services = []
         USER_CONFIG_TO_SERVICE = {
-            "is_maglo_enabled": ServiceNames.MAGLO.value,
-            "is_maglo_app_enabled": ServiceNames.MAGLO_APP.value,
-            "is_babbler_enabled": ServiceNames.BABBLER.value,
             "is_talko_enabled": ServiceNames.TALKO.value,
             "is_obotaai_enabled": ServiceNames.OBOTAAI.value,
-            "is_babbler_app_enabled": ServiceNames.BABBLER_APP.value,
         }
         for field, service in USER_CONFIG_TO_SERVICE.items():
             value = getattr(dto, field, None)

@@ -1,3 +1,4 @@
+from uuid import UUID
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 

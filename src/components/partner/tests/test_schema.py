@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
@@ -110,7 +111,7 @@ def test_partner_onboarding_response_optional_token():
     response = PartnerOnboardingResponse(
         name="A",
         company_legal_name="B",
-        id=1,
+        id= UUID("11111111-1111-1111-1111-111111111111"),
         user_login_token="token123",
     )
     assert response.user_login_token == "token123"
@@ -118,7 +119,7 @@ def test_partner_onboarding_response_optional_token():
     response_no_token = PartnerOnboardingResponse(
         name="A",
         company_legal_name="B",
-        id=1,
+        id= UUID("11111111-1111-1111-1111-111111111111"),
     )
     assert response_no_token.user_login_token is None
 

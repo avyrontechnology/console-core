@@ -1,5 +1,5 @@
+from uuid import UUID
 import json
-import re
 from typing import Any, List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -18,7 +18,7 @@ from src.components.common.response import (
 )
 from src.components.wallet.enum import ALL_CURRENCIES
 from src.components.order.constants import (
-    MAX_PARTNER_ID_INT32,
+
     MAX_PARTNER_IDS_PER_REQUEST,
     OrderSource,
     OrderType,
@@ -48,7 +48,6 @@ from src.components.order.services import OrderService
 from src.components.partner.error import InvalidPartnerIdsError, PartnerNotFoundError
 from src.components.payment.enum import PaymentStatusEnum
 from src.components.payment.errors import PaymentError
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -64,7 +63,7 @@ class OrderController:
     @order_router.post(
         "/initiate", response_model=dict, status_code=status.HTTP_201_CREATED
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:initiate_order")
     @inject
     async def initiate_order(
         request: Request,
@@ -133,7 +132,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.post("/validate", response_model=dict)
-    @permission_check(PermissionDependency)
+    @permission_check("console:validate_order")
     @inject
     async def validate_order(
         request: Request,
@@ -196,7 +195,7 @@ class OrderController:
             "payment_method=DIRECT: no gateway, entitlement provisioned immediately."
         ),
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_manual_order")
     @inject
     async def create_manual_order(
         request: Request,
@@ -223,8 +222,8 @@ class OrderController:
             # OR they must belong to an internal partner (sales team).
             # Non-internal users attempting to order for a different partner_id
             # are rejected with 403.
-            request_partner_id: int = current_user.get(TokenKeys.PARTNER_ID)
-            payload_partner_id: int = validated.get("partner_id")
+            request_partner_id: UUID = current_user.get(TokenKeys.PARTNER_ID)
+            payload_partner_id: UUID = validated.get("partner_id")
             is_internal: bool = current_user.get("is_internal", False)
 
             if request_partner_id != payload_partner_id and not is_internal:
@@ -307,7 +306,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.get("/history")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_order_history")
     @inject
     async def get_order_history(
         request: Request,
@@ -359,22 +358,15 @@ class OrderController:
         """
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(TokenKeys.USER_ID)
+            current_user_id: UUID = current_user.get(TokenKeys.USER_ID)
 
             user_data: dict = await auth_repo.get_role_by_user_id(current_user_id)
             user_hierarchy: int = user_data.get(RoleDictKeys.HIERARCHY)
             is_superadmin: bool = user_hierarchy <= 0
 
-            parsed_partner_ids: Optional[List[int]] = _parse_partner_ids(partner_ids)
+            parsed_partner_ids: Optional[List[UUID]] = _parse_partner_ids(partner_ids)
 
             if parsed_partner_ids is not None:
-                invalid_ids = _get_out_of_range_ids(parsed_partner_ids)
-                if invalid_ids:
-                    return BadRequestResponse(
-                        detail="partner_id(s) {} exceed the valid range of {}".format(
-                            invalid_ids, MAX_PARTNER_ID_INT32
-                        )
-                    )
                 if len(parsed_partner_ids) > MAX_PARTNER_IDS_PER_REQUEST:
                     return BadRequestResponse(
                         detail="Maximum {} partner_ids allowed per request".format(
@@ -483,7 +475,7 @@ class OrderController:
     # =========================================================================
 
     @order_router.post("/billing-details")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_billing_details")
     @inject
     async def get_billing_details(
         request: Request,
@@ -494,7 +486,7 @@ class OrderController:
         ),
     ):
         try:
-            partner_id: Optional[int] = None
+            partner_id: Optional[UUID] = None
 
             if hasattr(request.state, "user") and request.state.user:
                 current_user: dict = request.state.user
@@ -634,13 +626,13 @@ class OrderController:
 # =============================================================================
 
 
-def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[int]]:
+def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[UUID]]:
     """
-    Parse the partner_ids query param into a list of ints.
+    Parse the partner_ids query param into a list of UUIDs.
 
     Accepted formats:
-      "1"       → [1]
-      "[1,2,3]" → [1, 2, 3]
+      "<uuid>"                  → [UUID(...)]
+      '["<uuid>", "<uuid>"]'    → [UUID(...), UUID(...)]
 
     Returns None if raw_value is None (no filter applied).
     Raises ValueError for unrecognised formats.
@@ -651,32 +643,20 @@ def _parse_partner_ids(raw_value: Optional[str]) -> Optional[List[int]]:
     raw = raw_value.strip()
 
     try:
-        if re.fullmatch(r"\d+", raw):
-            return [int(raw)]
+        if not raw.startswith("["):
+            return [UUID(raw)]
 
-        if raw.startswith("["):
-            parsed = json.loads(raw)
-            if (
-                not isinstance(parsed, list)
-                or not parsed
-                or not all(isinstance(i, int) for i in parsed)
-            ):
-                raise ValueError("List must contain integers only")
-            return parsed
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list) or not parsed:
+            raise ValueError("List must contain UUID strings only")
+        return [UUID(str(item)) for item in parsed]
 
-        raise ValueError("Unrecognised format")
-
-    except (ValueError, json.JSONDecodeError, OverflowError) as exc:
+    except (ValueError, AttributeError, TypeError, json.JSONDecodeError) as exc:
         raise ValueError(
-            "partner_ids must be a single positive integer (e.g. 1) "
-            "or a JSON list of positive integers (e.g. [1,2,3]). "
+            "partner_ids must be a single UUID "
+            'or a JSON list of UUIDs (e.g. ["<uuid>","<uuid>"]). '
             "Error: {}".format(exc)
         ) from exc
-
-
-def _get_out_of_range_ids(partner_ids: List[int]) -> List[int]:
-    """Return any partner_ids that exceed the 32-bit integer ceiling."""
-    return [pid for pid in partner_ids if pid > MAX_PARTNER_ID_INT32]
 
 
 def _validate_date_ranges(

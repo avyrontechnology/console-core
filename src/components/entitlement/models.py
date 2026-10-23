@@ -1,5 +1,6 @@
+import uuid
 from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import ARRAY, JSON
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import relationship
 
 from src.components.common.datetime import DateTimeUtil
@@ -10,10 +11,10 @@ class Entitlement(MetaData):
     __tablename__ = "console_entitlements"
 
     order_id = Column(
-        Integer, ForeignKey("console_orders.id"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("console_orders.id"), nullable=False, index=True
     )
     partner_id = Column(
-        Integer, ForeignKey("console_partners.id"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("console_partners.id"), nullable=False, index=True
     )
 
     service_name = Column(String(32), nullable=False, index=True)

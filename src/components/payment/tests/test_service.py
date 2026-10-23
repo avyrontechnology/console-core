@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -47,7 +48,7 @@ class TestPaymentService:
 
         # Payloads
         self.initiate_payload = InitiateOrderRequest(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             amount=100.0,
             entity_name="PLAN",
         )
@@ -108,35 +109,35 @@ class TestPaymentService:
 
     async def test_validate_order_success(self):
         payment = Mock()
-        payment.id = 10
+        payment.id = UUID("10101010-1010-1010-1010-101010101010")
         self.repo.get_payment_by_order_id.return_value = payment
 
-        current_user = {"user_id": 42, "partner_id": "1"}
+        current_user = {"user_id": UUID("42424242-4242-4242-4242-424242424242"), "partner_id": "1"}
         result = await self.service.validate_order(self.validate_payload, current_user)
 
         assert result["status"] == "success"
         assert result["order_id"] == "order_test123"
 
         self.repo.update_payment.assert_called_once_with(
-            payment_id=10,
-            data={"payment_status": PaymentStatusEnum.SUCCESS, "updated_by": 42},
+            payment_id= UUID("10101010-1010-1010-1010-101010101010"),
+            data={"payment_status": PaymentStatusEnum.SUCCESS, "updated_by": UUID("42424242-4242-4242-4242-424242424242")},
         )
 
     async def test_validate_order_invalid_signature(self):
         payment = Mock()
-        payment.id = 10
+        payment.id = UUID("10101010-1010-1010-1010-101010101010")
         self.repo.get_payment_by_order_id.return_value = payment
 
         self.client.validate_signature.return_value = False
-        current_user = {"user_id": 42, "partner_id": "1"}
+        current_user = {"user_id": UUID("42424242-4242-4242-4242-424242424242"), "partner_id": "1"}
 
         result = await self.service.validate_order(self.validate_payload, current_user)
 
         assert result["status"] == "failed"
 
         self.repo.update_payment.assert_called_once_with(
-            payment_id=10,
-            data={"payment_status": PaymentStatusEnum.FAILED, "updated_by": 42},
+            payment_id= UUID("10101010-1010-1010-1010-101010101010"),
+            data={"payment_status": PaymentStatusEnum.FAILED, "updated_by": UUID("42424242-4242-4242-4242-424242424242")},
         )
 
     async def test_validate_order_not_found(self):
@@ -502,7 +503,7 @@ class TestReconcilePendingPayments:
     async def test_captured_payment_is_marked_success(self):
         payment = Mock()
         payment.id = 1
-        payment.order_id = 100
+        payment.order_id= UUID("10010010-0100-1001-0010-010010010010")
         payment.merchant_transaction_id = "order_abc"
         self.repo.get_stale_pending_payments.return_value = [payment]
 
@@ -527,7 +528,7 @@ class TestReconcilePendingPayments:
         """Order still 'created': customer hasn't tried paying yet."""
         payment = Mock()
         payment.id = 2
-        payment.order_id = 200
+        payment.order_id= UUID("20020020-0200-2002-0020-020020020020")
         payment.merchant_transaction_id = "order_def"
         self.repo.get_stale_pending_payments.return_value = [payment]
 
@@ -544,7 +545,7 @@ class TestReconcilePendingPayments:
         gateway failure, not a lost webhook for a success."""
         payment = Mock()
         payment.id = 5
-        payment.order_id = 500
+        payment.order_id= UUID("50050050-0500-5005-0050-050050050050")
         payment.merchant_transaction_id = "order_ghi"
         self.repo.get_stale_pending_payments.return_value = [payment]
 
@@ -569,7 +570,7 @@ class TestReconcilePendingPayments:
         a retry is still possible, so don't call it FAILED yet."""
         payment = Mock()
         payment.id = 6
-        payment.order_id = 600
+        payment.order_id= UUID("60060060-0600-6006-0060-060060060060")
         payment.merchant_transaction_id = "order_jkl"
         self.repo.get_stale_pending_payments.return_value = [payment]
 
@@ -589,12 +590,12 @@ class TestReconcilePendingPayments:
     async def test_one_failure_does_not_abort_the_batch(self):
         bad_payment = Mock()
         bad_payment.id = 3
-        bad_payment.order_id = 300
+        bad_payment.order_id= UUID("30030030-0300-3003-0030-030030030030")
         bad_payment.merchant_transaction_id = "order_bad"
 
         good_payment = Mock()
         good_payment.id = 4
-        good_payment.order_id = 400
+        good_payment.order_id= UUID("40040040-0400-4004-0040-040040040040")
         good_payment.merchant_transaction_id = "order_good"
 
         self.repo.get_stale_pending_payments.return_value = [

@@ -1,3 +1,4 @@
+from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 
@@ -10,7 +11,6 @@ from src.components.common.response import (
     ResourceConflictResponse,
     SuccessResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user_tracker.constants import UserTrackerResponseMsg
 from src.components.user_tracker.errors import (
@@ -37,7 +37,7 @@ class UserTrackerController:
     user_tracker_router = APIRouter()
 
     @user_tracker_router.get("/user-tracker/status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_availability_status")
     @inject
     async def get_user_availability_status(
         request: Request,
@@ -58,8 +58,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             result: UserAvailabilityStatusResponse = (
                 await user_tracker_service.get_user_availability_status(
@@ -80,7 +80,7 @@ class UserTrackerController:
             return InternalServerErrorResponse()
 
     @user_tracker_router.put("/user-tracker/status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_user_availability_status")
     @inject
     async def update_user_availability_status(
         request: Request,
@@ -99,8 +99,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             result: UpdateUserStatusResponse = (
                 await user_tracker_service.update_user_status(
@@ -131,7 +131,7 @@ class UserTrackerController:
             return InternalServerErrorResponse()
 
     @user_tracker_router.put("/user-tracker/custom-status")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_custom_statuses")
     @inject
     async def update_custom_statuses(
         request: Request,
@@ -151,8 +151,8 @@ class UserTrackerController:
         """
         try:
             current_user: dict = dict(request.state.user)
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             # role_hierarchy_level is not carried in the JWT — always resolve the
             # user's current role fresh from the DB by their user_id.

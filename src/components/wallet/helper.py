@@ -1,5 +1,6 @@
 """Wallet Util module."""
 
+from uuid import UUID
 from typing import Optional
 
 from src.components.api_key.schemas import ApiKeyResponse
@@ -13,7 +14,7 @@ from src.loggers.console_service_logger import ConsoleServiceLogger
 class WalletHelper:
     async def resolve_partner_id_with_api_key(
         current_user: dict,
-        partner_id: Optional[int],
+        partner_id: Optional[UUID],
         api_key: Optional[str],
         api_key_service: ApiKeyService,
         partner_service: PartnerService,

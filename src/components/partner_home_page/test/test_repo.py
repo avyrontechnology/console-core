@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -28,7 +29,7 @@ class TestPartnerHomePageRepositories:
     async def test_get_partner_homepage_details_success(self):
         """Test successful retrieval of partner homepage details."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_user = {"name": "John Doe", "designation": "Manager"}
         mock_result = MagicMock()
         mock_result.mappings.return_value.first.return_value = mock_user
@@ -47,7 +48,7 @@ class TestPartnerHomePageRepositories:
     async def test_get_partner_homepage_details_unexpected_error(self):
         """Test unexpected error during retrieval of partner homepage details."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session_mock.execute.side_effect = SQLAlchemyError("Database error")
 
         # Act & Assert
@@ -62,7 +63,7 @@ class TestPartnerHomePageRepositories:
     async def test_get_user_hierarchy_success(self):
         """Test successful retrieval of user hierarchy."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_hierarchy = {"role_hierarchy_level": 3}
         mock_result = MagicMock()
         mock_result.mappings.return_value.first.return_value = mock_hierarchy
@@ -81,7 +82,7 @@ class TestPartnerHomePageRepositories:
     async def test_get_user_hierarchy_unexpected_error(self):
         """Test unexpected error during retrieval of user hierarchy."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session_mock.execute.side_effect = SQLAlchemyError("Database error")
 
         # Act & Assert
@@ -97,7 +98,7 @@ class TestPartnerHomePageRepositories:
 
     async def test_partner_dashboard_cards_internal_user_success(self):
         """Test successful retrieval of partner dashboard cards for an internal user."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the user as internal
         mock_user = MagicMock()
@@ -115,9 +116,9 @@ class TestPartnerHomePageRepositories:
             5,    # partners_with_50_licenses
         ])
 
-        # Mock execute for combined config query → returns (3, 2, 1)
+        # Mock execute for combined config query → returns (2,)
         mock_config_result = MagicMock()
-        mock_config_result.one.return_value = (3, 2, 1)
+        mock_config_result.one.return_value = (2,)
         # append this to execute side_effect
         self.session_mock.execute.side_effect = [mock_user_result, mock_config_result]
 
@@ -130,8 +131,6 @@ class TestPartnerHomePageRepositories:
             {"title": PartnerDashboardCardsAttributes.LAST_WEEK_PARTNERS, "key": DashboardFilters.PARTNERS_LAST_SEVEN_DAYS, "count": 10},
             {"title": PartnerDashboardCardsAttributes.PARTNERS_MORE_THAN_FIFTY_LICENSES, "key": DashboardFilters.PARTNERS_GT_FIFTY_LICENSES, "count": 5},
             {"title": PartnerDashboardCardsAttributes.PARTNERS_USING_HOLLAR, "key": DashboardFilters.PARTNERS_USING_TALKO, "count": 2},
-            {"title": PartnerDashboardCardsAttributes.PARTNERS_USING_BABLAR, "key": DashboardFilters.PARTNERS_USING_BABBLER, "count": 1},
-            {"title": PartnerDashboardCardsAttributes.PARTNERS_USING_MAGLO, "key": DashboardFilters.PARTNERS_USING_MAGLO, "count": 3},
         ]
         assert result == expected
 
@@ -145,7 +144,7 @@ class TestPartnerHomePageRepositories:
 
     async def test_get_partner_by_id_success(self):
         """Test successful retrieval of partner by id."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_partner = MagicMock()
         
         mock_scalars_result = MagicMock()
@@ -164,7 +163,7 @@ class TestPartnerHomePageRepositories:
 
     async def test_get_partner_by_id_unexpected_error(self):
         """Test unexpected error during retrieval of partner by id."""
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session_mock.execute.side_effect = Exception("Unexpected error")
 
         with pytest.raises(Exception, match="Unexpected error"):

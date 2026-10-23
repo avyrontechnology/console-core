@@ -26,12 +26,9 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         "/openapi.json",
         "/robots.txt",
         "/create_partner",
-        "/upload_partner_profile",
         "/partner",
-        "/upload_digital_asset",
         "/update_constant",
         "/get_user_details_by_ivr",
-        "/internal/partner-db-config",
     )
 
     @staticmethod

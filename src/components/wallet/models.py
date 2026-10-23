@@ -1,5 +1,7 @@
-from sqlalchemy import JSON, Column, Enum, ForeignKey, Integer, Numeric, String
+import uuid
+from sqlalchemy import JSON, Column, Enum, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 from src.components.partner.models import Partner
@@ -15,7 +17,7 @@ class Wallet(MetaData):
     __tablename__ = "console_wallets"
 
     partner_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_partners.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,
@@ -52,7 +54,7 @@ class WalletTransaction(MetaData):
     __tablename__ = "console_wallet_transactions"
 
     wallet_id = Column(
-        Integer, ForeignKey("console_wallets.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("console_wallets.id", ondelete="CASCADE"), nullable=False
     )
     transaction_type = Column(Enum(TransactionType), nullable=False)
     service_name = Column(Enum(ServiceName), nullable=False)

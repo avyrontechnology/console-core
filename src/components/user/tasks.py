@@ -4,6 +4,7 @@ import io
 from typing import Dict, Any, List, Optional, Tuple, TypedDict, Set
 import re
 import uuid
+from uuid import UUID
 from src.components.auth.constant import AuthExceptionMsg
 
 import pandas as pd
@@ -17,28 +18,24 @@ from src.console_celery.celery_app import celery
 from src.loggers.console_celery_logger import CeleryLogger
 from src.components.location.repositories import LocationRepository
 from src.components.auth.repositories import AuthRepository
-from src.components.digital_assets.services import DigitalAssetService
-from src.components.digital_assets.constants import DigitalAssetEnum
-from starlette.datastructures import UploadFile as StarletteUploadFile
 
 logger = CeleryLogger.get_logger()
 
 
 class LocationData(TypedDict):
-    country_id: Optional[int]
-    state_id: Optional[int]
-    city_id: Optional[int]
+    country_id: Optional[UUID]
+    state_id: Optional[UUID]
+    city_id: Optional[UUID]
 
 
 class BulkUserResponse(TypedDict):
-    da_file_name: str
     total_success_count: int
     total_failed_count: int
     failed_reasons: List[Dict[str, Any]]
 
 
 class CurrentUser(TypedDict):
-    user_id: int
+    user_id: UUID
 
 
 RowResult = Tuple[int, Dict[str, Any], Optional[RowProcessResult], Optional[int], Optional[Exception]]
@@ -162,7 +159,7 @@ def _read_file(file_data: bytes, filename: str) -> pd.DataFrame:
     optional_columns: List[str] = [
         "country", "state", "city",
         "designation", "alternate_phone_number",
-        "cloud_agent_number", "is_maglo_publisher", "parent",
+        "cloud_agent_number", "parent",
     ]
 
     for col in optional_columns:
@@ -384,14 +381,10 @@ def _get_extra_fields(row: pd.Series) -> Dict[str, Any]:
 
     cloud_agent: Optional[str] = _get_optional_str(row.get("cloud_agent_number"))
 
-    raw_flag: Any = row.get("is_maglo_publisher")
-    is_maglo: bool = str(raw_flag).strip().lower() in ["true", "1", "yes"]
-
     return {
         "designation": designation,
         "alternate_phone_number": alt_phone,
         "cloud_agent_number": cloud_agent,
-        "is_maglo_publisher": is_maglo,
     }
 
 
@@ -403,9 +396,9 @@ def _build_user_data(
     name: str,
     phone: str,
     password: str,
-    partner_id: int,
-    role_id: int,
-    parent_id: Optional[int],
+    partner_id: UUID,
+    role_id: UUID,
+    parent_id: Optional[UUID],
     location_data: LocationData,
     extra_data: Dict[str, Any],
 ) -> UserData:
@@ -418,7 +411,6 @@ def _build_user_data(
         "role_id": role_id,
         "parent_id": parent_id,
         "designation": extra_data["designation"],
-        "is_maglo_publisher": extra_data["is_maglo_publisher"],
         "alternate_phone_number": extra_data["alternate_phone_number"],
         "cloud_agent_number": extra_data["cloud_agent_number"],
     }
@@ -441,12 +433,12 @@ def _build_user_data(
 async def _process_row(
     row: pd.Series,
     auth_service: AuthService,
-    partner_id: int,
+    partner_id: UUID,
     country_map: Dict[str, Any],
     state_map: Dict[Tuple[str, int], Any],
     city_map: Dict[Tuple[str, int], Any],
     role: Any,
-    parent_id: Optional[int],
+    parent_id: Optional[UUID],
 ) -> Tuple[RowProcessResult, Optional[int]]:
     email, name, phone, password = _validate_basic_fields(row)
 
@@ -485,7 +477,7 @@ async def _handle_admin_signup(
     auth_service: AuthService,
     user_repo: UserRepository,
     admin_row: pd.Series,
-    partner_id: int,
+    partner_id: UUID,
     role_map: Dict[str, Any],
 ) -> Any:
     try:
@@ -529,7 +521,7 @@ def create_bulk_users(
     self,
     current_user: CurrentUser,
     file_data_b64: str,
-    partner_id: int,
+    partner_id: UUID,
     filename: str,
 ) -> BulkUserResponse:
     task_id: str = self.request.id
@@ -543,7 +535,7 @@ def create_bulk_users(
 
     async def _run() -> BulkUserResponse:
         try:
-            user_id: Optional[int] = current_user.get("user_id")
+            user_id: Optional[UUID] = current_user.get("user_id")
             if user_id is None:
                 raise ValueError("user_id is missing")
 
@@ -557,7 +549,6 @@ def create_bulk_users(
         except Exception as exc:
             logger.exception("Task failed: %s", str(exc))
             return {
-                "da_file_name": "",
                 "total_success_count": 0,
                 "total_failed_count": 0,
                 "failed_reasons": [{"reason": str(exc)}],
@@ -570,7 +561,7 @@ async def _resolve_admin(
     df: pd.DataFrame,
     user_repo: UserRepository,
     auth_service: AuthService,
-    partner_id: int,
+    partner_id: UUID,
     role_map: Dict[str, Any],
 ) -> Tuple[int, Set[int], Optional[int]]:
 
@@ -655,7 +646,7 @@ def _build_email_index(
 
 def _classify_parent_ref(
     row: pd.Series,
-    admin_id: int,
+    admin_id: UUID,
     email_to_idx: Dict[str, int],
     external_lookup: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Any]:
@@ -681,7 +672,7 @@ def _classify_parent_ref(
 
 def _build_parent_plan(
     df: pd.DataFrame,
-    admin_id: int,
+    admin_id: UUID,
     skipped_admin_indexes: Set[int],
     created_admin_row_index: Optional[int],
     external_lookup: Dict[str, Dict[str, Any]],
@@ -878,7 +869,7 @@ async def _create_row(
     resolved_id_by_email: Dict[str, int],
     role_map: Dict[str, Any],
     auth_service: AuthService,
-    partner_id: int,
+    partner_id: UUID,
     country_map: Dict[str, Any],
     state_map: Dict[Tuple[str, int], Any],
     city_map: Dict[Tuple[str, int], Any],
@@ -912,7 +903,7 @@ async def _create_row(
             return idx, row_out, status, user_id, None
     except Exception as exc:
         row_out = row.to_dict()
-        existing_id: Optional[int] = None
+        existing_id: Optional[UUID] = None
         if _is_duplicate_user_error(exc):
             existing_id = await _lookup_existing_user_id(row, user_repo)
             if existing_id is not None:
@@ -987,7 +978,7 @@ async def _run_waves(
     failed_idx: Set[int],
     immediate_failures: Dict[int, str],
     auth_service: AuthService,
-    partner_id: int,
+    partner_id: UUID,
     country_map: Dict[str, Any],
     state_map: Dict[Tuple[str, int], Any],
     city_map: Dict[Tuple[str, int], Any],
@@ -1050,7 +1041,7 @@ def _merge_bookkeeping_results(
     immediate_failures: Dict[int, str],
     skipped_admin_indexes: Set[int],
     created_admin_row_index: Optional[int],
-    admin_id: int,
+    admin_id: UUID,
 ) -> Dict[int, RowResult]:
     """
     Rows fully excluded from the parent-plan (duplicate emails, admin
@@ -1088,12 +1079,12 @@ async def _process_rows_with_parent_resolution(
     df: pd.DataFrame,
     auth_service: AuthService,
     user_repo: UserRepository,
-    partner_id: int,
+    partner_id: UUID,
     country_map: Dict[str, Any],
     state_map: Dict[Tuple[str, int], Any],
     city_map: Dict[Tuple[str, int], Any],
     role_map: Dict[str, Any],
-    admin_id: int,
+    admin_id: UUID,
     skipped_admin_indexes: Set[int],
     created_admin_row_index: Optional[int],
 ) -> Tuple[List[Dict[str, Any]], int, int, List[Dict[str, Any]]]:
@@ -1195,8 +1186,8 @@ def _collate_results(
 # =========================================================
 async def process_bulk_users(
     file_data: bytes,
-    partner_id: int,
-    user_id: int,
+    partner_id: UUID,
+    user_id: UUID,
     filename: str,
 ) -> BulkUserResponse:
 
@@ -1206,7 +1197,6 @@ async def process_bulk_users(
     auth_repo: AuthRepository = container.auth_repository()
     location_repo: LocationRepository = container.location_repository()
     user_repo: UserRepository = await container.console_service()
-    digital_asset_service: DigitalAssetService = container.digital_asset_service()
 
     df = _read_file(file_data, filename)
     logger.info("File parsed successfully total_rows=%s", len(df))
@@ -1261,23 +1251,9 @@ async def process_bulk_users(
     )
 
     # =========================================================
-    # UPLOAD RESULT CSV TO DIGITAL ASSET SERVICE
+    # RESULT CSV (kept in-memory; result-file download retired with storage)
     # =========================================================
     csv_bytes: bytes = _convert_result_to_bytes(rows_result)
-
-    file_like = io.BytesIO(csv_bytes)
-    upload_file = StarletteUploadFile(
-        filename=f"bulk_result_{uuid.uuid4()}.csv",
-        file=file_like,
-        headers={"content-type": "text/csv"},
-    )
-    asset_response = await digital_asset_service.create_digital_asset(
-        partner_id=partner_id,
-        asset_type=DigitalAssetEnum.OTHER.name,
-        input_file=upload_file,
-        user_id=user_id,
-    )
-    da_file_name: str = asset_response.file_name
 
     logger.info(
         "Bulk user upload completed success=%s failed=%s",
@@ -1285,7 +1261,6 @@ async def process_bulk_users(
     )
 
     return {
-        "da_file_name": da_file_name,
         "total_success_count": success_count,
         "total_failed_count": failed_count,
         "failed_reasons": failed_reasons,

@@ -1,5 +1,6 @@
+import uuid
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
@@ -17,9 +18,9 @@ class Order(MetaData):
     __tablename__ = "console_orders"
 
     partner_id = Column(
-        Integer, ForeignKey("console_partners.id"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("console_partners.id"), nullable=False, index=True
     )
-    plan_id = Column(Integer, ForeignKey("console_plans.id"), nullable=True, index=True)
+    plan_id = Column(UUID(as_uuid=True), ForeignKey("console_plans.id"), nullable=True, index=True)
     add_ons = Column(JSON, nullable=True, default=dict)
     amount = Column(Float, nullable=False)
     currency = Column(String(3), default=Currency.INDIA, nullable=False)
@@ -53,7 +54,7 @@ class Order(MetaData):
     )
 
     original_order_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_orders.id"),
         nullable=True,
         index=True,

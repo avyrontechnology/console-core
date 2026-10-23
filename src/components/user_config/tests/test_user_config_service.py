@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, Mock
 
@@ -33,8 +34,8 @@ class TestUserConfigService:
         )
 
     async def test_create_user_config_success(self):
-        user_id = 1
-        partner_id = 100  # any arbitrary partner ID
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")  # any arbitrary partner ID
         current_user = {
             "user_id": user_id,
             "partner_id": partner_id,
@@ -68,8 +69,8 @@ class TestUserConfigService:
         self.cache.clear_pattern.assert_awaited_once()
 
     async def test_create_user_config_integrity_error(self):
-        user_id = 1
-        partner_id = 100  # any arbitrary partner ID
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")  # any arbitrary partner ID
         current_user = {
             "user_id": user_id,
             "partner_id": partner_id,
@@ -80,7 +81,7 @@ class TestUserConfigService:
         user_mock.partner_id = partner_id  # important fix
 
         user_service_mock.get_user_by_id.return_value = user_mock
-        request = UserConfigRequest(user_id=1, key="theme", value="dark")
+        request = UserConfigRequest(user_id= UUID("11111111-1111-1111-1111-111111111111"), key="theme", value="dark")
         self.repo.create_user_config.side_effect = IntegrityError(
             "Integrity", None, None
         )
@@ -93,7 +94,7 @@ class TestUserConfigService:
         self.logger.error.assert_called_once()
 
     async def test_get_user_config_by_key_cached(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "lang"
         cached_data = {
             "key": "lang",
@@ -110,7 +111,7 @@ class TestUserConfigService:
         self.repo.get_user_config_by_key.assert_not_called()
 
     async def test_get_user_config_by_key_db_fallback(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "theme"
         fake_config = UserConfig(
             key="theme",
@@ -129,7 +130,7 @@ class TestUserConfigService:
         self.cache.set_cache.assert_awaited_once()
 
     async def test_get_user_config_by_key_not_found(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         key = "nonexistent"
         self.cache.get_cache.return_value = None
         self.repo.get_user_config_by_key.side_effect = UserConfigException("Not found")
@@ -140,23 +141,23 @@ class TestUserConfigService:
         self.logger.error.assert_called_once()
 
     async def test_update_user_config_success(self):
-        partner_id = 100
-        user_ids = [1, 2]
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
         current_user = {"user_id": 10, "partner_id": partner_id}
         update_data = UserConfigData(theme="dark")
 
         fake_updated = [
             UserConfig(
-                id=1,
-                user_id=1,
+                id= UUID("11111111-1111-1111-1111-111111111111"),
+                user_id= UUID("11111111-1111-1111-1111-111111111111"),
                 key="theme",
                 value="dark",
                 created_at=int(datetime.now(timezone.utc).timestamp()),
                 history=[],
             ),
             UserConfig(
-                id=2,
-                user_id=2,
+                id= UUID("22222222-2222-2222-2222-222222222222"),
+                user_id= UUID("22222222-2222-2222-2222-222222222222"),
                 key="theme",
                 value="dark",
                 created_at=int(datetime.now(timezone.utc).timestamp()),
@@ -168,8 +169,8 @@ class TestUserConfigService:
         # Mock user_service.get_users_by_user_ids to return matching users
         user_service_mock = AsyncMock()
         user_service_mock.get_users_by_user_ids.return_value = [
-            MagicMock(id=1, partner_id=partner_id),
-            MagicMock(id=2, partner_id=partner_id),
+            MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), partner_id=partner_id),
+            MagicMock(id= UUID("22222222-2222-2222-2222-222222222222"), partner_id=partner_id),
         ]
         # Patch is_user_internal to return False
         user_service_mock.is_user_internal.return_value = False
@@ -190,8 +191,8 @@ class TestUserConfigService:
         self.repo.update_user_config.assert_awaited_once_with(user_ids, update_data)
 
     async def test_update_user_config_exception(self):
-        partner_id = 100
-        user_ids = [1]
+        partner_id= UUID("10010010-0100-1001-0010-010010010010")
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111")]
         current_user = {"user_id": 10, "partner_id": partner_id}
         update_data = UserConfigData(theme="dark")
         self.repo.update_user_config.side_effect = Exception("Unexpected")
@@ -199,7 +200,7 @@ class TestUserConfigService:
         # Mock user_service.get_users_by_user_ids to return matching users
         user_service_mock = AsyncMock()
         user_service_mock.get_users_by_user_ids.return_value = [
-            MagicMock(id=1, partner_id=partner_id)
+            MagicMock(id= UUID("11111111-1111-1111-1111-111111111111"), partner_id=partner_id)
         ]
         user_service_mock.is_user_internal.return_value = False
 
@@ -213,14 +214,14 @@ class TestUserConfigService:
         self.logger.error.assert_called_once()
 
     async def test_get_user_configs_by_user_id_db_fallback(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.cache.get_cache.return_value = None
 
         # Use a key that exists in REQUIRED_KEYS
         mock_config = UserConfig(
-            id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
             user_id=user_id,
-            key=UserConfigEnum.IS_MAGLO_ENABLED.value,  # "is_maglo_enabled"
+            key=UserConfigEnum.IS_TALKO_ENABLED.value,  # "is_talko_enabled"
             value=True,
             history=[],
             created_at=int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp()),
@@ -232,11 +233,11 @@ class TestUserConfigService:
         # Always returns all REQUIRED_KEYS entries
         assert len(result) == len(UserConfigEnum)
 
-        # The DB row is used for is_maglo_enabled
-        maglo = next(r for r in result if r.key == UserConfigEnum.IS_MAGLO_ENABLED.value)
-        assert maglo.id == 1
-        assert maglo.value is True
-        assert maglo.created_at == int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp())
+        # The DB row is used for is_talko_enabled
+        talko = next(r for r in result if r.key == UserConfigEnum.IS_TALKO_ENABLED.value)
+        assert talko.id == UUID("11111111-1111-1111-1111-111111111111")
+        assert talko.value is True
+        assert talko.created_at == int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp())
 
         # Keys not in DB get False defaults with no created_at
         obotaai = next(r for r in result if r.key == UserConfigEnum.IS_OBOTAAI_ENABLED.value)
@@ -245,8 +246,8 @@ class TestUserConfigService:
         assert obotaai.created_at is None
 
     async def test_create_user_config_raises_generic_exception(self):
-        user_id = 1
-        partner_id = 101
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10110110-1101-1011-0110-110110110110")
         current_user = {
             "user_id": user_id,
             "partner_id": partner_id,
@@ -277,7 +278,7 @@ class TestUserConfigService:
         )
 
     async def test_create_user_config_partner_id_mismatch(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         request = UserConfigRequest(user_id=user_id, key="theme", value="dark")
 
         current_user = {
@@ -287,7 +288,7 @@ class TestUserConfigService:
 
         user_service_mock = AsyncMock()
         user_mock = MagicMock()
-        user_mock.partner_id = 20  # mismatch with current_user['partner_id']
+        user_mock.partner_id= UUID("20202020-2020-2020-2020-202020202020")  # mismatch with current_user['partner_id']
         user_service_mock.get_user_by_id.return_value = user_mock
 
         with pytest.raises(UserConfigException) as exc_info:
@@ -304,8 +305,8 @@ class TestUserConfigService:
         )
 
     async def test_create_user_config_raises_user_not_found_error(self):
-        user_id = 1
-        partner_id = 101
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("10110110-1101-1011-0110-110110110110")
         current_user = {
             "user_id": user_id,
             "partner_id": partner_id,
@@ -323,77 +324,6 @@ class TestUserConfigService:
 
         assert str(exc_info.value) == f"User not found, id: {user_id}"
         self.logger.error.assert_called_with(
-            "Not found error occured: User not found, id: 1"
+            "Not found error occured: User not found, id: 11111111-1111-1111-1111-111111111111"
         )
 
-    async def test_validate_config_values_maglo_enabled_success(self):
-        partner_id = 100
-        update_data = UserConfigData(is_maglo_app_enabled=True)
-
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = MagicMock(
-            value=True
-        )
-
-        # Should NOT raise
-        await self.service.validate_config_values(
-            partner_id,
-            update_data,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        partner_config_service_mock.get_partner_config_by_key.assert_awaited_once_with(
-            partner_id=partner_id, key="is_maglo_app_enabled"
-        )
-
-    async def test_validate_config_values_maglo_enabled_config_missing(self):
-        partner_id = 100
-        update_data = UserConfigData(is_maglo_app_enabled=True)
-
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = None
-
-        with pytest.raises(UserConfigException) as exc:
-            await self.service.validate_config_values(
-                partner_id,
-                update_data,
-                partner_config_service=partner_config_service_mock,
-            )
-
-        assert str(exc.value) == "Maglo App is not enabled."
-        partner_config_service_mock.get_partner_config_by_key.assert_awaited_once()
-
-    async def test_validate_config_values_maglo_enabled_value_false(self):
-        partner_id = 100
-        update_data = UserConfigData(is_maglo_app_enabled=True)
-
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = MagicMock(
-            value=False
-        )
-
-        with pytest.raises(UserConfigException) as exc:
-            await self.service.validate_config_values(
-                partner_id,
-                update_data,
-                partner_config_service=partner_config_service_mock,
-            )
-
-        assert str(exc.value) == "Maglo App is not enabled."
-
-    async def test_validate_config_values_maglo_disabled_no_validation(self):
-        partner_id = 100
-
-        # User is NOT enabling Maglo app
-        update_data = UserConfigData(is_maglo_app_enabled=False)
-
-        partner_config_service_mock = AsyncMock()
-
-        # Should NOT call partner_config_service at all
-        await self.service.validate_config_values(
-            partner_id,
-            update_data,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        partner_config_service_mock.get_partner_config_by_key.assert_not_called()

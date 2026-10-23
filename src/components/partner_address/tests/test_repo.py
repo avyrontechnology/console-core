@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -29,7 +30,7 @@ class TestAddressRepository:
         # Mock PartnerAddress object (this can be reused in multiple tests)
         self.mock_partner_address = MagicMock(spec=PartnerAddress)
         self.mock_partner_address.id = 1
-        self.mock_partner_address.partner_id = 1
+        self.mock_partner_address.partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.mock_partner_address.address_1 = "123 Tech Lane"
         self.mock_partner_address.address_2 = "Suite 100"
         self.mock_partner_address.city = "Tech City"
@@ -96,7 +97,7 @@ class TestAddressRepository:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         self.session.get = AsyncMock(return_value=mock_address)
 
@@ -131,7 +132,7 @@ class TestAddressRepository:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         self.session.get = AsyncMock(return_value=mock_address)
         self.session.delete = AsyncMock()
@@ -149,7 +150,7 @@ class TestAddressRepository:
     async def test_partner_exists(self):
         """Test checking if a partner exists and is active."""
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock Partner object
         mock_partner = MagicMock(spec=Partner)
         mock_partner.id = partner_id
@@ -222,7 +223,7 @@ class TestAddressRepository:
             state="TechState",
             country="Techland",
             pincode="123456",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         self.session.get = AsyncMock(return_value=mock_address)
 
@@ -246,7 +247,7 @@ class TestAddressRepository:
     async def test_partner_exists_handles_exception(self):
         """Test checking if a partner exists and is active with exception handling."""
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         # Mock Partner object
         mock_partner = MagicMock(spec=Partner)
         mock_partner.id = partner_id
@@ -271,7 +272,7 @@ class TestAddressRepository:
         self.mock_logger.error.assert_any_call("unexpected error Database error")
 
     async def test_get_partner_address_by_partner_id_success(self):
-        partner_id = 10
+        partner_id= UUID("10101010-1010-1010-1010-101010101010")
         partner_mock = MagicMock()
         result_mock = MagicMock()
         # Mock .scalars().all() to return a non-empty list
@@ -305,7 +306,7 @@ class TestAddressRepository:
         )
 
         result = await self.address_repository.upsert_partner_address(
-            partner_id=1, user_id=10, update_data=update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
         )
 
         assert len(result) == 1
@@ -331,7 +332,7 @@ class TestAddressRepository:
         )
 
         result = await self.address_repository.upsert_partner_address(
-            partner_id=1, user_id=10, update_data=update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
         )
 
         assert len(result) == 1
@@ -366,7 +367,7 @@ class TestAddressRepository:
         )
 
         result = await self.address_repository.upsert_partner_address(
-            partner_id=1, user_id=10, update_data=update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
         )
 
         assert len(result) == 2
@@ -390,7 +391,7 @@ class TestAddressRepository:
         )
 
         result = await self.address_repository.upsert_partner_address(
-            partner_id=1, user_id=10, update_data=update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
         )
 
         assert len(result) == 2
@@ -419,7 +420,7 @@ class TestAddressRepository:
         )
 
         await self.address_repository.upsert_partner_address(
-            partner_id=1, user_id=10, update_data=update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
         )
 
         self.session.delete.assert_any_call(combined_address)
@@ -441,12 +442,12 @@ class TestAddressRepository:
 
         with pytest.raises(Exception) as exc_info:
             await self.address_repository.upsert_partner_address(
-                partner_id=1, user_id=10, update_data=update_data
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("10101010-1010-1010-1010-101010101010"), update_data=update_data
             )
 
         assert "Unexpected Error" in str(exc_info.value)
         self.mock_logger.error.assert_any_call(
             "An error occurred while upserting partner address for partner id {}: {}".format(
-                1, "Unexpected Error"
+                UUID("11111111-1111-1111-1111-111111111111"), "Unexpected Error"
             )
         )

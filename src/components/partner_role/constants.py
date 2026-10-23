@@ -8,7 +8,7 @@ HIERARCHY_SPACING: int = 100
 # Used when deriving data_scope for materialized copies of global roles.
 MANAGER_ROLE_HIERARCHY: int = 4
 
-# Floor for a partner-owned role's hierarchy. maglo-service's is_internal_user
+# Floor for a partner-owned role hierarchy.
 # check (src/components/home/services.py) treats hierarchy < ADMIN_ROLE_HIERARCHY_LEVEL(1)
 # as internal/system-only. A partner-created role must never be assigned a
 # hierarchy below this floor, or it would be silently treated as an internal

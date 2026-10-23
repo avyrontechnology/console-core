@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -6,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 class UserDetails(BaseModel):
     """Pydantic model for user."""
 
-    id: int
+    id: UUID
     name: str
     designation: Optional[str] = None
     email: Optional[str] = None
@@ -30,7 +31,6 @@ class RoleActionFlagResponse(BaseModel):
     can_assume_user: Optional[bool] = False
     can_view_plans: Optional[bool] = False
     can_view_order_history: Optional[bool] = False
-    can_edit_babbler_pricing: Optional[bool] = False
     can_view_api_admin: Optional[bool] = False
 
     model_config = ConfigDict(
@@ -39,9 +39,7 @@ class RoleActionFlagResponse(BaseModel):
 
 
 class SusbscribedServices(BaseModel):
-    is_maglo_enabled: Optional[bool] = False
     is_talko_enabled: Optional[bool] = False
-    is_babbler_enabled: Optional[bool] = False
     is_obotaai_enabled: Optional[bool] = False
     is_add_number_enabled: Optional[bool] = False
 
@@ -50,7 +48,7 @@ class SusbscribedServices(BaseModel):
 
 
 class ParnterInfo(BaseModel):
-    partner_id: int
+    partner_id: UUID
     partner_name: Optional[str] = None
     subscription_mode: Optional[str] = None
     subscription_status: Optional[dict] = None

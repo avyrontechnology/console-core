@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14partner_wallet.proto\x12\x06wallet\"\xc4\x01\n\x11WalletRPCResponse\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x12\n\npartner_id\x18\x02 \x01(\x03\x12\x0f\n\x07\x62\x61lance\x18\x03 \x01(\x01\x12\x10\n\x08\x63urrency\x18\x04 \x01(\t\x12\x16\n\x0e\x66rozen_balance\x18\x05 \x01(\x01\x12\x11\n\tis_active\x18\x06 \x01(\x08\x12\x19\n\x11is_wallet_enabled\x18\x07 \x01(\x08\x12\x12\n\ncreated_at\x18\x08 \x01(\x03\x12\x12\n\nupdated_at\x18\t \x01(\x03\"4\n\x1dGetWalletsByPartnerIdsRequest\x12\x13\n\x0bpartner_ids\x18\x01 \x03(\x03\"L\n\x1eGetWalletsByPartnerIdsResponse\x12*\n\x07wallets\x18\x01 \x03(\x0b\x32\x19.wallet.WalletRPCResponse2{\n\x10WalletRPCService\x12g\n\x16GetWalletsByPartnerIds\x12%.wallet.GetWalletsByPartnerIdsRequest\x1a&.wallet.GetWalletsByPartnerIdsResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14partner_wallet.proto\x12\x06wallet\"\xc4\x01\n\x11WalletRPCResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x12\n\npartner_id\x18\x02 \x01(\t\x12\x0f\n\x07\x62\x61lance\x18\x03 \x01(\x01\x12\x10\n\x08\x63urrency\x18\x04 \x01(\t\x12\x16\n\x0e\x66rozen_balance\x18\x05 \x01(\x01\x12\x11\n\tis_active\x18\x06 \x01(\x08\x12\x19\n\x11is_wallet_enabled\x18\x07 \x01(\x08\x12\x12\n\ncreated_at\x18\x08 \x01(\x03\x12\x12\n\nupdated_at\x18\t \x01(\x03\"4\n\x1dGetWalletsByPartnerIdsRequest\x12\x13\n\x0bpartner_ids\x18\x01 \x03(\t\"L\n\x1eGetWalletsByPartnerIdsResponse\x12*\n\x07wallets\x18\x01 \x03(\x0b\x32\x19.wallet.WalletRPCResponse\"\x88\x01\n\x12WalletDebitRequest\x12\x12\n\npartner_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x10\n\x08\x63urrency\x18\x03 \x01(\t\x12\x0f\n\x07\x63\x61ll_id\x18\x04 \x01(\t\x12\x16\n\x0e\x62illed_minutes\x18\x05 \x01(\x01\x12\x13\n\x0b\x64\x65scription\x18\x06 \x01(\t\"\x82\x01\n\x13WalletDebitResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x16\n\x0etransaction_id\x18\x02 \x01(\t\x12\x0e\n\x06\x61mount\x18\x03 \x01(\x01\x12\x19\n\x11remaining_balance\x18\x04 \x01(\x01\x12\x17\n\x0f\x61lready_charged\x18\x05 \x01(\x08\x32\xc3\x01\n\x10WalletRPCService\x12g\n\x16GetWalletsByPartnerIds\x12%.wallet.GetWalletsByPartnerIdsRequest\x1a&.wallet.GetWalletsByPartnerIdsResponse\x12\x46\n\x0bWalletDebit\x12\x1a.wallet.WalletDebitRequest\x1a\x1b.wallet.WalletDebitResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,6 +37,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETWALLETSBYPARTNERIDSREQUEST']._serialized_end=283
   _globals['_GETWALLETSBYPARTNERIDSRESPONSE']._serialized_start=285
   _globals['_GETWALLETSBYPARTNERIDSRESPONSE']._serialized_end=361
-  _globals['_WALLETRPCSERVICE']._serialized_start=363
-  _globals['_WALLETRPCSERVICE']._serialized_end=486
+  _globals['_WALLETDEBITREQUEST']._serialized_start=364
+  _globals['_WALLETDEBITREQUEST']._serialized_end=500
+  _globals['_WALLETDEBITRESPONSE']._serialized_start=503
+  _globals['_WALLETDEBITRESPONSE']._serialized_end=633
+  _globals['_WALLETRPCSERVICE']._serialized_start=636
+  _globals['_WALLETRPCSERVICE']._serialized_end=831
 # @@protoc_insertion_point(module_scope)

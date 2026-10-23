@@ -10,5 +10,3 @@ class Resource:
     user_meta_data: str = "USER_META_DATA"
     constant: str = "CONSTANT"
     default_role_permission: str = "DEFAULT_ROLE_PERMISSION"
-    team: str = "TEAM"
-    team_member: str = "TEAM_MEMBER"

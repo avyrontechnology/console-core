@@ -1,5 +1,6 @@
 """Tests for GraceService — all repos and dependencies fully mocked."""
 
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,8 +18,8 @@ from src.components.partner.error import PartnerNotFoundError
 
 
 def _make_grace(
-    grace_id=1,
-    partner_id=10,
+    grace_id= UUID("11111111-1111-1111-1111-111111111111"),
+    partner_id= UUID("10101010-1010-1010-1010-101010101010"),
     service_name="console",
     granted_days=7,
     attempt_number=1,
@@ -28,7 +29,7 @@ def _make_grace(
     consumed_days=None,
     settled_at=None,
     settled_by_order_id=None,
-    created_by=99,
+    created_by= UUID("99999999-9999-9999-9999-999999999999"),
     created_at=1_700_000_000_000,
     granted_by_name="Alice",
     remark="Test remark",
@@ -103,7 +104,7 @@ class TestGraceService:
         self.grace_repo.create_grace = AsyncMock(return_value=self.mock_grace)
 
         self.valid_payload = {
-            "partner_id": 10,
+            "partner_id": UUID("10101010-1010-1010-1010-101010101010"),
             "granted_days": 7,
             "remark": "Test remark",
         }
@@ -370,9 +371,14 @@ class TestGraceService:
         assert result.partner_id == self.mock_grace.partner_id
 
     async def test_success_multi_service_creates_one_record_per_service(self):
+        grace_ids = [
+            UUID("11111111-1111-1111-1111-111111111111"),
+            UUID("22222222-2222-2222-2222-222222222222"),
+            UUID("33333333-3333-3333-3333-333333333333"),
+        ]
         graces = [
-            _make_grace(grace_id=i, service_name=s)
-            for i, s in enumerate(["console", "boards", "reports"], start=1)
+            _make_grace(grace_id=gid, service_name=s)
+            for gid, s in zip(grace_ids, ["console", "boards", "reports"])
         ]
         self.grace_repo.create_grace = AsyncMock(side_effect=graces)
         with self._patch_services(["console", "boards", "reports"]):
@@ -424,8 +430,8 @@ class TestGraceService:
         assert kwargs["remark"] == "special reason"
 
     async def test_returns_first_created_grace_response(self):
-        first = _make_grace(grace_id=1, service_name="console")
-        second = _make_grace(grace_id=2, service_name="boards")
+        first = _make_grace(grace_id= UUID("11111111-1111-1111-1111-111111111111"), service_name="console")
+        second = _make_grace(grace_id= UUID("22222222-2222-2222-2222-222222222222"), service_name="boards")
         self.grace_repo.create_grace = AsyncMock(side_effect=[first, second])
         with self._patch_services(["console", "boards"]):
             result = await self.service.grant_grace(
@@ -435,7 +441,7 @@ class TestGraceService:
                 order_repo=self.order_repo,
                 partner_repo=self.partner_repo,
             )
-        assert result.grace_id == 1
+        assert result.grace_id== UUID("11111111-1111-1111-1111-111111111111")
 
     async def test_no_error_log_on_success(self):
         with self._patch_services(["console"]):
@@ -455,7 +461,7 @@ class TestGraceService:
     async def test_settle_grace_returns_tuple_from_repo(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(NOW_MS, 5))
         first_start, consumed = await self.service.settle_grace(
-            partner_id=10, service_name="console", order_id=1
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111")
         )
         assert first_start == NOW_MS
         assert consumed == 5
@@ -463,7 +469,7 @@ class TestGraceService:
     async def test_settle_grace_no_records_returns_none_zero(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(None, 0))
         first_start, consumed = await self.service.settle_grace(
-            partner_id=10, service_name="console", order_id=1
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111")
         )
         assert first_start is None
         assert consumed == 0
@@ -475,7 +481,7 @@ class TestGraceService:
             return_value=NOW_MS + 999,
         ):
             await self.service.settle_grace(
-                partner_id=10, service_name="console", order_id=1, payment_date_ms=None
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111"), payment_date_ms=None
             )
         kwargs = self.grace_repo.settle_all.call_args.kwargs
         assert kwargs["payment_date_ms"] == NOW_MS + 999
@@ -483,9 +489,9 @@ class TestGraceService:
     async def test_settle_grace_uses_provided_payment_date(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(None, 0))
         await self.service.settle_grace(
-            partner_id=10,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="console",
-            order_id=1,
+            order_id= UUID("11111111-1111-1111-1111-111111111111"),
             payment_date_ms=NOW_MS + 50_000,
         )
         kwargs = self.grace_repo.settle_all.call_args.kwargs
@@ -494,22 +500,22 @@ class TestGraceService:
     async def test_settle_grace_passes_order_id_to_repo(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(None, 0))
         await self.service.settle_grace(
-            partner_id=10, service_name="console", order_id=42
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("42424242-4242-4242-4242-424242424242")
         )
         kwargs = self.grace_repo.settle_all.call_args.kwargs
-        assert kwargs["order_id"] == 42
+        assert kwargs["order_id"] == UUID("42424242-4242-4242-4242-424242424242")
 
     async def test_settle_grace_logs_start_and_completion(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(NOW_MS, 3))
         await self.service.settle_grace(
-            partner_id=10, service_name="console", order_id=1
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111")
         )
         assert self.logger.info.call_count >= 2
 
     async def test_settle_grace_no_error_log_on_success(self):
         self.grace_repo.settle_all = AsyncMock(return_value=(NOW_MS, 3))
         await self.service.settle_grace(
-            partner_id=10, service_name="console", order_id=1
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111")
         )
         self.logger.error.assert_not_called()
 
@@ -521,7 +527,7 @@ class TestGraceService:
         self.grace_repo.settle_all = AsyncMock(side_effect=RuntimeError("settle fail"))
         with pytest.raises(RuntimeError, match="settle fail"):
             await self.service.settle_grace(
-                partner_id=10, service_name="console", order_id=1
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("11111111-1111-1111-1111-111111111111")
             )
         self.logger.error.assert_called_once()
         log_msg = self.logger.error.call_args[0][0]
@@ -531,7 +537,7 @@ class TestGraceService:
         self.grace_repo.settle_all = AsyncMock(side_effect=RuntimeError("boom"))
         with pytest.raises(RuntimeError):
             await self.service.settle_grace(
-                partner_id=10, service_name="console", order_id=42
+                partner_id= UUID("10101010-1010-1010-1010-101010101010"), service_name="console", order_id= UUID("42424242-4242-4242-4242-424242424242")
             )
         log_msg = self.logger.error.call_args[0][0]
         assert "10" in log_msg
@@ -545,7 +551,7 @@ class TestGraceService:
     async def test_status_no_records_all_defaults(self):
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.has_active_grace is False
         assert result.current_grace is None
         assert result.total_attempts_used == 0
@@ -558,61 +564,61 @@ class TestGraceService:
         active = _make_grace()
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[active])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[active])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.has_active_grace is True
         assert result.current_grace is not None
         assert result.total_attempts_used == 1
         assert result.attempts_remaining == max(_MAX_ATTEMPTS - 1, 0)
 
     async def test_status_counts_only_settled_consumed_days(self):
-        settled = _make_grace(grace_id=1, status=GraceStatus.SETTLED, consumed_days=5)
-        active = _make_grace(grace_id=2, status=GraceStatus.ACTIVE, consumed_days=None)
-        expired = _make_grace(grace_id=3, status=GraceStatus.EXPIRED, consumed_days=3)
+        settled = _make_grace(grace_id= UUID("11111111-1111-1111-1111-111111111111"), status=GraceStatus.SETTLED, consumed_days=5)
+        active = _make_grace(grace_id= UUID("22222222-2222-2222-2222-222222222222"), status=GraceStatus.ACTIVE, consumed_days=None)
+        expired = _make_grace(grace_id= UUID("33333333-3333-3333-3333-333333333333"), status=GraceStatus.EXPIRED, consumed_days=3)
         self.grace_repo.get_all_for_partner = AsyncMock(
             return_value=[settled, active, expired]
         )
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[active])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.total_consumed_days == 5
 
     async def test_status_attempts_remaining_floored_at_zero(self):
         records = [_make_grace(grace_id=i) for i in range(_MAX_ATTEMPTS + 2)]
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=records)
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.attempts_remaining == 0
 
     async def test_status_uses_latest_record_for_metadata(self):
         first = _make_grace(
-            grace_id=1, created_by=1, created_at=100, granted_by_name="Alice"
+            grace_id= UUID("11111111-1111-1111-1111-111111111111"), created_by= UUID("11111111-1111-1111-1111-111111111111"), created_at=100, granted_by_name="Alice"
         )
         latest = _make_grace(
-            grace_id=2, created_by=2, created_at=200, granted_by_name="Bob"
+            grace_id= UUID("22222222-2222-2222-2222-222222222222"), created_by= UUID("22222222-2222-2222-2222-222222222222"), created_at=200, granted_by_name="Bob"
         )
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[first, latest])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
-        assert result.created_by == 2
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
+        assert result.created_by== UUID("22222222-2222-2222-2222-222222222222")
         assert result.granted_by_name == "Bob"
 
     async def test_status_service_name_from_active_grace(self):
         active = _make_grace(service_name="boards")
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[active])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[active])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.service_name == "boards"
 
     async def test_status_service_name_empty_when_no_active(self):
         settled = _make_grace(status=GraceStatus.SETTLED, consumed_days=3)
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[settled])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result.service_name == ""
 
     async def test_status_no_error_log_on_success(self):
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         self.logger.error.assert_not_called()
 
     # =========================================================================
@@ -624,7 +630,7 @@ class TestGraceService:
             side_effect=RuntimeError("DB down")
         )
         with pytest.raises(RuntimeError, match="DB down"):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         self.logger.error.assert_called_once()
         assert "get_grace_status" in self.logger.error.call_args[0][0]
 
@@ -633,7 +639,7 @@ class TestGraceService:
             side_effect=RuntimeError("boom")
         )
         with pytest.raises(RuntimeError):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         log_msg = self.logger.error.call_args[0][0]
         assert "10" in log_msg
 
@@ -643,8 +649,8 @@ class TestGraceService:
 
     async def test_to_response_maps_all_fields_correctly(self):
         grace = _make_grace(
-            grace_id=5,
-            partner_id=10,
+            grace_id= UUID("55555555-5555-5555-5555-555555555555"),
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="boards",
             granted_days=7,
             attempt_number=1,
@@ -654,7 +660,7 @@ class TestGraceService:
             consumed_days=None,
             settled_at=None,
             settled_by_order_id=None,
-            created_by=99,
+            created_by= UUID("99999999-9999-9999-9999-999999999999"),
             created_at=NOW_MS,
             granted_by_name="Alice",
             remark="check remark",
@@ -670,8 +676,8 @@ class TestGraceService:
                 partner_repo=self.partner_repo,
             )
 
-        assert result.grace_id == 5
-        assert result.partner_id == 10
+        assert result.grace_id== UUID("55555555-5555-5555-5555-555555555555")
+        assert result.partner_id== UUID("10101010-1010-1010-1010-101010101010")
         assert result.service_name == "boards"
         assert result.granted_days == 7
         assert result.attempt_number == 1
@@ -681,7 +687,7 @@ class TestGraceService:
         assert result.consumed_days is None
         assert result.settled_at is None
         assert result.settled_by_order_id is None
-        assert result.created_by == 99
+        assert result.created_by== UUID("99999999-9999-9999-9999-999999999999")
         assert result.created_at == NOW_MS
         assert result.granted_by_name == "Alice"
         assert result.remark == "check remark"
@@ -744,25 +750,25 @@ class TestGraceService:
     async def test_status_raises_partner_not_found_when_partner_does_not_exist(self):
         self.partner_repo.get_by_id = AsyncMock(return_value=None)
         with pytest.raises(PartnerNotFoundError):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
 
     async def test_status_partner_not_found_error_is_not_swallowed(self):
         self.partner_repo.get_by_id = AsyncMock(return_value=None)
         with pytest.raises(PartnerNotFoundError):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
 
     async def test_status_partner_not_found_checked_before_repo_calls(self):
         """partner check must fire before any grace repo call."""
         self.partner_repo.get_by_id = AsyncMock(return_value=None)
         with pytest.raises(PartnerNotFoundError):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         self.grace_repo.get_all_for_partner.assert_not_awaited()
         self.grace_repo.get_all_active_for_partner.assert_not_awaited()
 
     async def test_status_proceeds_when_partner_exists(self):
         self.grace_repo.get_all_for_partner = AsyncMock(return_value=[])
         self.grace_repo.get_all_active_for_partner = AsyncMock(return_value=[])
-        result = await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+        result = await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         assert result is not None
 
     async def test_status_partner_not_found_is_logged_as_unexpected_error(self):
@@ -770,6 +776,6 @@ class TestGraceService:
         falls through to the generic except block and gets logged."""
         self.partner_repo.get_by_id = AsyncMock(return_value=None)
         with pytest.raises(PartnerNotFoundError):
-            await self.service.get_grace_status(10, partner_repo=self.partner_repo)
+            await self.service.get_grace_status(UUID("10101010-1010-1010-1010-101010101010"), partner_repo=self.partner_repo)
         self.logger.error.assert_called_once()
         assert "get_grace_status" in self.logger.error.call_args[0][0]

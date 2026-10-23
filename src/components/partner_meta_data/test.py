@@ -1,3 +1,4 @@
+from uuid import UUID
 from collections import namedtuple
 from unittest.mock import Mock
 
@@ -32,8 +33,8 @@ class TestPartnerMetaDataService(BaseTestSetup):
 
         # Initialize the mock row
         self.mock_row = PartnerMetaDataRow(
-            id=1,
-            partner_id=1,
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             api_key="5f715b8f-3ae7-4fce-a685-cc0f766359a5",
             timezone="utc",
             number_of_users=30,
@@ -42,7 +43,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
 
         # Mock data for UpdatePartnerMetaData
         self.update_data = UpdatePartnerMetaData(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             timezone="UTC",
             number_of_users=100,
             primary_contact="updated_contact@example.com",
@@ -50,7 +51,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
 
     async def test_get_by_partner_id(self):
         self.mock_db_session.get_by_partner_id.return_value = self.mock_row
-        response = await self.partner_metadata_service.get_by_partner_id(partner_id=1)
+        response = await self.partner_metadata_service.get_by_partner_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
         self.assertEqual(response.id, 1)
         self.assertEqual(response.partner_id, 1)
 
@@ -62,7 +63,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
     async def test_update_partner_meta_data(self):
         self.mock_db_session.update_partner_meta_data.return_value = self.update_data
         response = await self.partner_metadata_service.update_partner_meta_data(
-            partner_id=1, update_data=self.update_data
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), update_data=self.update_data
         )
         self.assertEqual(response, self.update_data)
 
@@ -73,7 +74,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
         )
 
         with self.assertRaises(PartnerMetaDataException):
-            await self.partner_metadata_service.get_by_partner_id(partner_id=1)
+            await self.partner_metadata_service.get_by_partner_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_partner_meta_data_exception(self):
         self.mock_db_session.update_partner_meta_data.side_effect = (
@@ -82,7 +83,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
 
         with self.assertRaises(PartnerMetaDataException):
             await self.partner_metadata_service.update_partner_meta_data(
-                partner_id=1, update_data=self.update_data
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"), update_data=self.update_data
             )
 
     async def test_get_all_partner_meta_data_exception(self):
@@ -101,7 +102,7 @@ class TestPartnerMetaDataService(BaseTestSetup):
         )
 
         with self.assertRaises(Exception):
-            await self.partner_metadata_service.get_by_partner_id(partner_id=1)
+            await self.partner_metadata_service.get_by_partner_id(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_update_partner_meta_data_general_exception(self):
 
@@ -111,5 +112,5 @@ class TestPartnerMetaDataService(BaseTestSetup):
 
         with self.assertRaises(Exception):
             await self.partner_metadata_service.update_partner_meta_data(
-                partner_id=1, update_data=self.update_data
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"), update_data=self.update_data
             )

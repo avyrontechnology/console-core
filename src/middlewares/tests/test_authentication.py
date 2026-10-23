@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -76,11 +77,80 @@ async def mock_console_service_logger():
 
 
 @pytest.mark.asyncio
-async def test_excluded_path(auth_middleware, mock_request, mock_call_next):
+async def test_excluded_path(auth_middleware, mock_request, mock_call_next, mock_console_service_logger):
+    from types import SimpleNamespace
+
     mock_request.url.path = "/console-service/v1/do_login"
-    response = await auth_middleware.dispatch(mock_request, mock_call_next)
+    mock_request.scope = {"route": SimpleNamespace(name="do_login")}
+    response = await auth_middleware.dispatch(mock_request, mock_call_next, console_service_logger=mock_console_service_logger)
     assert response == mock_call_next.return_value
     mock_call_next.assert_called_once_with(mock_request)
+
+
+@pytest.mark.asyncio
+async def test_public_route_resolved_without_scope_route(
+    auth_middleware, mock_call_next, mock_console_service_logger
+):
+    """scope["route"] is unset when BaseHTTPMiddleware runs pre-routing.
+
+    Public routes must still resolve, otherwise login/signup/webhooks 401.
+    """
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.post("/console-service/v1/do_login")
+    async def do_login():  # route name must be do_login
+        return {"ok": True}
+
+    request = MagicMock(spec=Request)
+    request.headers = {}
+    request.state = MagicMock()
+    request.app = app
+    request.url.path = "/console-service/v1/do_login"
+    request.scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/console-service/v1/do_login",
+        "headers": [],
+        "root_path": "",
+    }
+
+    response = await auth_middleware.dispatch(
+        request, mock_call_next, console_service_logger=mock_console_service_logger
+    )
+
+    assert response == mock_call_next.return_value
+    mock_call_next.assert_called_once_with(request)
+
+
+@pytest.mark.asyncio
+async def test_unknown_path_is_not_treated_as_public(
+    auth_middleware, mock_request, mock_call_next, mock_console_service_logger
+):
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.post("/console-service/v1/secret")
+    async def secret_route():
+        return {"ok": True}
+
+    mock_request.app = app
+    mock_request.url.path = "/console-service/v1/secret"
+    mock_request.scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/console-service/v1/secret",
+        "headers": [],
+        "root_path": "",
+    }
+
+    response = await auth_middleware.dispatch(
+        mock_request, mock_call_next, console_service_logger=mock_console_service_logger
+    )
+
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -256,10 +326,17 @@ async def test_api_key_success_flow():
     mock_call_next = AsyncMock(return_value="OK")
 
     # Mock API Key service return object
-    mock_api_key_details = MagicMock(is_active=True, partner_id=123)
+    mock_api_key_details = MagicMock(
+        is_active=True,
+        partner_id=UUID("12312312-3123-1231-2312-312312312312"),
+        expires_at=None,
+        scopes=["console:get_all_users"],
+        user_context={"user_id": "99999999-9999-9999-9999-999999999999"},
+        id=UUID("11111111-1111-1111-1111-111111111111"),
+    )
 
     # Mock system admin user
-    mock_admin_user = MagicMock(id=999, role_id=7)
+    mock_admin_user = MagicMock(id= UUID("99999999-9999-9999-9999-999999999999"), role_id= UUID("77777777-7777-7777-7777-777777777777"))
 
     middleware = AuthMiddleware(app=MagicMock())
 
@@ -294,7 +371,8 @@ async def test_api_key_success_flow():
     mock_call_next.assert_awaited_once()
 
     assert response == "OK"
-    assert mock_request.state.user == {"user_id": 999, "partner_id": 123, "role_id": 7}
+    assert mock_request.state.user == {"user_id": UUID("99999999-9999-9999-9999-999999999999"), "partner_id": UUID("12312312-3123-1231-2312-312312312312"), "role_id": None}
+    assert mock_request.state.api_key == {"scopes": ["console:get_all_users"], "key_id": "11111111-1111-1111-1111-111111111111"}
 
 
 @pytest.mark.asyncio
@@ -336,7 +414,7 @@ async def test_api_key_inactive_branch():
 
     middleware = AuthMiddleware(app=MagicMock())
 
-    api_key_details = MagicMock(is_active=False, partner_id=777)
+    api_key_details = MagicMock(is_active=False, partner_id= UUID("77777777-7777-7777-7777-777777777777"))
 
     api_key_service = MagicMock()
     api_key_service.validate_api_key = AsyncMock(return_value=api_key_details)
@@ -367,7 +445,14 @@ async def test_api_key_system_admin_missing_branch():
 
     middleware = AuthMiddleware(app=MagicMock())
 
-    api_key_details = MagicMock(is_active=True, partner_id=999)
+    api_key_details = MagicMock(
+        is_active=True,
+        partner_id=UUID("99999999-9999-9999-9999-999999999999"),
+        expires_at=None,
+        scopes=[],
+        user_context=None,
+        id=UUID("22222222-2222-2222-2222-222222222222"),
+    )
 
     api_key_service = MagicMock()
     api_key_service.validate_api_key = AsyncMock(return_value=api_key_details)

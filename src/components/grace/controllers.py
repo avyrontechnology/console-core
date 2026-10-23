@@ -30,7 +30,6 @@ from src.components.grace.schema import (
 )
 from src.components.grace.services import GraceService
 from src.components.partner.error import PartnerNotFoundError
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -52,7 +51,7 @@ class GraceController:
             "Service names are derived automatically from the partner's last successful order."
         ),
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:grant_grace")
     @inject
     async def grant_grace(
         request: Request,
@@ -149,7 +148,7 @@ class GraceController:
             "for the given partner across all services."
         ),
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_grace_status")
     @inject
     async def get_grace_status(
         request: Request,
@@ -168,9 +167,7 @@ class GraceController:
                     "partner_id": {
                         "value": partner_id,
                         "required": True,
-                        "type": FieldType.INTEGER,
-                        "min": 1,
-                        "max": 2147483647,
+                        "type": FieldType.UUID,
                     },
                 }
             )

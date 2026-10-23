@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractAsyncContextManager
 from typing import Callable, Optional, List
 
@@ -5,9 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
 
 from src.components.release_note.models import ReleaseNotes
-from src.components.digital_assets.logger_adapter import LoggerAdapter
+from src.loggers.console_service_logger import ConsoleServiceLogger
 
-logger = LoggerAdapter().get_logger()
+logger = ConsoleServiceLogger.get_logger()
 
 class ReleaseNotesRepository:
     def __init__(
@@ -25,8 +26,8 @@ class ReleaseNotesRepository:
         description: str,
         markup: str,
         da_file_path: Optional[str],
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         svc_name: str, 
     ) -> ReleaseNotes:
 
@@ -71,7 +72,7 @@ class ReleaseNotesRepository:
     # ========================================
     async def get_release_note_by_id(
         self,
-        release_note_id: int,
+        release_note_id: UUID,
         svc_name: Optional[str]=None, 
     ) -> Optional[ReleaseNotes]:
 
@@ -106,7 +107,7 @@ class ReleaseNotesRepository:
     # ========================================
     async def get_all_release_notes(
         self,
-        partner_id: int,
+        partner_id: UUID,
     ) -> List[ReleaseNotes]:
 
         async with self.__session_factory() as session:
@@ -135,12 +136,12 @@ class ReleaseNotesRepository:
     # ========================================
     async def update_release_note(
         self,
-        release_note_id: int,
+        release_note_id: UUID,
         title: str,
         description: str,
         markup: Optional[str], 
         da_file_path: Optional[str],
-        user_id: int,
+        user_id: UUID,
         version_history: list,
     ) -> Optional[ReleaseNotes]:
 
@@ -192,7 +193,7 @@ class ReleaseNotesRepository:
     # ================================
     async def get_release_note_history(
         self,
-        release_note_id: int,
+        release_note_id: UUID,
     ) -> Optional[List[dict]]:
 
         async with self.__session_factory() as session:

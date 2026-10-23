@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 import asyncio
 from src.components.notifications.constants import SERVICES
@@ -13,17 +14,16 @@ from src.loggers.console_celery_logger import CeleryLogger
 from src.components.notifications.models import NotificationSubscription
 from src.components.session_mangement.services import UserSessionService
 from src.components.notifications.constants import NotificationServiceType
-from src.components.auth.constant import ServiceNames
 class NotificationService:
     ...
     def __init__(
         self,
         notification_repository: NotificationRepository,
-        maglo_service_logger: CeleryLogger,
+        console_service_logger: CeleryLogger,
         user_session_service: UserSessionService
     ):
         self.__repository = notification_repository
-        self.__logger = maglo_service_logger
+        self.__logger = console_service_logger
         self.__user_session_service = user_session_service
 
     def _get_session_service_names(
@@ -31,16 +31,13 @@ class NotificationService:
         service_type: NotificationServiceType,
     ) -> List[str]:
         return {
-            NotificationServiceType.MAGLO: [
-                ServiceNames.MAGLO.value,      # web/postman login with svc_name="maglo"
-                ServiceNames.MAGLO_APP.value,  # mobile app login (svc_name="maglo_app")
-            ],
-            NotificationServiceType.BABBLER: ["babbler", "babbler_app"],
+            NotificationServiceType.TALKO: ["talko"],
+            NotificationServiceType.OBOTAAI: ["obotaai"],
         }.get(service_type, [service_type.value])
 
     async def _has_active_session(
         self,
-        user_id: int,
+        user_id: UUID,
         service_type: NotificationServiceType,
     ) -> bool:
         service_names = self._get_session_service_names(service_type)
@@ -68,12 +65,12 @@ class NotificationService:
 
     async def has_active_session_for_push(
         self,
-        user_id: int,
+        user_id: UUID,
         service_type: NotificationServiceType,
     ) -> bool:
         return await self._has_active_session(user_id, service_type)
 
-    async def register_subscription(self, user_id: int, payload: RegisterSubscriptionRequest) -> None:
+    async def register_subscription(self, user_id: UUID, payload: RegisterSubscriptionRequest) -> None:
         try:
             await self.__repository.upsert_subscription(
                 user_id=user_id,
@@ -89,7 +86,7 @@ class NotificationService:
             
     async def get_active_user_subscriptions(
         self,
-        user_id: int,
+        user_id: UUID,
         service_type: NotificationServiceType,
     ) -> List[NotificationSubscription]:
         try:
@@ -134,7 +131,7 @@ class NotificationService:
             self.__logger.error(f"Error fetching subscriptions for user {user_id}, service={service_type.value}: {exc}")
             return []
                 
-    async def deactivate_subscription(self, user_id: int, identifier: str, service_type: NotificationServiceType) -> None:
+    async def deactivate_subscription(self, user_id: UUID, identifier: str, service_type: NotificationServiceType) -> None:
         """
         Deactivates a specific device token/subscription. 
         Called when a user logs out or a token becomes unregistered.
@@ -154,27 +151,27 @@ class NotificationService:
             )
             raise exc
 
-    async def save_notification_history(self, user_id: int, title: str, body: str, data: dict, service_type: NotificationServiceType) -> None:
+    async def save_notification_history(self, user_id: UUID, title: str, body: str, data: dict, service_type: NotificationServiceType) -> None:
         try:
             await self.__repository.insert_history(user_id, title, body, data, service_type)
         except Exception as exc:
             self.__logger.error(f"Failed to save history for user {user_id}: {exc}")
 
-    async def get_history(self, user_id: int, limit: int, offset: int, state:Optional[str] = None, service_type: NotificationServiceType = NotificationServiceType.MAGLO):
+    async def get_history(self, user_id: UUID, limit: int, offset: int, state:Optional[str] = None, service_type: NotificationServiceType = NotificationServiceType.TALKO):
         res = await self.__repository.get_user_history(user_id, limit, offset, state,service_type)
         return {
             "notifications" : res[0],
             "count" : res[1]
         }
 
-    async def get_unread_count(self, user_id: int, service_type: NotificationServiceType) -> int:
+    async def get_unread_count(self, user_id: UUID, service_type: NotificationServiceType) -> int:
         return await self.__repository.get_unread_count(user_id, service_type)
 
-    async def mark_notifications_read(self, user_id: int, notification_ids: List[int]) -> None:
+    async def mark_notifications_read(self, user_id: UUID, notification_ids: List[UUID]) -> None:
         await self.__repository.mark_as_read(user_id, notification_ids)
         
     async def should_send_notification(
-        self, user_id: int, source: str, event_name: Optional[str] = None
+        self, user_id: UUID, source: str, event_name: Optional[str] = None
     ) -> bool:
         return await self.__repository.is_notification_enabled(
             user_id=user_id,
@@ -183,7 +180,7 @@ class NotificationService:
         )
 
     async def get_notification_preferences(
-        self, user_id: int
+        self, user_id: UUID
     ) -> NotificationPreferenceResponse:
         """
         Read the current per-source notification state for the current user.
@@ -195,7 +192,7 @@ class NotificationService:
         return NotificationPreferenceResponse(user_id=user_id, preferences=preferences)
 
     async def update_notification_preferences(
-        self, user_id: int, preferences: List[NotificationPreferenceItem]
+        self, user_id: UUID, preferences: List[NotificationPreferenceItem]
     ) -> NotificationPreferenceResponse:
         """
         Persist the user's application-level notification choices.

@@ -1,3 +1,4 @@
+from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 from fastapi.encoders import jsonable_encoder
@@ -20,7 +21,6 @@ from src.components.partner_meta_data.schema import (
     UpdatePartnerMetaData,
 )
 from src.components.partner_meta_data.services import PartnerMetaDataServices
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.exceptions import PartnerMetaDataException, PartnerNotFoundException
@@ -38,11 +38,11 @@ class PartnerMetaDataController:
     @partner_meta_data_router.post(
         "/partner_meta_data/{partner_id}", response_model=PartnerMetaDataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_partner_metadata")
     @inject
     async def create_partner_metadata(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_meta_data: PartnerMetadata = Body(...),
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
@@ -88,11 +88,11 @@ class PartnerMetaDataController:
     @partner_meta_data_router.patch(
         "/partner_meta_data/{partner_id}", response_model=PartnerMetaDataResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_partner_meta_data")
     @inject
     async def update_partner_meta_data(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         update_data: UpdatePartnerMetaData = Body(...),
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
@@ -152,11 +152,11 @@ class PartnerMetaDataController:
         "/partner_meta_data/partner/{partner_id}",
         response_model=PartnerMetaDataResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_meta_data")
     @inject
     async def get_partner_meta_data(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         partner_meta_data_service: PartnerMetaDataServices = Depends(
             Provide[Container.partner_meta_data_service]
         ),
@@ -188,9 +188,7 @@ class PartnerMetaDataController:
                         type_of_business="  ",
                         years_in_business=0,
                         annual_revenue=0,
-                        is_maglo_enabled=False,
                         is_talko_enabled=False,
-                        is_babbler_enabled=False,
                     ),
                 )
 

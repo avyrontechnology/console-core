@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, List
 
@@ -22,10 +23,11 @@ class ApiKeyRepository:
 
     async def generate_api_key(
         self,
-        partner_id: int,
-        current_user_id: int,
+        partner_id: UUID,
+        current_user_id: UUID,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
     ):
         """
         Generate and insert a new API key for a partner.
@@ -42,6 +44,7 @@ class ApiKeyRepository:
                     created_by=current_user_id,
                     scopes=scopes,
                     user_context=user_context,
+                    expires_at=expires_at,
                 )
 
                 session.add(api_key)
@@ -85,7 +88,7 @@ class ApiKeyRepository:
             )
             raise
 
-    async def get_active_api_key(self, partner_id: int) -> ApiKey:
+    async def get_active_api_key(self, partner_id: UUID) -> ApiKey:
         """
         Retrieve the active API key for the given partner.
         Returns the ApiKey ORM object if found, otherwise None.
@@ -116,7 +119,7 @@ class ApiKeyRepository:
             )
             raise
 
-    async def inactivate_api_key(self, partner_id: int, current_user_id: int) -> bool:
+    async def inactivate_api_key(self, partner_id: UUID, current_user_id: UUID) -> bool:
         """
         Mark the given API key as inactive (soft delete style) and record who updated it.
         """
@@ -158,10 +161,11 @@ class ApiKeyRepository:
 
     async def update_active_api_key_metadata(
         self,
-        partner_id: int,
-        current_user_id: int | None,
+        partner_id: UUID,
+        current_user_id: UUID | None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
     ):
         """
         Update ``scopes`` / ``user_context`` on the partner's active API key
@@ -181,6 +185,8 @@ class ApiKeyRepository:
                     values["scopes"] = scopes
                 if user_context is not None:
                     values["user_context"] = user_context
+                if expires_at is not None:
+                    values["expires_at"] = expires_at
 
                 stmt = (
                     update(ApiKey)
@@ -218,7 +224,7 @@ class ApiKeyRepository:
 
     async def generated_api_key_while_partner_onboarding(
         self,
-        partner_id: int,
+        partner_id: UUID,
     ):
         """
         Generate and insert a new API key for a partner.

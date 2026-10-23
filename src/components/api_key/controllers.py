@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -18,7 +19,6 @@ from src.components.common.response import (
     SuccessResponse,
     BadRequestResponse
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -29,11 +29,11 @@ class ApiKeysController:
     api_key_router = APIRouter()
 
     @api_key_router.get("/generate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:generate_api_key")
     @inject
     async def generate_api_key(
         request: Request,
-        partner_id:Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -59,12 +59,12 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.post("/generate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:generate_api_key_with_scopes")
     @inject
     async def generate_api_key_with_scopes(
         request: Request,
         payload: Optional[ApiKeyGenerateRequest] = None,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -88,6 +88,7 @@ class ApiKeysController:
                 partner_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=payload.expires_at if payload else None,
             )
             return SuccessResponse(api_key)
         except ApiKeyException as exc:
@@ -107,12 +108,12 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.patch("/api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:update_api_key")
     @inject
     async def update_api_key(
         request: Request,
         payload: ApiKeyUpdateRequest,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -133,6 +134,7 @@ class ApiKeysController:
                 partner_id=partner_id,
                 scopes=payload.scopes,
                 user_context=payload.user_context,
+                expires_at=payload.expires_at,
             )
             return SuccessResponse(api_key)
         except ApiKeyNotFoundError as exc:
@@ -157,11 +159,11 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.get("/get_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:get_api_key")
     @inject
     async def get_api_key(
         request: Request,
-        partner_id:Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -204,7 +206,7 @@ class ApiKeysController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @api_key_router.put("/inactivate_api_key", response_model=ApiKeyResponse)
-    # @permission_check(PermissionDependency)
+    @permission_check("console:inactivate_api_key")
     @inject
     async def inactivate_api_key(
         request: Request,
@@ -218,7 +220,7 @@ class ApiKeysController:
         """
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info(
                 f"User {current_user.get('id')} attempting to inactivate API key for partner_id={partner_id}"
             )

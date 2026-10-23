@@ -6,6 +6,7 @@ All endpoints are guarded by:
   2. is_user_internal check (super-admin only)
 """
 
+from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 
@@ -40,11 +41,11 @@ class PartnerDBConfigController:
         "/partner-db-config/{partner_id}",
         response_model=PartnerDBConfigResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_db_config")
     @inject
     async def upsert_partner_db_config(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         config_data: PartnerDBConfigRequest = Body(
             ..., description="Partner database connection credentials"
         ),
@@ -58,7 +59,7 @@ class PartnerDBConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             # Super-admin guard
             if not await user_svc.is_user_internal(current_user_id):
@@ -91,11 +92,11 @@ class PartnerDBConfigController:
         "/partner-db-config/{partner_id}",
         response_model=PartnerDBConfigResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_db_config")
     @inject
     async def get_partner_db_config(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
         ),
@@ -106,7 +107,7 @@ class PartnerDBConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             if not await user_svc.is_user_internal(current_user_id):
                 return UnauthorizedResponse(
@@ -130,51 +131,17 @@ class PartnerDBConfigController:
     # INTERNAL GET  —  GET /internal/partner-db-config/{partner_id}
     # (service-to-service, returns decrypted credentials)
     # ------------------------------------------------------------------
-    @partner_db_config_router.get(
-        "/internal/partner-db-config/{partner_id}",
-    )
-    @inject
-    async def get_partner_db_config_internal(
-        request: Request,
-        partner_id: int,
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-        partner_db_config_service: PartnerDBConfigService = Depends(
-            Provide[Container.partner_db_config_service]
-        ),
-    ):
-        """
-        Internal endpoint for maglo-service to resolve partner DB credentials.
-        Returns decrypted password.
-        """
-        try:
-            result = await partner_db_config_service.get_db_config_internal(
-                partner_id
-            )
-            if result is None:
-                return NotFoundResponse(
-                    detail="No DB config found for partner_id={}".format(partner_id)
-                )
-            return SuccessResponse(data=result)
-
-        except Exception as exc:
-            console_service_logger.error(
-                "Unexpected error fetching internal partner DB config: {}".format(exc)
-            )
-            return InternalServerErrorResponse()
-
     # ------------------------------------------------------------------
     # DELETE  —  DELETE /partner-db-config/{partner_id}
     # ------------------------------------------------------------------
     @partner_db_config_router.delete(
         "/partner-db-config/{partner_id}",
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_db_config")
     @inject
     async def delete_partner_db_config(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
         ),
@@ -185,7 +152,7 @@ class PartnerDBConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             if not await user_svc.is_user_internal(current_user_id):
                 return UnauthorizedResponse(

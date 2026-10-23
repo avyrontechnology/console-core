@@ -9,11 +9,10 @@ class PlanUtils:
     def split_modules_by_service(modules: list[str]) -> dict[str, list[str]]:
         """
         Example modules:
-        ["console:dashboard", "console:analytics", "babbler:boards"]
+        ["console:dashboard", "console:analytics"]
         ->
         {
-            "console": ["dashboard", "analytics"],
-            "babbler": ["boards"]
+            "console": ["dashboard", "analytics"]
         }
         """
         if not modules:
@@ -44,19 +43,11 @@ class PlanUtils:
         }
 
         Given PlanCustomLimitKeys:
-            class Maglo:
-                ACTIVE_USERS = "ACTIVE_USERS"
-                VIEW_ANALYTICS = "VIEW_ANALYTICS"
-
             class Console:
                 ACTIVE_USERS = "ACTIVE_USERS"
 
         Output:
         {
-            "maglo": {
-                "ACTIVE_USERS": 10,
-                "VIEW_ANALYTICS": 1
-            },
             "console": {
                 "ACTIVE_USERS": 10
             }

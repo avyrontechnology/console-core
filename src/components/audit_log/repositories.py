@@ -1,6 +1,7 @@
 from contextlib import AbstractContextManager
-from typing import Callable
+from typing import Callable, List, Optional
 
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from src.components.audit_log.models import AuditLog
@@ -21,3 +22,22 @@ class AuditLogRepository:
             await session.commit()
             await session.refresh(audit_log)
             return audit_log
+
+    async def list_audit_logs(
+        self,
+        resource: Optional[str] = None,
+        action: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[AuditLog]:
+        async with self.__session_factory() as session:
+            query = select(AuditLog)
+            if resource:
+                query = query.where(AuditLog.resource == resource)
+            if action:
+                query = query.where(AuditLog.action == action)
+            query = query.order_by(desc(AuditLog.created_at)).limit(limit).offset(
+                offset
+            )
+            result = await session.execute(query)
+            return list(result.scalars().all())

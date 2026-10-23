@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -30,7 +31,6 @@ from src.components.partner_address.schema import (
     UpsertPartnerAddressResponse,
 )
 from src.components.partner_address.services import PartnerAddressService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.services import UserService
 from src.core.container import Container
@@ -45,7 +45,7 @@ class PartnerAddressController:
     @partner_address_router.get(
         "/partner_addresses", response_model=List[PartnerAddressResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_addresses")
     @inject
     async def get_partner_addresses(
         request: Request,
@@ -77,11 +77,11 @@ class PartnerAddressController:
         "/partner_address_by_address_id/{address_id}",
         response_model=PartnerAddressResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_address_by_id")
     @inject
     async def get_partner_address_by_id(
         request: Request,
-        address_id: int,
+        address_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -109,11 +109,11 @@ class PartnerAddressController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @partner_address_router.delete("/partner_address/{address_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_partner_address_by_id")
     @inject
     async def delete_partner_address_by_id(
         request: Request,
-        address_id: int,
+        address_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -141,11 +141,11 @@ class PartnerAddressController:
         "/partner_address/{partner_id}",
         response_model=list[Contrasts.GetAddressByAddressIdResponse],
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_address_by_partner_id")
     @inject
     async def get_partner_address_by_partner_id(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
         ),
@@ -175,12 +175,12 @@ class PartnerAddressController:
     @partner_address_router.post(
         "/partner_address", response_model=list[UpsertPartnerAddressResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_address")
     @inject
     async def upsert_partner_address(
         request: Request,
         address_data: UpdatePartnerAddressRequest,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         is_upserting_publisher_address: Optional[bool]=False,
         address_service: PartnerAddressService = Depends(
             Provide[Container.address_service]
@@ -192,10 +192,10 @@ class PartnerAddressController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not is_upserting_publisher_address:
                 if not (partner_id and await user_svc.is_user_internal(user_id)):
-                    partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+                    partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             console_service_logger.info(
                 "trying to update the partner addresses for partner id: {}".format(

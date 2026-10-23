@@ -18,16 +18,14 @@ class Keys:
     GRPC_GET_USER_PERMISSIONS: str = "gRPC_GET_USER_PERMISSIONS:{}"
     PARTNER_API_KEY: str = "PARTNER_API_KEY:{}"
     GRPC_GET_USER_CHILD_HIERARCHY: str = "gRPC_GET_USER_CHILD_HIERARCHY_PARTNER:{}_USER:{}"
-    GRPC_GET_USER_TEAMS: str = "gRPC_GET_USER_TEAMS_PARTNER:{}_USER:{}"
-    GRPC_GET_PARTNER_TEAMS: str = "gRPC_GET_PARTNER_TEAMS_PARTNER:{}"
-    # Team-scoped effective role + permissions maglo caches per (user, team).
-    # Byte-identical to the maglo-service key template so console can bust it.
-    GRPC_GET_USER_TEAM_ROLE: str = "gRPC_GET_USER_TEAM_ROLE_USER:{}_TEAM:{}"
-    # Configured permission slugs for a role, maglo caches per role_id.
-    # Byte-identical to the maglo-service key template so console can bust it.
+    # Configured permission slugs for a role, cached per role_id.
+    # Byte-identical key template so console can bust it.
     GRPC_GET_ROLE_PERMISSIONS: str = "gRPC_GET_ROLE_PERMISSIONS_ROLE:{}"
     DB_CONFIG_KEY_PARTNER: str = "DB_CONFIG_KEY_PARTNER:{}"
+    # Resolved RBAC slug list per user (custom_role_permission_check).
+    USER_PERMISSIONS: str = "USER_PERMISSIONS_USER:{}"
 
 
 class TTL:
     ONE_WEEK: int = 7 * 24 * 60 * 60
+    FIVE_MINUTES: int = 5 * 60

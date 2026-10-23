@@ -15,14 +15,14 @@ message ValidateApiKeyRequest {
 }
 
 message GetApiKeyPartnerIdRequest {
-    int64 partner_id = 1; // Partner id for get active api key for partne
+    string partner_id = 1; // Partner id for get active api key for partne
 }
 
 // Response message for validating an API key
 message ValidateApiKeyResponse {
-    int64 id = 1;          // Unique ID of the API key
+    string id = 1;          // Unique ID of the API key
     string key = 2;        // The API key value
-    int64 partner_id = 3;  // Associated partner ID
+    string partner_id = 3;  // Associated partner ID
     bool is_active = 4;    // Whether the key is active
     repeated string scopes = 5;   // Permission slugs granted to this key
     string user_context = 6;      // JSON object (may be empty) about the key's generator
@@ -30,9 +30,9 @@ message ValidateApiKeyResponse {
 
 
 message PartnerApiKeyResponse {
-    int64 id = 1;
+    string id = 1;
     string key = 2;
     string description = 3;
     bool is_active = 4;
-    int64 partner_id = 5;
+    string partner_id = 5;
 }

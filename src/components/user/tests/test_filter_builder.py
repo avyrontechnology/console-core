@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 
 from src.components.user.filter_builder import UserRoleFilterBuilder
@@ -63,8 +64,8 @@ class TestUserRoleFilterBuilder:
         assert result is None
 
     def test_init_stores_partner_id(self):
-        builder = UserRoleFilterBuilder(criteria=None, base_query=None, partner_id=42)
-        assert builder.partner_id == 42
+        builder = UserRoleFilterBuilder(criteria=None, base_query=None, partner_id= UUID("42424242-4242-4242-4242-424242424242"))
+        assert builder.partner_id== UUID("42424242-4242-4242-4242-424242424242")
 
     def test_init_defaults_partner_id_to_none(self):
         builder = UserRoleFilterBuilder(criteria=None, base_query=None)

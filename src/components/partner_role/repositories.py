@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -30,7 +31,7 @@ class PartnerRoleRepository:
 
     # ------------------------------ lookups ------------------------------- #
 
-    async def get_partner(self, partner_id: int) -> Optional[Partner]:
+    async def get_partner(self, partner_id: UUID) -> Optional[Partner]:
         async with self.__session_factory() as session:
             result = await session.execute(
                 select(Partner).where(
@@ -41,14 +42,14 @@ class PartnerRoleRepository:
             )
             return result.scalar_one_or_none()
 
-    async def has_partner_roles(self, partner_id: int) -> bool:
+    async def has_partner_roles(self, partner_id: UUID) -> bool:
         async with self.__session_factory() as session:
             result = await session.execute(
                 select(Role.id).where(Role.partner_id == partner_id).limit(1)
             )
             return result.scalar_one_or_none() is not None
 
-    async def get_partner_roles_ordered(self, partner_id: int) -> List[Role]:
+    async def get_partner_roles_ordered(self, partner_id: UUID) -> List[Role]:
         async with self.__session_factory() as session:
             result = await session.execute(
                 select(Role)
@@ -92,7 +93,7 @@ class PartnerRoleRepository:
 
     async def get_partner_roles_paginated(
         self,
-        partner_id: int,
+        partner_id: UUID,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> Tuple[List[Role], int, int, int]:
@@ -160,7 +161,7 @@ class PartnerRoleRepository:
             return result.scalars().all(), total_count, total_active, total_inactive
 
     async def get_partner_role(
-        self, role_id: int, partner_id: int
+        self, role_id: UUID, partner_id: UUID
     ) -> Optional[Role]:
         async with self.__session_factory() as session:
             result = await session.execute(
@@ -172,7 +173,7 @@ class PartnerRoleRepository:
             )
             return result.scalar_one_or_none()
 
-    async def count_users_with_role(self, role_id: int) -> int:
+    async def count_users_with_role(self, role_id: UUID) -> int:
         async with self.__session_factory() as session:
             result = await session.execute(
                 select(func.count())
@@ -187,7 +188,7 @@ class PartnerRoleRepository:
     # ------------------------ copy-on-customize --------------------------- #
 
     async def materialize_catalog(
-        self, partner_id: int, is_internal: bool, user_id: int
+        self, partner_id: UUID, is_internal: bool, user_id: UUID
     ) -> None:
         """Snapshot the shared default catalog into partner-owned rows and
         repoint the partner's users + copy default permissions. Idempotent: a
@@ -276,9 +277,9 @@ class PartnerRoleRepository:
     async def create_role(
         self,
         values: Dict[str, Any],
-        user_id: int,
+        user_id: UUID,
         finalize_slug: Callable[[Role], str],
-        base_role_id: Optional[int] = None,
+        base_role_id: Optional[UUID] = None,
     ) -> Role:
         """``values["slug"]`` must already hold a NOT-NULL-safe placeholder
         (Role.slug has no default). Once the row is flushed and its id is
@@ -322,7 +323,7 @@ class PartnerRoleRepository:
             await session.refresh(role)
             return role
 
-    async def update_role(self, role_id: int, values: Dict[str, Any], user_id: int) -> Role:
+    async def update_role(self, role_id: UUID, values: Dict[str, Any], user_id: UUID) -> Role:
         async with self.__session_factory() as session:
             await session.execute(
                 update(Role)
@@ -333,7 +334,7 @@ class PartnerRoleRepository:
             result = await session.execute(select(Role).where(Role.id == role_id))
             return result.scalar_one()
 
-    async def soft_delete_role(self, role_id: int, user_id: int) -> None:
+    async def soft_delete_role(self, role_id: UUID, user_id: UUID) -> None:
         async with self.__session_factory() as session:
             await session.execute(
                 update(Role)
@@ -342,12 +343,12 @@ class PartnerRoleRepository:
             )
             await session.commit()
 
-    async def rebalance(self, partner_id: int, user_id: int) -> List[Role]:
+    async def rebalance(self, partner_id: UUID, user_id: UUID) -> List[Role]:
         """Re-space the partner's hierarchy to wide multiples (order preserved).
 
         Done in two passes within one transaction to avoid transient unique
         collisions on (partner_id, hierarchy). ``role_id`` FKs are untouched, so
-        user/team references stay valid.
+        user references stay valid.
         """
         async with self.__session_factory() as session:
             roles: List[Role] = (

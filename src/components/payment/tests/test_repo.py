@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -43,10 +44,10 @@ class TestPaymentRepository:
 
         # Sample payment model
         self.mock_payment = Payment(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             amount=100.50,
             order_id="order_123",
-            entity_name=EntityNameEnum.BABBLER_WALLET,
+            entity_name=EntityNameEnum.PLAN,
             vendor=PaymentClientEnum.RAZORPAY,
             payment_status=PaymentStatusEnum.PENDING,
             additional_info={"note": "test payment"},
@@ -107,14 +108,14 @@ class TestPaymentRepository:
         self.session.get = AsyncMock(return_value=self.mock_payment)
 
         await self.payment_repo.update_payment(
-            payment_id=1, data={"payment_status": "SUCCESS"}
+            payment_id= UUID("11111111-1111-1111-1111-111111111111"), data={"payment_status": "SUCCESS"}
         )
 
-        self.session.get.assert_awaited_once_with(Payment, 1)
+        self.session.get.assert_awaited_once_with(Payment, UUID("11111111-1111-1111-1111-111111111111"))
         self.session.commit.assert_awaited_once()
         self.session.refresh.assert_awaited_once_with(self.mock_payment)
 
-        self.mock_logger.info.assert_called_once_with("Payment updated: 1")
+        self.mock_logger.info.assert_called_once_with("Payment updated: 11111111-1111-1111-1111-111111111111")
 
     async def test_update_payment_failure(self):
         """Test update failure triggers rollback."""
@@ -123,7 +124,7 @@ class TestPaymentRepository:
 
         with pytest.raises(Exception):
             await self.payment_repo.update_payment(
-                payment_id=1, data={"payment_status": "FAILED"}
+                payment_id= UUID("11111111-1111-1111-1111-111111111111"), data={"payment_status": "FAILED"}
             )
 
         self.session.rollback.assert_awaited_once()
@@ -161,9 +162,9 @@ class TestPaymentRepository:
         self.session.get = AsyncMock(return_value=None)
 
         with pytest.raises(PaymentNotFoundError):
-            await self.payment_repo.update_payment(999, {"payment_status": "FAILED"})
+            await self.payment_repo.update_payment(UUID("99999999-9999-9999-9999-999999999999"), {"payment_status": "FAILED"})
 
-        self.session.get.assert_awaited_once_with(Payment, 999)
+        self.session.get.assert_awaited_once_with(Payment, UUID("99999999-9999-9999-9999-999999999999"))
         self.mock_logger.error.assert_called_once()
 
     async def test_create_payment_refresh_failure(self):

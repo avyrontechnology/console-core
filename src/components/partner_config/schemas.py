@@ -1,6 +1,7 @@
+from uuid import UUID
 from typing import Optional, Union
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from src.components.partner_config.constants import SubscriptionModeEnum
 
@@ -24,10 +25,10 @@ class PartnerConfigRequest(BaseModel):
 
 
 class PartnerConfigResponse(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     key: Optional[str] = None
     value: Optional[Union[int, str, dict, list, bool]] = None
-    partner_id: Optional[int] = None
+    partner_id: Optional[UUID] = None
     created_at: Optional[int] = None
     history: Optional[list] = None
 
@@ -38,8 +39,8 @@ class PartnerConfigResponse(BaseModel):
 
 class UpdatePartnerConfigResponse(PartnerConfigResponse):
     updated_at: int
-    updated_by: int
-    id: Optional[int] = None
+    updated_by: UUID
+    id: Optional[UUID] = None
     key: Optional[str] = None
     value: Optional[Union[int, str, dict, list]] = None
     history: Optional[list] = None
@@ -55,9 +56,7 @@ class PartnerConfigUpdateRequest(BaseModel):
 
 class PartnerConfigData(BaseModel):
     is_custom_role_permission_enabled: Optional[bool] = False
-    is_maglo_enabled: Optional[bool] = None
     is_talko_enabled: Optional[bool] = False
-    is_babbler_enabled: Optional[bool] = False
     is_otp_enabled: Optional[bool] = False
     send_user_credentials: Optional[bool] = False
     is_email_verification_enabled: Optional[bool] = False
@@ -65,8 +64,6 @@ class PartnerConfigData(BaseModel):
     can_add_workflow: Optional[bool] = False
     can_view_workflow: Optional[bool] = False
     is_wallet_enabled: Optional[bool] = True
-    is_maglo_app_enabled: Optional[bool] = False
-    is_babbler_app_enabled: Optional[bool] = False
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     from_email: Optional[str] = None
@@ -77,7 +74,6 @@ class PartnerConfigData(BaseModel):
     subscription_mode: Optional[str] = None
     is_rule_based_assignment_enabled: Optional[bool] = False
     can_view_pipeline_management: Optional[bool] = False
-    is_complementary_babbler_enabled: Optional[bool] = False
     can_view_contact: Optional[bool] = False
     can_view_organization: Optional[bool] = False
     enable_dialer: Optional[bool] = False
@@ -93,13 +89,8 @@ class PartnerConfigData(BaseModel):
     can_view_products: Optional[bool] = False
     can_view_inventory: Optional[bool] = False
     can_view_order_management: Optional[bool] = False
-    # Teams feature
-    is_teams_enabled: Optional[bool] = None
     is_partner_custom_roles_enabled: Optional[bool] = None
-    is_team_data_partition_enabled: Optional[bool] = None
     is_reenquiry_chain_enabled: Optional[bool] = False
-    team_strict_hierarchy_mode: Optional[str] = None
-    team_strict_hierarchy_start_role_id: Optional[int] = None
     is_user_tracker_enabled: Optional[bool] = False
     can_view_payment_history: Optional[bool] = False
     can_view_report_management: Optional[bool] = False
@@ -124,17 +115,3 @@ class PartnerConfigData(BaseModel):
                 "subscription_mode must be one of: {}".format(", ".join(allowed))
             )
         return v
-
-
-class EmailConfigUpsertSchema(BaseModel):
-    smtp_username: Optional[str] = None
-    smtp_password: Optional[str] = None
-    from_email: Optional[EmailStr] = None
-
-    @model_validator(mode="before")
-    def field_check(cls, values):
-        if not any(values.values()):
-            raise ValueError(
-                "At least one field must be provided: smtp_username, smtp_password, from_email"
-            )
-        return values

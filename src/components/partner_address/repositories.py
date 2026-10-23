@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, Dict, Iterator, Optional
 from unittest import result
@@ -32,7 +33,7 @@ class AddressRepository:
         )
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
-    async def partner_exists(self, partner_id: int) -> bool:
+    async def partner_exists(self, partner_id: UUID) -> bool:
         async with self.__session_factory() as session:
             try:
                 self.__console_service_logger.info(
@@ -154,8 +155,8 @@ class AddressRepository:
 
     async def upsert_partner_address(
         self,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         update_data: UpdatePartnerAddressRequest,
     ) -> list[PartnerAddress]:
         async with self.__session_factory() as session:
@@ -192,7 +193,7 @@ class AddressRepository:
                 )
                 raise exec
 
-    async def _get_existing_addresses(self, session, partner_id: int) -> dict:
+    async def _get_existing_addresses(self, session, partner_id: UUID) -> dict:
         self.__console_service_logger.info(
             "Fetching existing addresses for partner id: {}".format(partner_id)
         )
@@ -204,8 +205,8 @@ class AddressRepository:
     async def _handle_combined_address(
         self,
         session,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         update_data: UpdatePartnerAddressRequest,
         address_map: dict,
     ) -> list[PartnerAddress]:
@@ -261,8 +262,8 @@ class AddressRepository:
     async def _handle_separate_addresses(
         self,
         session,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         update_data: UpdatePartnerAddressRequest,
         address_map: dict,
     ) -> list[PartnerAddress]:
@@ -324,8 +325,8 @@ class AddressRepository:
         data: dict,
         address_map: dict,
         addr_type: AddressType,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         is_same: bool,
     ) -> PartnerAddress:
 

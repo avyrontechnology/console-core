@@ -1,3 +1,4 @@
+from uuid import UUID
 from src.components.common.errors import NotFoundError
 
 
@@ -6,7 +7,7 @@ class EntitlementNotFoundError(NotFoundError):
 
 
 class OrderNotFoundForEntitlementError(Exception):
-    def __init__(self, order_id: int):
+    def __init__(self, order_id: UUID):
         super().__init__(f"entitlement not found for order_id={order_id}")
 
 

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -75,18 +76,18 @@ class TestUserService:
 
     async def test_get_service_board_users_details_success(self):
         """Test successful retrieval of service board users details."""
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         mock_users = [
             {
-                "user_id": 1,
+                "user_id": UUID("11111111-1111-1111-1111-111111111111"),
                 "email": "user1@example.com",
                 "is_active": True,
                 "is_suspended": False,
                 "name": "User One",
             },
             {
-                "user_id": 2,
+                "user_id": UUID("22222222-2222-2222-2222-222222222222"),
                 "email": "user2@example.com",
                 "is_active": True,
                 "is_suspended": False,
@@ -102,14 +103,14 @@ class TestUserService:
 
         assert isinstance(result, list)
         assert len(result) == 2
-        assert result[0]["user_id"] == 1
+        assert result[0]["user_id"] == UUID("11111111-1111-1111-1111-111111111111")
         assert result[0]["email"] == "user1@example.com"
-        assert result[1]["user_id"] == 2
+        assert result[1]["user_id"] == UUID("22222222-2222-2222-2222-222222222222")
         assert result[1]["email"] == "user2@example.com"
 
     async def test_get_service_board_users_details_generic_exception(self):
         """Test handling of unexpected exceptions in get_service_board_users_details."""
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         self.user_repository_mock.get_service_board_users_details.side_effect = (
             Exception("Database Error")
@@ -122,21 +123,21 @@ class TestUserService:
 
     async def test_get_users_success(self):
         """Test successful retrieval of paginated users under a user's hierarchy."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
         # Mock User object
         user_mock = AsyncMock(spec=User)
-        user_mock.id = 1
+        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
         user_mock.name = "John Doe"  # String
         user_mock.email = "john@example.com"
         user_mock.designation = "Manager"
         user_mock.phone_number = "+1-202-555-0123"  # E.164 format
         user_mock.parent_id = None
         user_mock.partner_id = None
-        user_mock.role_id = 1
-        user_mock.country_id = 1
+        user_mock.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_mock.country_id= UUID("11111111-1111-1111-1111-111111111111")
         user_mock.country = Mock()
         user_mock.country.name = "USA"  # String
         user_mock.state_id = None
@@ -168,7 +169,7 @@ class TestUserService:
         assert result.offset == offset
         assert len(result.users_data) == 1
         assert isinstance(result.users_data[0], AllUsersDataResponse)
-        assert result.users_data[0].id == 1
+        assert result.users_data[0].id == UUID("11111111-1111-1111-1111-111111111111")
         assert result.users_data[0].name == "John Doe"
         assert result.users_data[0].email == "john@example.com"
         assert result.users_data[0].role_name == "Counsellor"
@@ -177,14 +178,12 @@ class TestUserService:
         assert result.users_data[0].phone_number == "+1-202-555-0123"
         assert result.users_data[0].cloud_agent_number == "09876"
         assert result.users_data[0].current_status == "Active"
-        # No team_repository/partner_config_service wired -> team_count omitted.
-        assert result.users_data[0].team_count is None
 
         # Verify mocks
         self.user_repository_mock.get_all.assert_called_once_with(
             current_user_id, limit, offset, filter_criteria=None
         )
-        self.auth_utility_mock.get_role_by_id.assert_called_once_with(1)
+        self.auth_utility_mock.get_role_by_id.assert_called_once_with(UUID("11111111-1111-1111-1111-111111111111"))
         self.mock_logger.info.assert_any_call("getting all users")
 
     async def test_get_users_current_status_null_falls_back_to_away(self):
@@ -195,7 +194,7 @@ class TestUserService:
         current_user_id, limit, offset = 1, 10, 0
 
         user_mock = AsyncMock(spec=User)
-        user_mock.id = 1
+        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
         user_mock.name = "John Doe"
         user_mock.email = "john@example.com"
         user_mock.designation = "Manager"
@@ -220,114 +219,9 @@ class TestUserService:
 
         assert result.users_data[0].current_status == StandardStatuses.AWAY
 
-    async def test_get_users_team_count_populated_when_teams_enabled(self):
-        """team_count is populated per-user when teams are enabled for the partner."""
-        current_user_id, limit, offset = 1, 10, 0
-
-        user_mock = AsyncMock(spec=User)
-        user_mock.id = 1
-        user_mock.name = "John Doe"
-        user_mock.email = "john@example.com"
-        user_mock.designation = "Manager"
-        user_mock.phone_number = "+1-202-555-0123"
-        user_mock.parent_id = None
-        user_mock.partner_id = 10
-        user_mock.role_id = 1
-        user_mock.country_id = None
-        user_mock.country = None
-        user_mock.state_id = None
-        user_mock.city_id = None
-        user_mock.parent = None
-        user_mock.is_active = True
-        user_mock.cloud_agent_number = None
-        user_mock.current_status = "Active"
-
-        self.user_repository_mock.get_all.return_value = ([user_mock], 1)
-        self.auth_utility_mock.get_role_by_id.return_value = None
-
-        team_repository_mock = AsyncMock()
-        team_repository_mock.get_member_counts_for_users.return_value = {1: 4}
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = Mock(
-            value=True
-        )
-
-        service_with_teams = UserService(
-            user_repository=self.user_repository_mock,
-            audit_service=self.audit_log_mock,
-            console_service_logger=self.mock_logger,
-            console_service_cache=self.redis_mock,
-            auth_service_utility=self.auth_utility_mock,
-            session_factory=MagicMock(),
-            team_repository=team_repository_mock,
-        )
-
-        result = await service_with_teams.get_users(
-            current_user_id,
-            limit,
-            offset,
-            auth_service=self.auth_utility_mock,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        assert result.users_data[0].team_count == 4
-        team_repository_mock.get_member_counts_for_users.assert_awaited_once_with([1])
-
-    async def test_get_users_team_count_none_when_teams_disabled(self):
-        """team_count stays None when teams aren't enabled for the partner."""
-        current_user_id, limit, offset = 1, 10, 0
-
-        user_mock = AsyncMock(spec=User)
-        user_mock.id = 1
-        user_mock.name = "John Doe"
-        user_mock.email = "john@example.com"
-        user_mock.designation = "Manager"
-        user_mock.phone_number = "+1-202-555-0123"
-        user_mock.parent_id = None
-        user_mock.partner_id = 10
-        user_mock.role_id = 1
-        user_mock.country_id = None
-        user_mock.country = None
-        user_mock.state_id = None
-        user_mock.city_id = None
-        user_mock.parent = None
-        user_mock.is_active = True
-        user_mock.cloud_agent_number = None
-        user_mock.current_status = "Active"
-
-        self.user_repository_mock.get_all.return_value = ([user_mock], 1)
-        self.auth_utility_mock.get_role_by_id.return_value = None
-
-        team_repository_mock = AsyncMock()
-        partner_config_service_mock = AsyncMock()
-        partner_config_service_mock.get_partner_config_by_key.return_value = Mock(
-            value=False
-        )
-
-        service_with_teams = UserService(
-            user_repository=self.user_repository_mock,
-            audit_service=self.audit_log_mock,
-            console_service_logger=self.mock_logger,
-            console_service_cache=self.redis_mock,
-            auth_service_utility=self.auth_utility_mock,
-            session_factory=MagicMock(),
-            team_repository=team_repository_mock,
-        )
-
-        result = await service_with_teams.get_users(
-            current_user_id,
-            limit,
-            offset,
-            auth_service=self.auth_utility_mock,
-            partner_config_service=partner_config_service_mock,
-        )
-
-        assert result.users_data[0].team_count is None
-        team_repository_mock.get_member_counts_for_users.assert_not_called()
-
     async def test_get_users_exception(self):
         """Test handling of exceptions in get_users method."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
@@ -359,28 +253,26 @@ class TestUserService:
         """Test successful user update."""
 
         # Arrange
-        user_id = 1
-        current_user = {"user_id": 33, "partner_id": 12}
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         user_data = MagicMock(
-            country_id=1,
-            state_id=2,
-            city_id=3,
+            country_id= UUID("11111111-1111-1111-1111-111111111111"),
+            state_id= UUID("22222222-2222-2222-2222-222222222222"),
+            city_id= UUID("33333333-3333-3333-3333-333333333333"),
             password="new_password",
-            role_id=1,
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_id=current_user.get("partner_id"),
-            is_maglo_publisher=True,
             parent_id=None,
         )
 
         user_data.model_dump.return_value = {
-            "country_id": 1,
-            "state_id": 2,
-            "city_id": 3,
+            "country_id": UUID("11111111-1111-1111-1111-111111111111"),
+            "state_id": UUID("22222222-2222-2222-2222-222222222222"),
+            "city_id": UUID("33333333-3333-3333-3333-333333333333"),
             "password": "new_password",
-            "role_id": 1,
+            "role_id": UUID("11111111-1111-1111-1111-111111111111"),
             "partner_id": current_user.get("partner_id"),
-            "is_maglo_publisher": True,
             "parent_id": None,
         }
 
@@ -465,23 +357,6 @@ class TestUserService:
             "new_password"
         )
 
-        maglo_cache_patterns = [
-            CacheKeys.HOME_PAGE.format(updated_user.partner_id, user_id),
-            CacheKeys.ENLIST_AGENTS.format(updated_user.partner_id),
-            CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-            CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-            CacheKeys.GRPC_GET_USER_ROLE.format(user_id),
-            CacheKeys.GRPC_GET_USER_CHILD_HIERARCHY.format("*", user_id),
-            CacheKeys.GRPC_GET_PUBLISHER_DATA.format(
-                updated_user.partner_id
-            ),
-        ]
-
-        cache_mock.clear_pattern.assert_any_call(
-            prefix=RedisCache.KeysPrefix.MAGLO,
-            pattern=maglo_cache_patterns,
-        )
-
         cache_mock.clear_pattern.assert_any_call(
             prefix=RedisCache.KeysPrefix.CONSOLE,
             pattern=CacheKeys.TOKEN.format(
@@ -505,20 +380,19 @@ class TestUserService:
     async def test_update_user_current_status_success(self):
         """A valid current_status (standard or active custom) is accepted."""
         # Arrange
-        user_id = 1
-        current_user = {"user_id": 33, "partner_id": 12}
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         user_data = MagicMock(
             country_id=None,
             state_id=None,
             city_id=None,
             parent_id=None,
-            is_maglo_publisher=False,
         )
         user_data.model_dump.return_value = {"current_status": "Meeting"}
 
-        existing_user = MagicMock(id=user_id, partner_id=12)
-        updated_user = MagicMock(id=user_id, partner_id=12)
+        existing_user = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"))
+        updated_user = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"))
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -561,7 +435,7 @@ class TestUserService:
         )
         repository_mock.update_user.assert_awaited_once_with(
             user_id=user_id,
-            current_user_id=33,
+            current_user_id= UUID("33333333-3333-3333-3333-333333333333"),
             current_status="Meeting",
             current_status_icon=None,
         )
@@ -570,13 +444,13 @@ class TestUserService:
     async def test_update_user_current_status_invalid(self):
         """An unknown current_status (not standard, not an active custom status) is rejected."""
         # Arrange
-        user_id = 1
-        current_user = {"user_id": 33, "partner_id": 12}
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         user_data = MagicMock(country_id=None, state_id=None, city_id=None)
         user_data.model_dump.return_value = {"current_status": "Not A Real Status"}
 
-        existing_user = MagicMock(id=user_id, partner_id=12)
+        existing_user = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"))
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -613,10 +487,10 @@ class TestUserService:
     async def test_update_user_country_not_found(self):
         """Test update user with invalid country."""
         # Arrange
-        user_id = 1
-        user_data = MagicMock(country_id=999)
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_data = MagicMock(country_id= UUID("99999999-9999-9999-9999-999999999999"))
         existing_user = MagicMock(id=user_id)
-        current_user = {"user_id": 33, "partner_id": 12}
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -662,7 +536,7 @@ class TestUserService:
     async def test_update_user_not_found(self):
         """Test update user when user is not found."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         user_data = MagicMock()
 
         repository_mock = AsyncMock()
@@ -704,7 +578,7 @@ class TestUserService:
     async def test_update_user_unexpected_error(self):
         """Test update user with an unexpected error."""
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         user_data = MagicMock()
 
         repository_mock = AsyncMock()
@@ -741,10 +615,10 @@ class TestUserService:
     async def test_update_user_city_not_found(self):
         """Test update user with invalid city."""
         # Arrange
-        user_id = 1
-        user_data = MagicMock(city_id=999)
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_data = MagicMock(city_id= UUID("99999999-9999-9999-9999-999999999999"))
         existing_user = MagicMock(id=user_id)
-        current_user = {"user_id": 33, "partner_id": 12}
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -790,10 +664,10 @@ class TestUserService:
     async def test_update_user_state_not_found(self):
         """Test update user with invalid state."""
         # Arrange
-        user_id = 1
-        user_data = MagicMock(state_id=999)
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_data = MagicMock(state_id= UUID("99999999-9999-9999-9999-999999999999"))
         existing_user = MagicMock(id=user_id)
-        current_user = {"user_id": 33, "partner_id": 12}
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -837,20 +711,19 @@ class TestUserService:
 
     async def test_update_user_reactivates_inactive_user(self):
         """An inactive user can be reactivated; audit action is ACTIVATE."""
-        user_id = 1
-        current_user = {"user_id": 33, "partner_id": 12}
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         user_data = MagicMock(
             country_id=None,
             state_id=None,
             city_id=None,
             parent_id=None,
-            is_maglo_publisher=False,
         )
         user_data.model_dump.return_value = {"is_active": True}
 
-        existing_user = MagicMock(id=user_id, partner_id=12, is_active=False)
-        updated_user = MagicMock(id=user_id, partner_id=12)
+        existing_user = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"), is_active=False)
+        updated_user = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"))
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = existing_user
@@ -886,30 +759,29 @@ class TestUserService:
             user_id, show_inactive_users=True
         )
         repository_mock.update_user.assert_awaited_once_with(
-            user_id=user_id, current_user_id=33, is_active=True
+            user_id=user_id, current_user_id= UUID("33333333-3333-3333-3333-333333333333"), is_active=True
         )
         assert audit_service_mock.log_action.call_args.args[0].action == "ACTIVATE"
         assert result == updated_user
 
     async def test_update_user_deactivates_active_user(self):
         """An active user can be deactivated; sessions are killed and audit action is DEACTIVATE."""
-        user_id = 1
-        current_user = {"user_id": 33, "partner_id": 12}
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         user_data = MagicMock(
             country_id=None,
             state_id=None,
             city_id=None,
             parent_id=None,
-            is_maglo_publisher=False,
         )
         user_data.model_dump.return_value = {"is_active": False}
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = MagicMock(
-            id=user_id, partner_id=12, is_active=True
+            id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"), is_active=True
         )
-        repository_mock.update_user.return_value = MagicMock(id=user_id, partner_id=12)
+        repository_mock.update_user.return_value = MagicMock(id=user_id, partner_id= UUID("12121212-1212-1212-1212-121212121212"))
 
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock(
@@ -950,7 +822,7 @@ class TestUserService:
 
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = MagicMock(
-            id=1, is_active=True
+            id= UUID("11111111-1111-1111-1111-111111111111"), is_active=True
         )
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock(
@@ -969,7 +841,7 @@ class TestUserService:
         with pytest.raises(UserException, match="already active"):
             await user_service.update_user(
                 1,
-                {"user_id": 33, "partner_id": 12},
+                {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")},
                 user_data,
                 partner_service=partner_service_mock,
             )
@@ -992,11 +864,11 @@ class TestUserService:
         self, constraint_name, expected_exception, field
     ):
         # Arrange
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         user_data = MagicMock()
         setattr(user_data, field, 999)
         user_role = MagicMock(hierarchy="USER")  # Mock role object
-        current_user = {"user_id": 33, "partner_id": 12}
+        current_user = {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}
 
         self.user_repository_mock.get_by_id.return_value = (
             MagicMock()
@@ -1045,7 +917,7 @@ class TestUserService:
 
         # Call the service method
         user_hierarchy = 1
-        partner_id = 10
+        partner_id= UUID("10101010-1010-1010-1010-101010101010")
         result = await self.user_service.get_admin_credentials_by_hierarchy(
             user_hierarchy, partner_id
         )
@@ -1071,7 +943,7 @@ class TestUserService:
         )
 
         user_hierarchy = 1
-        partner_id = 10
+        partner_id= UUID("10101010-1010-1010-1010-101010101010")
 
         # Call the service method and expect an exception
         with pytest.raises(Exception) as exc_info:
@@ -1091,7 +963,7 @@ class TestUserService:
 
     async def test_get_users_availability_status_success(self):
         """Test successful retrieval of users status."""
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         mock_users_status = [
             {"user_id": 1, "current_status": "Active"},
@@ -1112,7 +984,7 @@ class TestUserService:
 
     async def test_get_users_availability_status_unexpected_error(self):
         """Test unexpected error while retrieving users status."""
-        user_ids = [1, 2]
+        user_ids = [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]
 
         self.user_repository_mock.get_users_availability_status.side_effect = Exception(
             "Database error"
@@ -1126,7 +998,7 @@ class TestUserService:
         self.mock_logger.error.assert_called()
 
     async def test_get_admin_details_by_partner_id_success(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         user_mock = MagicMock()
         response_mock = MagicMock()
 
@@ -1149,7 +1021,7 @@ class TestUserService:
             )
 
     async def test_get_admin_details_by_partner_id_user_exception(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         self.user_repository_mock.get_admin_details_by_partner_id.side_effect = (
             UserException("User not found")
         )
@@ -1164,7 +1036,7 @@ class TestUserService:
         )
 
     async def test_get_admin_details_by_partner_id_unexpected_exception(self):
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
         self.user_repository_mock.get_admin_details_by_partner_id.side_effect = (
             Exception("Unexpected error")
         )
@@ -1235,21 +1107,21 @@ class TestUserService:
 
     async def test_get_users_inactive_user_cleaned_data(self):
         """Test get_users calls _clean_user_data for inactive user."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
         # Mock User object for inactive user
         user_mock = AsyncMock(spec=User)
-        user_mock.id = 1
+        user_mock.id = UUID("11111111-1111-1111-1111-111111111111")
         user_mock.name = "John Doe"
-        user_mock.email = "1_john.doe@example.com"
+        user_mock.email = "11111111-1111-1111-1111-111111111111_john.doe@example.com"
         user_mock.designation = "Manager"
-        user_mock.phone_number = "+1-202-555-0123_1"
+        user_mock.phone_number = "+1-202-555-0123_11111111-1111-1111-1111-111111111111"
         user_mock.parent_id = None
         user_mock.partner_id = None
-        user_mock.role_id = 1
-        user_mock.country_id = 1
+        user_mock.role_id= UUID("11111111-1111-1111-1111-111111111111")
+        user_mock.country_id= UUID("11111111-1111-1111-1111-111111111111")
         user_mock.country = Mock()
         user_mock.country.name = "USA"
         user_mock.state_id = None
@@ -1279,7 +1151,7 @@ class TestUserService:
         assert result.offset == offset
         assert len(result.users_data) == 1
         assert isinstance(result.users_data[0], AllUsersDataResponse)
-        assert result.users_data[0].id == 1
+        assert result.users_data[0].id == UUID("11111111-1111-1111-1111-111111111111")
         assert result.users_data[0].email == "john.doe@example.com"  # Cleaned email
         assert (
             result.users_data[0].phone_number == "+1-202-555-0123"
@@ -1294,16 +1166,12 @@ class TestUserService:
             await user_service.get_user_by_id(999)
 
     @pytest.mark.asyncio
-    @patch("src.components.user.services.httpx.AsyncClient.get")
-    async def test_delete_user_by_id_clears_cache(mock_get, user_service):
+    async def test_delete_user_by_id_clears_cache(self):
         # --- Arrange ---
-        mock_user = User(id=1, is_active=False, partner_id=123)
-        user_service._UserService__repository.delete_by_id.return_value = mock_user
-
-        # Mock successful internal API response
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        mock_user = User(id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False, partner_id= UUID("12312312-3123-1231-2312-312312312312"))
+        self.user_repository_mock.delete_by_id.return_value = mock_user
+        self.user_repository_mock.get_by_id.return_value = mock_user
+        self.user_repository_mock.has_child_users.return_value = False
 
         # Mock request with Authorization header
         mock_request = MagicMock()
@@ -1313,11 +1181,16 @@ class TestUserService:
         user_session_service = AsyncMock()
 
         # --- Act ---
-        await user_service.delete_user_by_id(
+        await self.user_service.delete_user_by_id(
             request=mock_request,
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             user_session_service=user_session_service,
         )
+
+        # --- Assert ---
+        self.user_repository_mock.delete_by_id.assert_called_once_with(UUID("11111111-1111-1111-1111-111111111111"))
+        self.redis_mock.clear_pattern.assert_called()
+        user_session_service.deactivate_user_sessions.assert_called_once_with(UUID("11111111-1111-1111-1111-111111111111"))
 
     async def test_get_user_by_user_id_not_found(self, user_service):
         user_service._UserService__repository.get_user_by_user_id.side_effect = (
@@ -1328,27 +1201,27 @@ class TestUserService:
 
     async def test_clean_user_data(self, user_service):
         user = User(
-            id=48,
-            email="48_shalini.rani@affinityeducation.in",
-            phone_number="+91-7634-567-890_48",
+            id= UUID("48484848-4848-4848-4848-484848484848"),
+            email="48484848-4848-4848-4848-484848484848_shalini.rani@affinityeducation.in",
+            phone_number="+91-7634-567-890_48484848-4848-4848-4848-484848484848",
         )
         email, phone = user_service._clean_user_data(user)
         assert email == "shalini.rani@affinityeducation.in"
         assert phone == "+91-7634-567-890"
 
     async def test_is_user_internal_false(self, user_service):
-        mock_user = User(id=1, is_internal=False)
+        mock_user = User(id= UUID("11111111-1111-1111-1111-111111111111"), is_internal=False)
         user_service.get_user_by_id = AsyncMock(return_value=mock_user)
         assert not await user_service.is_user_internal(1)
 
     async def test_is_user_internal_true(self, user_service):
-        mock_user = User(id=1, is_internal=True)
+        mock_user = User(id= UUID("11111111-1111-1111-1111-111111111111"), is_internal=True)
         user_service.get_user_by_id = AsyncMock(return_value=mock_user)
         assert await user_service.is_user_internal(1)
 
     async def test_get_users_user_exception(self):
         """Test handling of UserException in get_users method."""
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         limit = 10
         offset = 0
 
@@ -1378,7 +1251,7 @@ class TestUserService:
 
     async def test_get_user_by_id_success(self):
         """Test successful retrieval of a user by ID."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         user_mock = AsyncMock(spec=User)
         user_mock.id = user_id
         user_mock.name = "Jane Doe"
@@ -1401,7 +1274,7 @@ class TestUserService:
 
     async def test_get_user_by_id_generic_exception(self):
         """Test handling of generic exception in get_user_by_id method."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock repository to raise generic exception
         self.user_repository_mock.get_by_id.side_effect = Exception("Database error")
@@ -1425,7 +1298,7 @@ class TestUserService:
 
     async def test_get_user_by_id_not_found(self):
         """Test handling of UserNotFoundError in get_user_by_id method."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock repository to raise UserNotFoundError
         self.user_repository_mock.get_by_id.side_effect = UserNotFoundError(user_id)
@@ -1445,15 +1318,9 @@ class TestUserService:
         )
         self.user_repository_mock.get_by_id.assert_called_once_with(user_id)
 
-    @patch("src.components.user.services.httpx.AsyncClient.get")
-    async def test_delete_user_by_id_not_found(self, mock_get):
+    async def test_delete_user_by_id_not_found(self):
         """Test handling of UserNotFoundError when user not found in get_user_by_id."""
-        user_id = 1
-
-        # Mock HTTPX call to succeed so flow reaches get_user_by_id
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Simulate user not found
         self.user_service.get_user_by_id = AsyncMock(
@@ -1478,17 +1345,11 @@ class TestUserService:
                 user_session_service=user_session_service,
             )
 
-    @patch("src.components.user.services.httpx.AsyncClient.get")
-    async def test_delete_user_by_id_generic_exception(self, mock_get):
+    async def test_delete_user_by_id_generic_exception(self):
         """Test handling of generic exception in delete_user_by_id method."""
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # --- Arrange ---
-        # Mock the internal API call to succeed
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
-
         # Mock get_user_by_id to succeed (so we reach delete_by_id)
         self.user_service.get_user_by_id = AsyncMock(return_value=AsyncMock())
 
@@ -1514,7 +1375,7 @@ class TestUserService:
             )
 
     async def test_enlist_users_by_partner_id_success(self):
-        filter_request = UserRoleFilterRequest(partner_id=123)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("12312312-3123-1231-2312-312312312312"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
         partner_repository.get_by_id.return_value = MagicMock()
@@ -1528,19 +1389,19 @@ class TestUserService:
         )
 
         assert result == [{"user_id": 1, "role_id": 2}]
-        partner_repository.get_by_id.assert_awaited_once_with(123)
+        partner_repository.get_by_id.assert_awaited_once_with(UUID("12312312-3123-1231-2312-312312312312"))
         filter_service.get_user_data.assert_awaited_once_with(
             filter_request=filter_request
         )
         self.mock_logger.info.assert_any_call(
-            "Checking partner: 123 is activate or available."
+            "Checking partner: 12312312-3123-1231-2312-312312312312 is activate or available."
         )
         self.mock_logger.info.assert_any_call(
-            "Attempting to get users by partner id: 123"
+            "Attempting to get users by partner id: 12312312-3123-1231-2312-312312312312"
         )
 
     async def test_enlist_users_by_partner_id_partner_not_found(self):
-        filter_request = UserRoleFilterRequest(partner_id=999)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("99999999-9999-9999-9999-999999999999"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
         partner_repository.get_by_id.return_value = None
@@ -1553,13 +1414,13 @@ class TestUserService:
                 filter_service=filter_service,
             )
 
-        partner_repository.get_by_id.assert_awaited_once_with(999)
+        partner_repository.get_by_id.assert_awaited_once_with(UUID("99999999-9999-9999-9999-999999999999"))
         self.mock_logger.error.assert_called_with(
-            "Partner not find while get users by partner_id: Partner not found, id: 999"
+            "Partner not find while get users by partner_id: Partner not found, id: 99999999-9999-9999-9999-999999999999"
         )
 
     async def test_enlist_users_by_partner_id_user_exception(self):
-        filter_request = UserRoleFilterRequest(partner_id=123)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("12312312-3123-1231-2312-312312312312"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
         partner_repository.get_by_id.return_value = MagicMock()
@@ -1578,7 +1439,7 @@ class TestUserService:
         )
 
     async def test_enlist_users_by_partner_id_generic_exception(self):
-        filter_request = UserRoleFilterRequest(partner_id=123)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("12312312-3123-1231-2312-312312312312"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
         partner_repository.get_by_id.side_effect = Exception("Unexpected error")
@@ -1605,7 +1466,7 @@ class TestUserService:
 
     async def test_get_users_by_partner_id_partner_not_found(self):
         # Arrange
-        partner_id = 101
+        partner_id= UUID("10110110-1101-1011-0110-110110110110")
         self.partner_repository_mock.get_by_id.return_value = None
 
         # Act & Assert
@@ -1623,132 +1484,9 @@ class TestUserService:
         )
         assert str(exc_info.value) == f"Partner not found, id: {partner_id}"
 
-    async def test_inactive_app_by_id_success(self):
-        # Arrange
-        current_user = {"user_id": 10}
-
-        # Mock user returned by get_user_by_field
-        user_mock = AsyncMock()
-        user_mock.id = 10
-        user_mock.email = "test@example.com"
-
-        # Patch the service method get_user_by_field
-        self.user_service.get_user_by_field = AsyncMock(return_value=user_mock)
-
-        # Mock config object
-        config_mock = MagicMock()
-        config_mock.value = True   # app is currently enabled
-
-        user_config_service = AsyncMock()
-        user_config_service.get_user_config_by_key.return_value = config_mock
-
-        user_session_service = AsyncMock()
-
-        # Act
-        result = await self.user_service.inactive_app_by_id(
-            current_user=current_user,
-            user_config_service=user_config_service,
-            user_session_service=user_session_service,
-        )
-
-        # Assert
-        self.user_service.get_user_by_field.assert_called_once_with("id", 10)
-
-        user_config_service.get_user_config_by_key.assert_called_once_with(
-            10, "is_maglo_app_enabled"
-        )
-
-        user_config_service.update_is_maglo_app_config.assert_called_once_with(
-            user_id=10, is_maglo_app_enabled=False
-        )
-
-        user_session_service.deactivate_user_sessions.assert_called_once_with(
-            user_id=10, service_name="maglo_app"
-        )
-
-        assert result == UserResponseMsg.ACCOUNT_DELETED
-        self.mock_logger.info.assert_called()
-
-    async def test_inactive_app_by_id_user_not_found(self):
-        current_user = {"user_id": 44}
-
-        # get_user_by_field returns None
-        self.user_service.get_user_by_field = AsyncMock(return_value=None)
-
-        with pytest.raises(UserException, match="User not found"):
-            await self.user_service.inactive_app_by_id(
-                current_user=current_user,
-                user_config_service=AsyncMock(),
-                user_session_service=AsyncMock(),
-            )
-
-        self.mock_logger.error.assert_called()
-
-    async def test_inactive_app_by_id_config_not_found(self):
-        current_user = {"user_id": 10}
-
-        # Mock user
-        user_mock = AsyncMock(id=10)
-        self.user_service.get_user_by_field = AsyncMock(return_value=user_mock)
-
-        # Config missing
-        user_config_service = AsyncMock()
-        user_config_service.get_user_config_by_key.return_value = None
-
-        with pytest.raises(UserException, match=UserResponseMsg.MAGLO_APP_NOT_ENABLED):
-            await self.user_service.inactive_app_by_id(
-                current_user=current_user,
-                user_config_service=user_config_service,
-                user_session_service=AsyncMock(),
-            )
-
-        self.mock_logger.error.assert_called()
-
-    async def test_inactive_app_by_id_already_disabled(self):
-        current_user = {"user_id": 20}
-
-        # Mock user
-        user_mock = AsyncMock()
-        user_mock.id = 20
-        user_mock.email = "already@disabled.com"
-
-        self.user_service.get_user_by_field = AsyncMock(return_value=user_mock)
-
-        # Config returned but value is False
-        config_mock = MagicMock(value=False)
-
-        user_config_service = AsyncMock()
-        user_config_service.get_user_config_by_key.return_value = config_mock
-
-        with pytest.raises(UserNotFoundError):
-            await self.user_service.inactive_app_by_id(
-                current_user=current_user,
-                user_config_service=user_config_service,
-                user_session_service=AsyncMock(),
-            )
-
-        self.mock_logger.error.assert_called()
-
-    async def test_inactive_app_by_id_unexpected_error(self):
-        current_user = {"user_id": 10}
-
-        # Force unexpected error
-        self.user_service.get_user_by_field = AsyncMock(
-            side_effect=Exception("Some unexpected error")
-        )
-
-        with pytest.raises(Exception, match="Some unexpected error"):
-            await self.user_service.inactive_app_by_id(
-                current_user=current_user,
-                user_config_service=AsyncMock(),
-                user_session_service=AsyncMock(),
-            )
-
-        self.mock_logger.error.assert_called()
-
     async def test_enlist_users_dynamically_non_internal_returns_empty(self):
         current_user = {"user_id": 10, "partner_id": 100}
-        filter_request = UserRoleFilterRequest(partner_id=200)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("20020020-0200-2002-0020-020020020020"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
 
@@ -1764,12 +1502,12 @@ class TestUserService:
         partner_repository.get_by_id.assert_not_awaited()
         filter_service.get_user_data.assert_not_awaited()
         self.mock_logger.info.assert_any_call(
-            "Checking partner: 200 is activate or available."
+            "Checking partner: 20020020-0200-2002-0020-020020020020 is activate or available."
         )
 
     async def test_enlist_users_dynamically_internal_user_allows_listing(self):
         current_user = {"user_id": 11, "partner_id": 100}
-        filter_request = UserRoleFilterRequest(partner_id=200)
+        filter_request = UserRoleFilterRequest(partner_id= UUID("20020020-0200-2002-0020-020020020020"))
         partner_repository = AsyncMock()
         filter_service = AsyncMock()
 
@@ -1784,19 +1522,19 @@ class TestUserService:
 
         assert result == [{"user_id": 1, "role_id": 2}]
         self.user_service.is_user_internal.assert_awaited_once_with(11)
-        partner_repository.get_by_id.assert_awaited_once_with(200)
+        partner_repository.get_by_id.assert_awaited_once_with(UUID("20020020-0200-2002-0020-020020020020"))
         filter_service.get_user_data.assert_awaited_once_with(filter_request=filter_request)
         self.mock_logger.info.assert_any_call(
-            "Checking partner: 200 is activate or available."
+            "Checking partner: 20020020-0200-2002-0020-020020020020 is activate or available."
         )
 
     async def test_toggle_walkthrough_key_activation_success(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         update_data = MagicMock()
         update_data.model_dump.return_value = {"is_walkthrough_completed": True}
 
         # repository returns an object with partner_id
-        repo_result = MagicMock(partner_id=123)
+        repo_result = MagicMock(partner_id= UUID("12312312-3123-1231-2312-312312312312"))
         self.user_repository_mock.toggle_walkthrough_key_activation.return_value = repo_result
 
         await self.user_service.toggle_walkthrough_key_activation(user_id, update_data)
@@ -1805,24 +1543,13 @@ class TestUserService:
             user_id, **{"is_walkthrough_completed": True}
         )
 
-        expected_patterns = [
-            CacheKeys.HOME_PAGE.format(repo_result.partner_id, user_id),
-            CacheKeys.ENLIST_AGENTS.format(repo_result.partner_id),
-            CacheKeys.GRPC_GET_USER_CHILD_DETAILS.format("*", ""),
-            CacheKeys.GRPC_GET_USER_DETAILS.format("*", user_id),
-            CacheKeys.GRPC_GET_USER_ROLE.format(user_id),
-        ]
-
-        self.redis_mock.clear_pattern.assert_any_call(
-            prefix=RedisCache.KeysPrefix.MAGLO, pattern=expected_patterns
-        )
         self.redis_mock.clear_pattern.assert_any_call(
             prefix=RedisCache.KeysPrefix.CONSOLE,
             pattern=CacheKeys.TOKEN.format(repo_result.partner_id, ""),
         )
 
     async def test_toggle_walkthrough_key_activation_repository_exception(self):
-        user_id = 2
+        user_id= UUID("22222222-2222-2222-2222-222222222222")
         update_data = MagicMock()
         update_data.model_dump.return_value = {}
 
@@ -1834,8 +1561,8 @@ class TestUserService:
         self.mock_logger.error.assert_called()
 
     async def test_resolve_user_walkthrough_key_calls_toggle_when_expired_and_not_completed(self):
-        user_id = 10
-        partner_id = 20
+        user_id= UUID("10101010-1010-1010-1010-101010101010")
+        partner_id= UUID("20202020-2020-2020-2020-202020202020")
 
         user_obj = MagicMock()
         user_obj.created_at = 0
@@ -1855,8 +1582,8 @@ class TestUserService:
         assert called_args[1].is_walkthrough_completed is True
 
     async def test_resolve_user_walkthrough_key_does_not_call_toggle_when_already_completed(self):
-        user_id = 11
-        partner_id = 21
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("21212121-2121-2121-2121-212121212121")
 
         user_obj = MagicMock()
         user_obj.created_at = 0
@@ -1872,8 +1599,8 @@ class TestUserService:
         self.user_service.toggle_walkthrough_key_activation.assert_not_awaited()
 
     async def test_resolve_user_walkthrough_key_propagates_get_user_error(self):
-        user_id = 12
-        partner_id = 22
+        user_id= UUID("12121212-1212-1212-1212-121212121212")
+        partner_id= UUID("22222222-2222-2222-2222-222222222222")
 
         self.user_service.get_user_by_user_id = AsyncMock(side_effect=Exception("fetch error"))
 
@@ -1884,7 +1611,7 @@ class TestUserService:
 
     @pytest.mark.asyncio
     async def test_get_agent_details_success(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         ivr_phone = "9999999999"
         api_key = "valid_key"
 
@@ -1920,7 +1647,7 @@ class TestUserService:
 
     @pytest.mark.asyncio
     async def test_invalid_api_key(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         self.partner_repository_mock.get_by_id.return_value = MagicMock()
 
@@ -1938,7 +1665,7 @@ class TestUserService:
 
     @pytest.mark.asyncio
     async def test_user_not_found(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         ivr_phone = "9999999999"
 
         self.partner_repository_mock.get_by_id.return_value = MagicMock()
@@ -1959,7 +1686,7 @@ class TestUserService:
 
     @pytest.mark.asyncio
     async def test_user_wrong_partner(self):
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         ivr_phone = "9999999999"
 
         self.partner_repository_mock.get_by_id.return_value = MagicMock()
@@ -1967,7 +1694,7 @@ class TestUserService:
         mock_api_repo = AsyncMock()
         mock_api_repo.get_active_api_key.return_value = MagicMock(key="valid_key")
 
-        mock_user = MagicMock(partner_id=999)  # different partner
+        mock_user = MagicMock(partner_id= UUID("99999999-9999-9999-9999-999999999999"))  # different partner
         self.user_repository_mock.get_user_by_field.return_value = mock_user
 
         with pytest.raises(UserNotFoundError):
@@ -1996,7 +1723,7 @@ class TestUserService:
         with pytest.raises(IntegrityError):
             await self.user_service.update_user(
                 1,
-                {"user_id": 33, "partner_id": 12},
+                {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")},
                 user_data,
                 location_service=AsyncMock(),
                 auth_repository=auth_repository_mock,
@@ -2008,7 +1735,7 @@ class TestUserService:
         user_data.model_dump.return_value = {"is_active": False}
         repository_mock = AsyncMock()
         repository_mock.get_by_id.return_value = MagicMock(
-            id=1, is_active=False
+            id= UUID("11111111-1111-1111-1111-111111111111"), is_active=False
         )
         partner_service_mock = AsyncMock()
         partner_service_mock.get_partner_by_id.return_value = MagicMock(is_internal=True)
@@ -2023,6 +1750,6 @@ class TestUserService:
         )
         with pytest.raises(UserException, match="already inactive"):
             await user_service.update_user(
-                1, {"user_id": 33, "partner_id": 12}, user_data,
+                1, {"user_id": UUID("33333333-3333-3333-3333-333333333333"), "partner_id": UUID("12121212-1212-1212-1212-121212121212")}, user_data,
                 partner_service=partner_service_mock,
             )

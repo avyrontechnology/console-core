@@ -8,6 +8,7 @@ from grpc_interceptor.exceptions import GrpcException
 from fastapi import Depends
 from src.core.container import Container
 from src.components.api_key.services import ApiKeyNotFoundError, ApiKeyResponse, ApiKeyService
+from src.components.common.rpc_uuid import parse_uuid, uuid_str
 
 
 class ApiKeyServiceGRPC(ApiKeyServiceServicer):
@@ -36,9 +37,9 @@ class ApiKeyServiceGRPC(ApiKeyServiceServicer):
                 )
 
             response = ValidateApiKeyResponse(
-                id=key_details.id,
+                id=uuid_str(key_details.id),
                 key=key_details.key,
-                partner_id=key_details.partner_id,
+                partner_id=uuid_str(key_details.partner_id),
                 is_active=key_details.is_active,
                 scopes=list(key_details.scopes or []),
                 user_context=json.dumps(key_details.user_context or {}),
@@ -65,7 +66,7 @@ class ApiKeyServiceGRPC(ApiKeyServiceServicer):
         context,
         api_key_service: ApiKeyService = Depends(Provide[Container.api_key_service]),
     ):
-        partner_id = request.partner_id
+        partner_id = parse_uuid(request.partner_id, "partner_id")
 
         try:
             self.__logger.info(f"[gRPC]: Fetching API key details for partner_id: {partner_id}")
@@ -73,10 +74,10 @@ class ApiKeyServiceGRPC(ApiKeyServiceServicer):
             key_details: ApiKeyResponse = await api_key_service.get_api_key(partner_id=partner_id)
             
             response = PartnerApiKeyResponse(
-                id=key_details.id,
+                id=uuid_str(key_details.id),
                 key=key_details.key,
                 description=key_details.description,
-                partner_id=key_details.partner_id,
+                partner_id=uuid_str(key_details.partner_id),
                 is_active=key_details.is_active,
             )
 

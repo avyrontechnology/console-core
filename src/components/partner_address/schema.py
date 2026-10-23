@@ -1,3 +1,4 @@
+from uuid import UUID
 from enum import Enum
 from typing import Optional
 
@@ -19,12 +20,12 @@ class Contrasts:
         state: str
         country: str
         pincode: str
-        partner_id: int
+        partner_id: UUID
         is_address_same: bool = False
 
     class GetAddressByAddressIdResponse(AddressData):
         is_address_same: Optional[bool] = False
-        id: int
+        id: UUID
 
         model_config = ConfigDict(
             from_attributes=True,
@@ -47,7 +48,7 @@ class UpdatePartnerAddressRequest(BaseModel):
 
 
 class PartnerAddressResponse(BaseModel):
-    id: int
+    id: UUID
     address_1: str
     address_2: Optional[str]
     address_type: AddressType
@@ -55,7 +56,7 @@ class PartnerAddressResponse(BaseModel):
     state: str
     country: str
     pincode: str
-    partner_id: int
+    partner_id: UUID
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -63,7 +64,7 @@ class PartnerAddressResponse(BaseModel):
 
 
 class UpsertPartnerAddressResponse(BaseModel):
-    id: int
+    id: UUID
     address_1: str
     address_2: Optional[str]
     city: str
@@ -71,10 +72,10 @@ class UpsertPartnerAddressResponse(BaseModel):
     country: str
     pincode: str
     address_type: AddressType
-    partner_id: int
+    partner_id: UUID
     is_address_same: Optional[bool] = False
     created_at: Optional[int] = None
-    created_by: Optional[int] = None
+    created_by: Optional[UUID] = None
 
     model_config = ConfigDict(
         from_attributes=True,

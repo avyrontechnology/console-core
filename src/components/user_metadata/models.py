@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 
@@ -11,7 +12,7 @@ class UserMetadata(MetaData):
     __tablename__ = "console_user_metadata"
 
     user_id = Column(
-        Integer, ForeignKey("console_users.id"), index=True, unique=True, nullable=False
+        UUID(as_uuid=True), ForeignKey("console_users.id"), index=True, unique=True, nullable=False
     )
     meta_key = Column(
         String(50), default=lambda: str(uuid.uuid4()), nullable=False, unique=True

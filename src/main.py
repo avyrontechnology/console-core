@@ -11,14 +11,9 @@ from src.config.swagger import SwaggerConfig
 
 from src.core.container import Container
 
-from src.core.firebase import firebase_init
 from src.exceptions.validation import handler
 from src.middlewares import allowed_middlewares
 from src.routes.base import Router
-import firebase_admin
-from firebase_admin import credentials
-import json
-from src.components.notifications.constants import NotificationServiceType
 
 
 container = Container()
@@ -37,31 +32,6 @@ Router.register_all_routes(console_service)
 
 app.include_router(console_service)
 # app.include_router(console_service, prefix="/service")
-
-# ── RFC-8414 / RFC-9728 spec-compliant OAuth discovery (root-mounted) ────
-# Both specs build the well-known URL by INSERTING /.well-known/<name>
-# between the host and the issuer/resource path. With our issuer set to
-# ``https://<host>/console-service/v1`` that means spec-strict clients
-# (Claude.ai Custom Connectors) compute discovery URLs at:
-#   /.well-known/oauth-authorization-server/console-service/v1
-#   /.well-known/oauth-protected-resource/console-service/v1
-# These live at the host root, NOT under the /console-service/v1 prefix.
-# Routes return the same JSON as their prefixed counterparts (see
-# ``OAuthController._build_*_metadata``); we keep both flavours so naive
-# clients that follow our explicit WWW-Authenticate URL also work.
-try:
-    from src.components.oauth_server import config as _oauth_cfg
-    from src.components.oauth_server.controllers import (
-        OAuthController as _OAuthController,
-    )
-
-    if _oauth_cfg.OAUTH_ENABLED:
-        app.include_router(
-            _OAuthController.well_known_root_router,
-            tags=["OAuth Discovery (RFC 8414)"],
-        )
-except Exception:  # pragma: no cover — keep boot resilient if OAuth is off
-    pass
 
 # Apply Swagger configuration
 SwaggerConfig.get_swagger_config(app)
@@ -89,15 +59,47 @@ async def startup_event():
         "//////////////////////////// Constants initialized. ////////////////////////////"
     )
 
-    try:
-        # Initialize Maglo Firebase
-        firebase_init(NotificationServiceType.MAGLO)
+    from src.components.rbac.startup_validation import (
+        ensure_route_permissions,
+        ensure_superadmin_grants,
+        validate_route_permissions,
+    )
 
-        # Initialize Babbler Firebase
-        firebase_init(NotificationServiceType.BABBLER)
-
+    # Self-seed any new route slugs first (zero-touch deploys), then
+    # fail-closed validate as a safety net.
+    sync_report = await ensure_route_permissions(session_factory)
+    if sync_report["seeded"]:
         print(
-            "//////////////////////////// Firebase initialized for Maglo and Babbler ////////////////////////////"
+            "//////////////////////////// seeded permission slugs: {} ////////////////////////////".format(
+                sync_report["seeded"]
+            )
+        )
+    if sync_report["unmapped_warnings"]:
+        print(
+            "//////////////////////////// WARNING unmapped slugs (internal-only): {} ////////////////////////////".format(
+                sync_report["unmapped_warnings"]
+            )
+        )
+    route_slugs = await validate_route_permissions(session_factory)
+    print(
+        "//////////////////////////// route permissions validated: {} slugs ////////////////////////////".format(
+            len(route_slugs)
+        )
+    )
+
+    # Super admin is defined as "has every permission": re-grant on boot so a
+    # permission seeded later is never silently missing for it.
+    grant_report = await ensure_superadmin_grants(session_factory)
+    if grant_report["granted"]:
+        print(
+            "//////////////////////////// superadmin grants added: {} ////////////////////////////".format(
+                grant_report["granted"]
+            )
+        )
+
+    try:
+        print(
+            "//////////////////////////// Firebase disabled (no push services) ////////////////////////////"
         )
     except Exception as e:
         print(f"//////////////////////////// Firebase initialization failed: {e} ////////////////////////////")

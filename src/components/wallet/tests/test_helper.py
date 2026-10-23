@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -32,20 +33,20 @@ async def test_matching_api_key_returns_partner_id(mock_logger):
     partner_service = AsyncMock()
 
     api_key_obj = ApiKeyResponse(
-        id=1, key="k", description=None, scopes=None, is_active=True, partner_id=5
+        id= UUID("11111111-1111-1111-1111-111111111111"), key="k", description=None, scopes=None, is_active=True, partner_id= UUID("55555555-5555-5555-5555-555555555555")
     )
     api_key_service.get_api_key.return_value = api_key_obj
 
     res = await WalletHelper.resolve_partner_id_with_api_key(
         current_user,
-        partner_id=5,
+        partner_id= UUID("55555555-5555-5555-5555-555555555555"),
         api_key="some-key",
         api_key_service=api_key_service,
         partner_service=partner_service,
         logger=mock_logger,
     )
 
-    assert res == 5
+    assert res == UUID("55555555-5555-5555-5555-555555555555")
     api_key_service.get_api_key.assert_awaited_once()
 
 
@@ -59,7 +60,7 @@ async def test_missing_api_key_raises_and_logs(mock_logger):
     with pytest.raises(AuthException):
         await WalletHelper.resolve_partner_id_with_api_key(
             current_user,
-            partner_id=5,
+            partner_id= UUID("55555555-5555-5555-5555-555555555555"),
             api_key="bad-key",
             api_key_service=api_key_service,
             partner_service=partner_service,
@@ -75,7 +76,7 @@ async def test_mismatch_api_key_but_internal_partner_allows(mock_logger):
     partner_service = AsyncMock()
 
     api_key_obj = ApiKeyResponse(
-        id=1, key="k", description=None, scopes=None, is_active=True, partner_id=99
+        id= UUID("11111111-1111-1111-1111-111111111111"), key="k", description=None, scopes=None, is_active=True, partner_id= UUID("99999999-9999-9999-9999-999999999999")
     )
     api_key_service.get_api_key.return_value = api_key_obj
 
@@ -85,14 +86,14 @@ async def test_mismatch_api_key_but_internal_partner_allows(mock_logger):
 
     res = await WalletHelper.resolve_partner_id_with_api_key(
         current_user,
-        partner_id=5,
+        partner_id= UUID("55555555-5555-5555-5555-555555555555"),
         api_key="some-key",
         api_key_service=api_key_service,
         partner_service=partner_service,
         logger=mock_logger,
     )
 
-    assert res == 5
+    assert res == UUID("55555555-5555-5555-5555-555555555555")
     partner_service.get_partner_by_id.assert_awaited_once()
 
 
@@ -102,7 +103,7 @@ async def test_mismatch_api_key_and_non_internal_raises_and_logs(mock_logger):
     partner_service = AsyncMock()
 
     api_key_obj = ApiKeyResponse(
-        id=1, key="k", description=None, scopes=None, is_active=True, partner_id=99
+        id= UUID("11111111-1111-1111-1111-111111111111"), key="k", description=None, scopes=None, is_active=True, partner_id= UUID("99999999-9999-9999-9999-999999999999")
     )
     api_key_service.get_api_key.return_value = api_key_obj
 
@@ -113,7 +114,7 @@ async def test_mismatch_api_key_and_non_internal_raises_and_logs(mock_logger):
     with pytest.raises(AuthException):
         await WalletHelper.resolve_partner_id_with_api_key(
             current_user,
-            partner_id=5,
+            partner_id= UUID("55555555-5555-5555-5555-555555555555"),
             api_key="some-key",
             api_key_service=api_key_service,
             partner_service=partner_service,

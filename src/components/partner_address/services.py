@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Dict, Iterator
 
 from dependency_injector.wiring import Provide
@@ -39,7 +40,7 @@ class PartnerAddressService:
         self.__audit_service: ConsoleServiceLogger = audit_service
         self.__partner_address_service_cache: CacheHelper = partner_address_service_cache
 
-    async def partner_exists(self, partner_id: int) -> bool:
+    async def partner_exists(self, partner_id: UUID) -> bool:
         try:
             return await self.__repository.partner_exists(partner_id)
         except Exception as e:
@@ -104,12 +105,8 @@ class PartnerAddressService:
                     address_id
                 ),
             )
-            await self.__audit_service.log_action(log_entry)
 
-            await self.__partner_address_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=CacheKeys.GRPC_GET_PUBLISHER_DATA.format(deleted_address.partner_id),
-            )
+            await self.__audit_service.log_action(log_entry)
         except AddressNotFoundError as e:
             self.__logger.error(str(e))
             raise
@@ -118,7 +115,7 @@ class PartnerAddressService:
             raise
 
     async def get_partner_address_by_partner_id(
-        self, partner_id: int
+        self, partner_id: UUID
     ) -> Contrasts.GetAddressByAddressIdResponse:
         try:
             self.__logger.info(
@@ -145,8 +142,8 @@ class PartnerAddressService:
 
     async def upsert_partner_address(
         self,
-        partner_id: int,
-        user_id: int,
+        partner_id: UUID,
+        user_id: UUID,
         update_data: UpdatePartnerAddressRequest,
         partner_service: PartnerService = Depends(Provide["partner_service"]),
     ) -> list[UpsertPartnerAddressResponse]:
@@ -170,12 +167,6 @@ class PartnerAddressService:
                 for addr in addresses
                 if addr
             ]
-
-            await self.__partner_address_service_cache.clear_pattern(
-                prefix=RedisCache.KeysPrefix.MAGLO,
-                pattern=CacheKeys.GRPC_GET_PUBLISHER_DATA.format(partner_id),
-            )
-
             return result
         except PartnerException as exec:
             self.__logger.error("Partner not found: {}".format(str(exec)))

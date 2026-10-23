@@ -29,6 +29,7 @@ UserDefaults / RowProcessResult are the real enums/constants used by the
 module under test. Adjust the two import blocks below only if your actual
 paths differ from what's shown in the source file you shared.
 """
+from uuid import UUID
 import base64
 import io
 from types import SimpleNamespace
@@ -100,7 +101,6 @@ def make_row(**overrides) -> pd.Series:
         "designation": None,
         "alternate_phone_number": None,
         "cloud_agent_number": None,
-        "is_maglo_publisher": None,
         "parent": None,
         "_duplicate_email": False,
         "_row_email": "user@example.com",
@@ -110,7 +110,7 @@ def make_row(**overrides) -> pd.Series:
     return pd.Series(base)
 
 
-def make_role(role_id=1):
+def make_role(role_id= UUID("11111111-1111-1111-1111-111111111111")):
     return SimpleNamespace(id=role_id)
 
 
@@ -123,10 +123,10 @@ class TestGetterHelpers:
         assert _get_id(None) is None
 
     def test_get_id_dict(self):
-        assert _get_id({"id": 7}) == 7
+        assert _get_id({"id": UUID("77777777-7777-7777-7777-777777777777")}) == UUID("77777777-7777-7777-7777-777777777777")
 
     def test_get_id_obj(self):
-        assert _get_id(SimpleNamespace(id=9)) == 9
+        assert _get_id(SimpleNamespace(id=UUID("99999999-9999-9999-9999-999999999999"))) == UUID("99999999-9999-9999-9999-999999999999")
 
     def test_get_id_missing_attr(self):
         assert _get_id(SimpleNamespace()) is None
@@ -144,19 +144,19 @@ class TestGetterHelpers:
         assert _get_country_id(None) is None
 
     def test_get_country_id_dict(self):
-        assert _get_country_id({"country_id": 3}) == 3
+        assert _get_country_id({"country_id": UUID("33333333-3333-3333-3333-333333333333")}) == UUID("33333333-3333-3333-3333-333333333333")
 
     def test_get_country_id_obj(self):
-        assert _get_country_id(SimpleNamespace(country_id=3)) == 3
+        assert _get_country_id(SimpleNamespace(country_id=UUID("33333333-3333-3333-3333-333333333333"))) == UUID("33333333-3333-3333-3333-333333333333")
 
     def test_get_state_id_none(self):
         assert _get_state_id(None) is None
 
     def test_get_state_id_dict(self):
-        assert _get_state_id({"state_id": 5}) == 5
+        assert _get_state_id({"state_id": UUID("55555555-5555-5555-5555-555555555555")}) == UUID("55555555-5555-5555-5555-555555555555")
 
     def test_get_state_id_obj(self):
-        assert _get_state_id(SimpleNamespace(state_id=5)) == 5
+        assert _get_state_id(SimpleNamespace(state_id=UUID("55555555-5555-5555-5555-555555555555"))) == UUID("55555555-5555-5555-5555-555555555555")
 
 
 # =====================================================================
@@ -421,7 +421,7 @@ class TestLocationResolution:
             _resolve_country("mars", {})
 
     def test_resolve_country_valid(self):
-        country = {"id": 1}
+        country = {"id": UUID("11111111-1111-1111-1111-111111111111")}
         assert _resolve_country("india", {"india": country}) == country
 
     def test_resolve_state_none_name(self):
@@ -429,30 +429,30 @@ class TestLocationResolution:
 
     def test_resolve_state_invalid(self):
         with pytest.raises(ValueError, match="Invalid state"):
-            _resolve_state("up", {}, {"id": 1})
+            _resolve_state("up", {}, {"id": UUID("11111111-1111-1111-1111-111111111111")})
 
     def test_resolve_state_valid(self):
-        state = {"id": 2}
-        assert _resolve_state("up", {("up", 1): state}, {"id": 1}) == state
+        state = {"id": UUID("22222222-2222-2222-2222-222222222222")}
+        assert _resolve_state("up", {("up", UUID("11111111-1111-1111-1111-111111111111")): state}, {"id": UUID("11111111-1111-1111-1111-111111111111")}) == state
 
     def test_resolve_city_none_name(self):
         assert _resolve_city(None, {}, None) is None
 
     def test_resolve_city_invalid(self):
         with pytest.raises(ValueError, match="Invalid city"):
-            _resolve_city("ghaziabad", {}, {"id": 2})
+            _resolve_city("ghaziabad", {}, {"id": UUID("22222222-2222-2222-2222-222222222222")})
 
     def test_resolve_city_valid(self):
-        city = {"id": 3}
-        assert _resolve_city("ghaziabad", {("ghaziabad", 2): city}, {"id": 2}) == city
+        city = {"id": UUID("33333333-3333-3333-3333-333333333333")}
+        assert _resolve_city("ghaziabad", {("ghaziabad", UUID("22222222-2222-2222-2222-222222222222")): city}, {"id": UUID("22222222-2222-2222-2222-222222222222")}) == city
 
     def test_get_location_ids_full_flow(self):
         row = make_row(country="India", state="UP", city="Ghaziabad")
-        country_map = {"india": {"id": 1}}
-        state_map = {("up", 1): {"id": 2}}
-        city_map = {("ghaziabad", 2): {"id": 3}}
+        country_map = {"india": {"id": UUID("11111111-1111-1111-1111-111111111111")}}
+        state_map = {("up", UUID("11111111-1111-1111-1111-111111111111")): {"id": UUID("22222222-2222-2222-2222-222222222222")}}
+        city_map = {("ghaziabad", UUID("22222222-2222-2222-2222-222222222222")): {"id": UUID("33333333-3333-3333-3333-333333333333")}}
         result = _get_location_ids(row, country_map, state_map, city_map)
-        assert result == {"country_id": 1, "state_id": 2, "city_id": 3}
+        assert result == {"country_id": UUID("11111111-1111-1111-1111-111111111111"), "state_id": UUID("22222222-2222-2222-2222-222222222222"), "city_id": UUID("33333333-3333-3333-3333-333333333333")}
 
     def test_get_location_ids_all_blank(self):
         row = make_row()
@@ -465,15 +465,6 @@ class TestLocationResolution:
 # =====================================================================
 
 class TestGetExtraFields:
-    @pytest.mark.parametrize("flag,expected", [
-        ("true", True), ("TRUE", True), ("1", True), ("yes", True),
-        ("false", False), ("0", False), ("no", False), (None, False),
-    ])
-    def test_is_maglo_publisher_variants(self, flag, expected):
-        row = make_row(is_maglo_publisher=flag)
-        result = _get_extra_fields(row)
-        assert result["is_maglo_publisher"] is expected
-
     def test_alternate_phone_cleaned(self):
         row = make_row(alternate_phone_number="9123456780")
         result = _get_extra_fields(row)
@@ -493,29 +484,29 @@ class TestGetExtraFields:
 class TestBuildUserData:
     def test_without_location(self):
         extra = {
-            "designation": None, "is_maglo_publisher": False,
+            "designation": None,
             "alternate_phone_number": None, "cloud_agent_number": None,
         }
         location = {"country_id": None, "state_id": None, "city_id": None}
         ud = _build_user_data(
-            "a@x.com", "Alice", "+919876543210", "TestPass1!", 1, 2, None, location, extra,
+            "a@x.com", "Alice", "+919876543210", "TestPass1!", UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222"), None, location, extra,
         )
         assert ud.email == "a@x.com"
         assert not hasattr(ud, "country_id") or ud.country_id is None
 
     def test_with_location(self):
         extra = {
-            "designation": "lead", "is_maglo_publisher": True,
+            "designation": "lead",
             "alternate_phone_number": "+911111111111", "cloud_agent_number": "ca1",
         }
-        location = {"country_id": 1, "state_id": 2, "city_id": 3}
+        location = {"country_id": UUID("11111111-1111-1111-1111-111111111111"), "state_id": UUID("22222222-2222-2222-2222-222222222222"), "city_id": UUID("33333333-3333-3333-3333-333333333333")}
         ud = _build_user_data(
-            "a@x.com", "Alice", "+919876543210", "TestPass1!", 1, 2, 99, location, extra,
+            "a@x.com", "Alice", "+919876543210", "TestPass1!", UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222"), UUID("99999999-9999-9999-9999-999999999999"), location, extra,
         )
-        assert ud.parent_id == 99
-        assert ud.country_id == 1
-        assert ud.state_id == 2
-        assert ud.city_id == 3
+        assert ud.parent_id== UUID("99999999-9999-9999-9999-999999999999")
+        assert ud.country_id== UUID("11111111-1111-1111-1111-111111111111")
+        assert ud.state_id== UUID("22222222-2222-2222-2222-222222222222")
+        assert ud.city_id== UUID("33333333-3333-3333-3333-333333333333")
 
 
 # =====================================================================
@@ -527,42 +518,42 @@ class TestProcessRow:
     async def test_success(self):
         row = make_row()
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=42))
-        role = make_role(1)
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("42424242-4242-4242-4242-424242424242")))
+        role = make_role(UUID("11111111-1111-1111-1111-111111111111"))
 
         status, user_id = await _process_row(
-            row, auth_service, partner_id=1,
+            row, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             country_map={}, state_map={}, city_map={},
             role=role, parent_id=None,
         )
         assert status == RowProcessResult.SUCCESS
-        assert user_id == 42
+        assert user_id== UUID("42424242-4242-4242-4242-424242424242")
 
     async def test_email_failed_with_user_on_exception(self):
         row = make_row()
         auth_service = MagicMock()
         exc = UserCreatedButEmailFailedError("email failed")
-        exc.user = SimpleNamespace(id=7)
+        exc.user = SimpleNamespace(id= UUID("77777777-7777-7777-7777-777777777777"))
         auth_service.sing_up = AsyncMock(side_effect=exc)
-        role = make_role(1)
+        role = make_role(UUID("11111111-1111-1111-1111-111111111111"))
 
         status, user_id = await _process_row(
-            row, auth_service, partner_id=1,
+            row, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             country_map={}, state_map={}, city_map={},
             role=role, parent_id=None,
         )
         assert status == RowProcessResult.EMAIL_FAILED
-        assert user_id == 7
+        assert user_id== UUID("77777777-7777-7777-7777-777777777777")
 
     async def test_email_failed_without_user_on_exception(self):
         row = make_row()
         auth_service = MagicMock()
         exc = UserCreatedButEmailFailedError("email failed")
         auth_service.sing_up = AsyncMock(side_effect=exc)
-        role = make_role(1)
+        role = make_role(UUID("11111111-1111-1111-1111-111111111111"))
 
         status, user_id = await _process_row(
-            row, auth_service, partner_id=1,
+            row, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             country_map={}, state_map={}, city_map={},
             role=role, parent_id=None,
         )
@@ -573,11 +564,11 @@ class TestProcessRow:
         row = make_row(email=None)
         auth_service = MagicMock()
         auth_service.sing_up = AsyncMock()
-        role = make_role(1)
+        role = make_role(UUID("11111111-1111-1111-1111-111111111111"))
 
         with pytest.raises(ValueError):
             await _process_row(
-                row, auth_service, partner_id=1,
+                row, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 country_map={}, state_map={}, city_map={},
                 role=role, parent_id=None,
             )
@@ -598,38 +589,38 @@ class TestHandleAdminSignup:
 
     async def test_success(self):
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=1))
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111")))
         user_repo = MagicMock()
-        role_map = {"admin": make_role(1)}
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         result = await _handle_admin_signup(
-            auth_service, user_repo, self._admin_row(), partner_id=1, role_map=role_map,
+            auth_service, user_repo, self._admin_row(), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert result.id == 1
+        assert result.id == UUID("11111111-1111-1111-1111-111111111111")
 
     async def test_creation_returns_falsy_raises(self):
         auth_service = MagicMock()
         auth_service.sing_up = AsyncMock(return_value=None)
         user_repo = MagicMock()
-        role_map = {"admin": make_role(1)}
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         with pytest.raises(ValueError, match="Admin creation failed"):
             await _handle_admin_signup(
-                auth_service, user_repo, self._admin_row(), partner_id=1, role_map=role_map,
+                auth_service, user_repo, self._admin_row(), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
             )
 
     async def test_email_failed_with_user_attr(self):
         auth_service = MagicMock()
         exc = UserCreatedButEmailFailedError("fail")
-        exc.user = SimpleNamespace(id=5)
+        exc.user = SimpleNamespace(id= UUID("55555555-5555-5555-5555-555555555555"))
         auth_service.sing_up = AsyncMock(side_effect=exc)
         user_repo = MagicMock()
-        role_map = {"admin": make_role(1)}
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         result = await _handle_admin_signup(
-            auth_service, user_repo, self._admin_row(), partner_id=1, role_map=role_map,
+            auth_service, user_repo, self._admin_row(), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert result.id == 5
+        assert result.id == UUID("55555555-5555-5555-5555-555555555555")
 
     async def test_email_failed_without_user_refetch_success(self):
         auth_service = MagicMock()
@@ -637,14 +628,14 @@ class TestHandleAdminSignup:
         auth_service.sing_up = AsyncMock(side_effect=exc)
         user_repo = MagicMock()
         user_repo.get_admin_details_by_partner_id = AsyncMock(
-            return_value=SimpleNamespace(id=9)
+            return_value=SimpleNamespace(id= UUID("99999999-9999-9999-9999-999999999999"))
         )
-        role_map = {"admin": make_role(1)}
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         result = await _handle_admin_signup(
-            auth_service, user_repo, self._admin_row(), partner_id=1, role_map=role_map,
+            auth_service, user_repo, self._admin_row(), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert result.id == 9
+        assert result.id == UUID("99999999-9999-9999-9999-999999999999")
 
     async def test_email_failed_without_user_refetch_fails(self):
         auth_service = MagicMock()
@@ -652,11 +643,11 @@ class TestHandleAdminSignup:
         auth_service.sing_up = AsyncMock(side_effect=exc)
         user_repo = MagicMock()
         user_repo.get_admin_details_by_partner_id = AsyncMock(return_value=None)
-        role_map = {"admin": make_role(1)}
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         with pytest.raises(ValueError, match="Admin creation failed after email error"):
             await _handle_admin_signup(
-                auth_service, user_repo, self._admin_row(), partner_id=1, role_map=role_map,
+                auth_service, user_repo, self._admin_row(), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
             )
 
 
@@ -677,16 +668,16 @@ class TestCreateBulkUsersTask:
 
     def test_missing_user_id_returns_failure_dict(self):
         result = create_bulk_users.run(
-            current_user={}, file_data_b64="", partner_id=1, filename="f.csv",
+            current_user={}, file_data_b64="", partner_id= UUID("11111111-1111-1111-1111-111111111111"), filename="f.csv",
         )
         assert result["total_success_count"] == 0
         assert "user_id is missing" in result["failed_reasons"][0]["reason"]
 
     def test_invalid_base64_returns_failure_dict(self):
         result = create_bulk_users.run(
-            current_user={"user_id": 1},
+            current_user={"user_id": UUID("11111111-1111-1111-1111-111111111111")},
             file_data_b64="not-valid-base64-!!!",
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             filename="f.csv",
         )
         assert result["total_success_count"] == 0
@@ -694,7 +685,7 @@ class TestCreateBulkUsersTask:
 
     def test_success_delegates_to_process_bulk_users(self):
         expected = {
-            "da_file_name": "out.csv", "total_success_count": 1,
+            "total_success_count": 1,
             "total_failed_count": 0, "failed_reasons": [],
         }
         with patch.object(
@@ -702,9 +693,9 @@ class TestCreateBulkUsersTask:
         ):
             encoded = base64.b64encode(b"dummy").decode()
             result = create_bulk_users.run(
-                current_user={"user_id": 1},
+                current_user={"user_id": UUID("11111111-1111-1111-1111-111111111111")},
                 file_data_b64=encoded,
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 filename="f.csv",
             )
         assert result == expected
@@ -716,9 +707,9 @@ class TestCreateBulkUsersTask:
         ):
             encoded = base64.b64encode(b"dummy").decode()
             result = create_bulk_users.run(
-                current_user={"user_id": 1},
+                current_user={"user_id": UUID("11111111-1111-1111-1111-111111111111")},
                 file_data_b64=encoded,
-                partner_id=1,
+                partner_id= UUID("11111111-1111-1111-1111-111111111111"),
                 filename="f.csv",
             )
         assert result["total_success_count"] == 0
@@ -738,15 +729,15 @@ class TestResolveAdmin:
         df = self._df(["admin", "manager"])
         user_repo = MagicMock()
         user_repo.get_admin_details_by_partner_id = AsyncMock(
-            return_value=SimpleNamespace(id=10)
+            return_value=SimpleNamespace(id= UUID("10101010-1010-1010-1010-101010101010"))
         )
         auth_service = MagicMock()
         role_map = {}
 
         admin_id, skipped, created_idx = await _resolve_admin(
-            df, user_repo, auth_service, partner_id=1, role_map=role_map,
+            df, user_repo, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert admin_id == 10
+        assert admin_id== UUID("10101010-1010-1010-1010-101010101010")
         assert skipped == {0}
         assert created_idx is None
 
@@ -757,7 +748,7 @@ class TestResolveAdmin:
         auth_service = MagicMock()
 
         with pytest.raises(ValueError, match="Admin is required"):
-            await _resolve_admin(df, user_repo, auth_service, partner_id=1, role_map={})
+            await _resolve_admin(df, user_repo, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map={})
 
     async def test_no_admin_creates_from_first_csv_admin_row(self):
         df = pd.DataFrame({
@@ -769,13 +760,13 @@ class TestResolveAdmin:
         user_repo = MagicMock()
         user_repo.get_admin_details_by_partner_id = AsyncMock(return_value=None)
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=99))
-        role_map = {"admin": make_role(1)}
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("99999999-9999-9999-9999-999999999999")))
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         admin_id, skipped, created_idx = await _resolve_admin(
-            df, user_repo, auth_service, partner_id=1, role_map=role_map,
+            df, user_repo, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert admin_id == 99
+        assert admin_id== UUID("99999999-9999-9999-9999-999999999999")
         assert skipped == {1}
         assert created_idx == 0
 
@@ -791,13 +782,13 @@ class TestResolveAdmin:
             return_value=SimpleNamespace(id=None)
         )
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=55))
-        role_map = {"admin": make_role(1)}
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("55555555-5555-5555-5555-555555555555")))
+        role_map = {"admin": make_role(UUID("11111111-1111-1111-1111-111111111111"))}
 
         admin_id, skipped, created_idx = await _resolve_admin(
-            df, user_repo, auth_service, partner_id=1, role_map=role_map,
+            df, user_repo, auth_service, partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_map=role_map,
         )
-        assert admin_id == 55
+        assert admin_id== UUID("55555555-5555-5555-5555-555555555555")
         assert created_idx == 0
 
 
@@ -826,37 +817,37 @@ class TestParentDependencyGraph:
 
     def test_classify_default_admin(self):
         row = pd.Series({"_parent_ref": None, "_row_email": "u@x.com"})
-        result = _classify_parent_ref(row, admin_id=1, email_to_idx={}, external_lookup={})
-        assert result == {"parent_id": 1, "source": "default_admin", "depends_on_idx": None}
+        result = _classify_parent_ref(row, admin_id= UUID("11111111-1111-1111-1111-111111111111"), email_to_idx={}, external_lookup={})
+        assert result == {"parent_id": UUID("11111111-1111-1111-1111-111111111111"), "source": "default_admin", "depends_on_idx": None}
 
     def test_classify_self_ref(self):
         row = pd.Series({"_parent_ref": "u@x.com", "_row_email": "u@x.com"})
-        result = _classify_parent_ref(row, admin_id=1, email_to_idx={}, external_lookup={})
+        result = _classify_parent_ref(row, admin_id= UUID("11111111-1111-1111-1111-111111111111"), email_to_idx={}, external_lookup={})
         assert result["source"] == "self_ref"
 
     def test_classify_in_batch(self):
         row = pd.Series({"_parent_ref": "p@x.com", "_row_email": "u@x.com"})
         result = _classify_parent_ref(
-            row, admin_id=1, email_to_idx={"p@x.com": 3}, external_lookup={},
+            row, admin_id= UUID("11111111-1111-1111-1111-111111111111"), email_to_idx={"p@x.com": 3}, external_lookup={},
         )
         assert result == {"parent_id": None, "source": "in_batch", "depends_on_idx": 3}
 
     def test_classify_external_db(self):
         row = pd.Series({"_parent_ref": "p@x.com", "_row_email": "u@x.com"})
         result = _classify_parent_ref(
-            row, admin_id=1, email_to_idx={}, external_lookup={"p@x.com": {"id": 77}},
+            row, admin_id= UUID("11111111-1111-1111-1111-111111111111"), email_to_idx={}, external_lookup={"p@x.com": {"id": UUID("77777777-7777-7777-7777-777777777777")}},
         )
-        assert result == {"parent_id": 77, "source": "external_db", "depends_on_idx": None}
+        assert result == {"parent_id": UUID("77777777-7777-7777-7777-777777777777"), "source": "external_db", "depends_on_idx": None}
 
     def test_classify_not_found(self):
         row = pd.Series({"_parent_ref": "nowhere@x.com", "_row_email": "u@x.com"})
-        result = _classify_parent_ref(row, admin_id=1, email_to_idx={}, external_lookup={})
+        result = _classify_parent_ref(row, admin_id= UUID("11111111-1111-1111-1111-111111111111"), email_to_idx={}, external_lookup={})
         assert result["source"] == "not_found"
 
     def test_build_parent_plan_end_to_end(self):
         df = self._df()
         plan = _build_parent_plan(
-            df, admin_id=1, skipped_admin_indexes=set(),
+            df, admin_id= UUID("11111111-1111-1111-1111-111111111111"), skipped_admin_indexes=set(),
             created_admin_row_index=None, external_lookup={},
         )
         assert plan[0]["source"] == "default_admin"
@@ -925,13 +916,13 @@ class TestResolveExternalParents:
         })
         user_repo = MagicMock()
         user_repo.get_users_id_hierarchy_by_emails = AsyncMock(
-            return_value={"external@x.com": {"id": 5}}
+            return_value={"external@x.com": {"id": UUID("55555555-5555-5555-5555-555555555555")}}
         )
 
         result = await _resolve_external_parents(
             df, user_repo, skipped_admin_indexes=set(), created_admin_row_index=None,
         )
-        assert result == {"external@x.com": {"id": 5}}
+        assert result == {"external@x.com": {"id": UUID("55555555-5555-5555-5555-555555555555")}}
         called_with = user_repo.get_users_id_hierarchy_by_emails.call_args.args[0]
         assert called_with == ["external@x.com"]
 
@@ -947,8 +938,8 @@ class TestRunWaves:
         return dict(
             plan=plan, df=df, children=children, in_degree=in_degree,
             failed_idx=set(), immediate_failures={},
-            partner_id=1, country_map={}, state_map={}, city_map={},
-            role_map={"manager": make_role(1)},
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), country_map={}, state_map={}, city_map={},
+            role_map={"manager": make_role(UUID("11111111-1111-1111-1111-111111111111"))},
             user_repo=MagicMock(),
         )
 
@@ -956,7 +947,7 @@ class TestRunWaves:
         df = pd.DataFrame([make_row()])
         plan = {0: {"parent_id": None, "source": "default_admin", "depends_on_idx": None}}
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=1))
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111")))
 
         kwargs = self._base_kwargs(df, plan)
         results = await _run_waves(auth_service=auth_service, **kwargs)
@@ -964,7 +955,7 @@ class TestRunWaves:
         assert len(results) == 1
         idx, row_out, status, user_id, exc = results[0]
         assert status == RowProcessResult.SUCCESS
-        assert user_id == 1
+        assert user_id== UUID("11111111-1111-1111-1111-111111111111")
         assert exc is None
 
     async def test_chain_resolves_parent_id_across_waves(self):
@@ -978,13 +969,13 @@ class TestRunWaves:
         }
         auth_service = MagicMock()
         auth_service.sing_up = AsyncMock(
-            side_effect=[SimpleNamespace(id=100), SimpleNamespace(id=200)]
+            side_effect=[SimpleNamespace(id= UUID("10010010-0100-1001-0010-010010010010")), SimpleNamespace(id= UUID("20020020-0200-2002-0020-020020020020"))]
         )
         kwargs = self._base_kwargs(df, plan)
         results = await _run_waves(auth_service=auth_service, **kwargs)
 
         by_idx = {r[0]: r for r in results}
-        assert by_idx[1][1]["_resolved_parent_id"] == 100
+        assert by_idx[1][1]["_resolved_parent_id"] == UUID("10010010-0100-1001-0010-010010010010")
 
     async def test_row_creation_failure_cascades_to_children(self):
         df = pd.DataFrame([
@@ -1048,7 +1039,7 @@ class TestMergeBookkeepingResults:
         df = pd.DataFrame([make_row(_duplicate_email=True)])
         result = _merge_bookkeeping_results(
             df, all_results=[], immediate_failures={},
-            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id=1,
+            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         assert "already appears earlier" in str(result[0][4])
 
@@ -1056,7 +1047,7 @@ class TestMergeBookkeepingResults:
         df = pd.DataFrame([make_row(), make_row()])
         result = _merge_bookkeeping_results(
             df, all_results=[], immediate_failures={},
-            skipped_admin_indexes={1}, created_admin_row_index=0, admin_id=1,
+            skipped_admin_indexes={1}, created_admin_row_index=0, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         assert "extra Admin row was skipped" in str(result[1][4])
 
@@ -1064,7 +1055,7 @@ class TestMergeBookkeepingResults:
         df = pd.DataFrame([make_row()])
         result = _merge_bookkeeping_results(
             df, all_results=[], immediate_failures={},
-            skipped_admin_indexes={0}, created_admin_row_index=None, admin_id=1,
+            skipped_admin_indexes={0}, created_admin_row_index=None, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         assert "Admin already exists" in str(result[0][4])
 
@@ -1072,11 +1063,11 @@ class TestMergeBookkeepingResults:
         df = pd.DataFrame([make_row()])
         result = _merge_bookkeeping_results(
             df, all_results=[], immediate_failures={},
-            skipped_admin_indexes=set(), created_admin_row_index=0, admin_id=42,
+            skipped_admin_indexes=set(), created_admin_row_index=0, admin_id= UUID("42424242-4242-4242-4242-424242424242"),
         )
         idx, row_out, status, user_id, exc = result[0]
         assert status == RowProcessResult.SUCCESS
-        assert user_id == 42
+        assert user_id== UUID("42424242-4242-4242-4242-424242424242")
         assert exc is None
 
     def test_wave_results_take_precedence_over_bookkeeping(self):
@@ -1084,7 +1075,7 @@ class TestMergeBookkeepingResults:
         wave_result = (0, {"email": "x"}, RowProcessResult.SUCCESS, 1, None)
         result = _merge_bookkeeping_results(
             df, all_results=[wave_result], immediate_failures={},
-            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id=1,
+            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         assert result[0] == wave_result
 
@@ -1092,7 +1083,7 @@ class TestMergeBookkeepingResults:
         df = pd.DataFrame([make_row()])
         result = _merge_bookkeeping_results(
             df, all_results=[], immediate_failures={0: "cycle"},
-            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id=1,
+            skipped_admin_indexes=set(), created_admin_row_index=None, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
         )
         assert "cycle" in str(result[0][4])
 
@@ -1134,14 +1125,14 @@ class TestCollateResults:
         row_dict = {
             "email": "a@x.com", "_duplicate_email": False,
             "_row_email": "a@x.com", "_parent_ref": None,
-            "_resolved_parent_id": 5,
+            "_resolved_parent_id": UUID("55555555-5555-5555-5555-555555555555"),
         }
         result_map = {0: (0, row_dict, RowProcessResult.SUCCESS, 1, None)}
         rows, *_ = _collate_results(result_map)
         assert "_duplicate_email" not in rows[0]
         assert "_row_email" not in rows[0]
         assert "_parent_ref" not in rows[0]
-        assert rows[0]["parent_id"] == 5
+        assert rows[0]["parent_id"] == UUID("55555555-5555-5555-5555-555555555555")
 
     def test_sorted_by_index(self):
         result_map = {
@@ -1162,14 +1153,14 @@ class TestProcessRowsWithParentResolution:
     async def test_end_to_end_simple_success(self):
         df = pd.DataFrame([make_row()])
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=1))
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111")))
         user_repo = MagicMock()
         user_repo.get_users_id_hierarchy_by_emails = AsyncMock(return_value={})
 
         rows, success, failed, reasons = await _process_rows_with_parent_resolution(
-            df, auth_service, user_repo, partner_id=1,
+            df, auth_service, user_repo, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             country_map={}, state_map={}, city_map={},
-            role_map={"manager": make_role(1)}, admin_id=1,
+            role_map={"manager": make_role(UUID("11111111-1111-1111-1111-111111111111"))}, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
             skipped_admin_indexes=set(), created_admin_row_index=None,
         )
         assert success == 1
@@ -1184,9 +1175,9 @@ class TestProcessRowsWithParentResolution:
         user_repo.get_users_id_hierarchy_by_emails = AsyncMock(return_value={})
 
         rows, success, failed, reasons = await _process_rows_with_parent_resolution(
-            df, auth_service, user_repo, partner_id=1,
+            df, auth_service, user_repo, partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             country_map={}, state_map={}, city_map={},
-            role_map={"manager": make_role(1)}, admin_id=1,
+            role_map={"manager": make_role(UUID("11111111-1111-1111-1111-111111111111"))}, admin_id= UUID("11111111-1111-1111-1111-111111111111"),
             skipped_admin_indexes=set(), created_admin_row_index=None,
         )
         assert failed == 1
@@ -1207,7 +1198,7 @@ class TestProcessBulkUsers:
         )
 
         auth_service = MagicMock()
-        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id=1))
+        auth_service.sing_up = AsyncMock(return_value=SimpleNamespace(id= UUID("11111111-1111-1111-1111-111111111111")))
 
         location_repo = MagicMock()
         location_repo.get_all_countries = AsyncMock(return_value=[])
@@ -1219,32 +1210,25 @@ class TestProcessBulkUsers:
         user_repo.get_users_id_hierarchy_by_emails = AsyncMock(return_value={})
 
         auth_repo = MagicMock()
-        auth_repo.get_all_role = AsyncMock(return_value=[make_role_with_name("admin", 1)])
-
-        digital_asset_service = MagicMock()
-        digital_asset_service.create_digital_asset = AsyncMock(
-            return_value=SimpleNamespace(file_name="result.csv")
-        )
+        auth_repo.get_all_role = AsyncMock(return_value=[make_role_with_name("admin", UUID("11111111-1111-1111-1111-111111111111"))])
 
         container = SimpleNamespace(
             auth_service=SimpleNamespace(async_=AsyncMock(return_value=auth_service)),
             auth_repository=lambda: auth_repo,
             location_repository=lambda: location_repo,
             console_service=AsyncMock(return_value=user_repo),
-            digital_asset_service=lambda: digital_asset_service,
         )
 
         with patch.object(tasks_module.celery, "container", container):
             result = await process_bulk_users(
-                csv_bytes, partner_id=1, user_id=1, filename="users.csv",
+                csv_bytes, partner_id= UUID("11111111-1111-1111-1111-111111111111"), user_id= UUID("11111111-1111-1111-1111-111111111111"), filename="users.csv",
             )
 
-        assert result["da_file_name"] == "result.csv"
         assert result["total_success_count"] == 1
         assert result["total_failed_count"] == 0
 
 
-def make_role_with_name(name: str, role_id: int):
+def make_role_with_name(name: str, role_id):
     return SimpleNamespace(id=role_id, name=name)
 
 

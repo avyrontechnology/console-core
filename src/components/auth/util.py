@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta
 
 import jwt
@@ -27,7 +28,9 @@ class AuthUtility:
         This function return current user Token payload
         """
         if request.state.user is None:
-            raise UnauthorizedResponse(detail="Unauthorized User")
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=401, detail="Unauthorized User")
         return request.state.user
 
     async def verify_password(self, plain_password: str, hash_password: str) -> bool:
@@ -42,7 +45,11 @@ class AuthUtility:
         self, data: dict, expires_delta: timedelta = None
     ) -> str:
         self.__user_logger.info("Creating access token")
-        to_encode = data.copy()
+        # UUIDs are not JSON-serializable: normalize to str at the boundary.
+        to_encode = {
+            k: (str(v) if isinstance(v, uuid.UUID) else v)
+            for k, v in data.copy().items()
+        }
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:

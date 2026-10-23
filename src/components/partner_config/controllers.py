@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from dependency_injector.wiring import Provide, inject
@@ -20,19 +21,16 @@ from src.components.partner_config.constants import (
 )
 from src.components.partner_config.errors import (
     PartnerConfigKeyError,
-    PartnerConfigMailMGError,
     PartnerConfigValidationError,
     PartnerNotFoundError,
 )
 from src.components.partner_config.schemas import (
-    EmailConfigUpsertSchema,
     PartnerConfigData,
     PartnerConfigRequest,
     PartnerConfigResponse,
     UpdatePartnerConfigResponse,
 )
 from src.components.partner_config.services import PartnerConfigService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.services import UserService
 from src.core.container import Container
@@ -51,7 +49,7 @@ class PartnerConfigController:
     partner_config_router = APIRouter()
 
     @partner_config_router.post("/partner-config", response_model=PartnerConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_partner_config")
     @inject
     async def create_partner_config(
         request: Request,
@@ -71,7 +69,7 @@ class PartnerConfigController:
             if PartnerConfigEnum(key) not in PartnerConfigEnum.__members__.values():
                 return BadRequestResponse(detail=f"Invalid Config Key: {key}")
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             console_service_logger.info(
                 "Attempting to create partner config for partner id: {}".format(
@@ -114,7 +112,7 @@ class PartnerConfigController:
             return InternalServerErrorResponse()
 
     @partner_config_router.get("/partner-config", response_model=PartnerConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_config_by_key")
     @inject
     async def get_partner_config_by_key(
         request: Request,
@@ -128,7 +126,7 @@ class PartnerConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info(
                 "Attempting to fetch partner config for partner id: {}".format(
                     partner_id
@@ -164,11 +162,11 @@ class PartnerConfigController:
     @partner_config_router.patch(
         "/partner-configs/{partner_id}", response_model=UpdatePartnerConfigResponse
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_partner_config")
     @inject
     async def upsert_partner_config(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         update_partner_config_data: PartnerConfigData = Body(
             ..., description="New value for the configuration."
         ),
@@ -242,11 +240,11 @@ class PartnerConfigController:
     @partner_config_router.get(
         "/partner-configs/{partner_id}", response_model=List[PartnerConfigResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_partner_configs_by_partner_id")
     @inject
     async def get_partner_configs_by_partner_id(
         request: Request,
-        partner_id: int,
+        partner_id: UUID,
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
         ),
@@ -297,40 +295,3 @@ class PartnerConfigController:
             console_service_logger.error("Unexpected error occured: {}".format(exec))
             return InternalServerErrorResponse()
 
-    @partner_config_router.post("/upsert-email-config")
-    @permission_check(PermissionDependency)
-    @inject
-    async def upsert_email_config(
-        request: Request,
-        email_config_data: EmailConfigUpsertSchema,
-        console_service_logger: ConsoleServiceLogger = Depends(
-            Provide[Container.console_service_logger]
-        ),
-        partner_config_service: PartnerConfigService = Depends(
-            Provide[Container.partner_config_service]
-        ),
-    ):
-        try:
-            current_user: dict = request.state.user
-            response = await partner_config_service.upsert_email_config(
-                current_user, email_config_data
-            )
-            return SuccessResponse(
-                data=response, message="Email config key generated successfully"
-            )
-
-        except PartnerConfigValidationError as exc:
-            console_service_logger.error("Validation error: {}".format(str(exc)))
-            return BadRequestResponse(detail=str(exc))
-
-        except (PartnerNotFoundError, PartnerConfigKeyError) as exc:
-            console_service_logger.error("Not found error: {}".format(str(exc)))
-            return NotFoundResponse(detail=str(exc))
-
-        except PartnerConfigMailMGError as exc:
-            console_service_logger.error("MailMG API error: {}".format(str(exc)))
-            return InternalServerErrorResponse(detail=str(exc))
-
-        except Exception as exc:
-            console_service_logger.error("Unexpected error: {}".format(str(exc)))
-            return InternalServerErrorResponse(detail=str(exc))

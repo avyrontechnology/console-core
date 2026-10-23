@@ -1,3 +1,4 @@
+from uuid import UUID
 import os
 import unittest
 
@@ -38,13 +39,13 @@ class TestService(unittest.IsolatedAsyncioTestCase):
         console_service: UserService = Depends(Provide[Container.console_service]),
     ):
         # test for valid case
-        response = console_service.get_user_details(user_id=1)
+        response = console_service.get_user_details(user_id= UUID("11111111-1111-1111-1111-111111111111"))
         self.assertEqual(response.id, 1)
         self.assertEqual(response.company_name, "AdityaTest")
         self.assertEqual(type(response), Contracts.AccountDetailsResponse)
 
         # test for invalid case (data not available in DB)
-        response = console_service.get_account_details(user_id=100)
+        response = console_service.get_account_details(user_id= UUID("10010010-0100-1001-0010-010010010010"))
         self.assertEqual(type(response), type(None))
 
     @inject

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -23,19 +24,17 @@ class TestDefaultRolePermissionService:
         self.logger_mock = mock_logger
         self.default_role_permission_repository_mock = AsyncMock()
         self.partner_config_service_mock = AsyncMock()
-        self.cache_helper_mock = AsyncMock()
 
         self.partner_role_perm_service_mock = DefaultRolePermissionService(
             audit_service=self.audit_service_mock,
             console_service_logger=self.logger_mock,
             default_role_permission_repository=self.default_role_permission_repository_mock,
             partner_config_service=self.partner_config_service_mock,
-            cache_helper=self.cache_helper_mock,
         )
 
     async def test_add_default_role_permission_success(self): 
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        current_user = {CurrentUserMap.USER_ID: 123}
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        current_user = {CurrentUserMap.USER_ID: UUID("12312312-3123-1231-2312-312312312312")}
         mock_result = MagicMock(spec=DefaultRolePermission)
         mock_result.id = 10
         self.default_role_permission_repository_mock.add_default_role_permission.return_value = (
@@ -60,13 +59,11 @@ class TestDefaultRolePermissionService:
             )
         )
         self.audit_service_mock.log_action.assert_awaited_once()
-        # A baseline grant must bust maglo's per-user RBAC cache.
-        self.cache_helper_mock.invalidate_user_permissions_cache.assert_awaited_once()
         assert result == mock_result
 
     async def test_add_default_role_permission_partner_exception(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        current_user = {CurrentUserMap.USER_ID: 123}
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        current_user = {CurrentUserMap.USER_ID: UUID("12312312-3123-1231-2312-312312312312")}
         self.default_role_permission_repository_mock.add_default_role_permission.side_effect = PartnerRolePermissionException(
             "error"
         )
@@ -81,8 +78,8 @@ class TestDefaultRolePermissionService:
         self.logger_mock.error.assert_called()
 
     async def test_add_default_role_permission_general_exception(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        current_user = {CurrentUserMap.USER_ID: 123}
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        current_user = {CurrentUserMap.USER_ID: UUID("12312312-3123-1231-2312-312312312312")}
         self.default_role_permission_repository_mock.add_default_role_permission.side_effect = Exception(
             "db error"
         )

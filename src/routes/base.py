@@ -2,13 +2,10 @@ from fastapi import APIRouter
 
 from src.components.api_key.controllers import ApiKeysController
 from src.components.auth.controller import AuthController
-from src.components.oauth_server import config as _oauth_cfg
-from src.components.oauth_server.controllers import OAuthController
 from src.components.common.controllers import AppConfigController
 from src.components.default_role_permission.controllers import (
     DefaultRolePermissionController,
 )
-from src.components.digital_assets.controllers import DigitalAssetController
 from src.components.location.controllers import LocationController
 from src.components.partner_address.controllers import PartnerAddressController
 from src.components.partner_config.controllers import PartnerConfigController
@@ -20,10 +17,10 @@ from src.components.partner_role_permission.controller import (
 )
 from src.components.release_note.controllers import ReleaseNoteController
 from src.components.session_mangement.controllers import UserSessionController
-from src.components.team.controllers import TeamController
 from src.components.partner_role.controllers import PartnerRoleController
 
 from ..components.api_logs.controllers import ApiLogsController
+from ..components.audit_log.controllers import AuditLogController
 from ..components.db_constants.controllers import ConstantsController
 from ..components.entitlement.controllers import EntitlementController
 from ..components.grace.controllers import GraceController
@@ -56,11 +53,6 @@ class Router:
             tags=["Partner Role Permission"],
         )
         router.include_router(
-            TeamController.team_router,
-            prefix="",
-            tags=["Teams"],
-        )
-        router.include_router(
             PartnerRoleController.partner_role_router,
             prefix="",
             tags=["Partner Roles"],
@@ -88,11 +80,6 @@ class Router:
             tags=["Release Notes"],
         )
 
-        router.include_router(
-            DigitalAssetController.digital_asset_router,
-            prefix="",
-            tags=["Digital Assets"],
-        )
         router.include_router(
             ConstantsController.constants_router,
             prefix="",
@@ -140,6 +127,9 @@ class Router:
         router.include_router(
             ApiLogsController.api_log_router, prefix="", tags=["Api Logs"]
         )
+        router.include_router(
+            AuditLogController.audit_log_router, prefix="", tags=["Audit Logs"]
+        )
         router.include_router(PlanController.plan_router, prefix="", tags=["Plans"])
         router.include_router(OrderController.order_router, prefix="", tags=["Orders"])
         router.include_router(GraceController.grace_router, prefix="", tags=["Grace"])
@@ -168,27 +158,3 @@ class Router:
             prefix="",
             tags=["Partner DB Config"],
         )
-
-        # ── OAuth 2.1 self-hosted server (gated by OAUTH_ENABLED) ─────────
-        # Three sub-routers, registered at the SAME parent prefix so the
-        # discovery (/.well-known/...), public (/oauth/register, /oauth/
-        # token, /oauth/authorize, ...) and authenticated (/oauth/consent
-        # /..., /oauth/authorize/continue) endpoints all live under the
-        # console-service prefix. AuthMiddleware exempts the public ones
-        # by path suffix (see middlewares/constants.py).
-        if _oauth_cfg.OAUTH_ENABLED:
-            router.include_router(
-                OAuthController.discovery_router,
-                prefix="",
-                tags=["OAuth Discovery"],
-            )
-            router.include_router(
-                OAuthController.oauth_public_router,
-                prefix="",
-                tags=["OAuth Public"],
-            )
-            router.include_router(
-                OAuthController.oauth_authenticated_router,
-                prefix="",
-                tags=["OAuth Authenticated"],
-            )

@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,14 +28,14 @@ class TestDefaultRolePermissionRepository:
         self.mock_logger = mock_logger
 
         self.mock_default_role_permission = DefaultRolePermission(
-            id=1,
-            role_id=1,
-            permission_id=2
+            id= UUID("11111111-1111-1111-1111-111111111111"),
+            role_id= UUID("11111111-1111-1111-1111-111111111111"),
+            permission_id= UUID("22222222-2222-2222-2222-222222222222")
         )
 
     async def test_add_default_role_permission_success(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock permission and role existence
         mock_result = MagicMock()
@@ -57,8 +58,8 @@ class TestDefaultRolePermissionRepository:
         )
 
     async def test_add_default_role_permission_permission_not_found(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=99)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("99999999-9999-9999-9999-999999999999"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         mock_result = MagicMock()
         mock_result.fetchone.return_value = MagicMock(
@@ -71,8 +72,8 @@ class TestDefaultRolePermissionRepository:
         assert "Permission does not exist or is inactive." in str(exc_info.value)
 
     async def test_add_default_role_permission_role_not_found(self):
-        add_data = DefaultRolePermissionData(role_id=99, permission_id=1)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("99999999-9999-9999-9999-999999999999"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         mock_result = MagicMock()
         mock_result.fetchone.return_value = MagicMock(
@@ -85,8 +86,8 @@ class TestDefaultRolePermissionRepository:
         assert "Role does not exist or is inactive." in str(exc_info.value)
 
     async def test_add_default_role_permission_unique_violation(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock permission and role existence
         mock_result = MagicMock()
@@ -103,8 +104,8 @@ class TestDefaultRolePermissionRepository:
         assert "Duplicate entry" in str(exc_info.value)
 
     async def test_add_default_role_permission_integrity_error(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Mock permission and role existence
         mock_result = MagicMock()
@@ -121,8 +122,8 @@ class TestDefaultRolePermissionRepository:
         assert "A record with this combination already exists." in str(exc_info.value)
 
     async def test_add_default_role_permission_general_exception(self):
-        add_data = DefaultRolePermissionData(role_id=1, permission_id=2)
-        user_id = 123
+        add_data = DefaultRolePermissionData(role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("22222222-2222-2222-2222-222222222222"))
+        user_id= UUID("12312312-3123-1231-2312-312312312312")
 
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
 
@@ -160,7 +161,7 @@ class TestDefaultRolePermissionRepository:
 
     async def test_get_default_role_permissions_by_role_id_success(self):
         # Arrange
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_result = MagicMock()
         mock_rows = MagicMock()
         mock_result.fetchall.return_value = mock_rows
@@ -178,7 +179,7 @@ class TestDefaultRolePermissionRepository:
 
     async def test_get_default_role_permissions_by_role_id_db_error(self):
         # Arrange
-        role_id = 1
+        role_id= UUID("11111111-1111-1111-1111-111111111111")
         self.session.execute = AsyncMock(side_effect=Exception("DB error"))
 
         # Act & Assert
@@ -188,7 +189,7 @@ class TestDefaultRolePermissionRepository:
         assert "DB error" in str(exc_info.value)
 
     async def test_delete_default_role_permission_success(self):
-        default_role_permission_id = 1
+        default_role_permission_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock .execute().scalar_one_or_none() to return the permission
         mock_scalars = MagicMock()
@@ -207,7 +208,7 @@ class TestDefaultRolePermissionRepository:
         )
 
     async def test_delete_default_role_permission_not_found(self):
-        default_role_permission_id = 999
+        default_role_permission_id= UUID("99999999-9999-9999-9999-999999999999")
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
@@ -220,7 +221,7 @@ class TestDefaultRolePermissionRepository:
         self.mock_logger.error.assert_called_with(ExceptionMsg.DEFAULT_ROLE_PERMISSION_NOT_FOUND)
 
     async def test_delete_default_role_permission_unexpected_error(self):
-        default_role_permission_id = 1
+        default_role_permission_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.side_effect = SQLAlchemyError("DB error")

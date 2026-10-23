@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from src.components.audit_log.schema import AuditLogSchema
@@ -18,8 +19,6 @@ from src.components.db_constants.schema import (
     ConstantResponseSchema,
     NavbarMarqueeResponseSchema,
 )
-from src.components.digital_assets.services import DigitalAssetService
-from src.components.digital_assets.storage.helper import StorageHelper
 from src.exceptions import (
     ConstantNotFoundException,
     ConstantVersionException,
@@ -33,13 +32,11 @@ class ConstantsService:
         self,
         constants_repository: ConstantsRepository,
         console_service_logger: ConsoleServiceLogger,
-        audit_log_service: AuditService,
-        digital_asset_service: DigitalAssetService,
+        audit_service: AuditService,
     ) -> None:
         self.constants_repository: ConstantsRepository = constants_repository
         self.console_service_logger: ConsoleServiceLogger = console_service_logger
-        self.audit_log_service: AuditService = audit_log_service
-        self.digital_asset_service: DigitalAssetService = digital_asset_service
+        self.audit_log_service: AuditService = audit_service
 
     async def get_constants_details(
         self, constant_model: type[ConstantsBase]
@@ -51,22 +48,6 @@ class ConstantsService:
             constants: List[ConstantResponseSchema] = (
                 await self.constants_repository.fetch_constant_by_type(constant_model)
             )
-            if constant_model in [MediaConstants, GlobalMediaConstants]:
-                for constant in constants:
-                    constant.additional_info = {
-                        key: (
-                            StorageHelper.get_presigned_url(value)
-                            if isinstance(value, str)
-                            else value
-                        )
-                        for key, value in (constant.additional_info or {}).items()
-                    }
-
-                    constant.value = (
-                        StorageHelper.get_presigned_url(constant.value)
-                        if isinstance(constant.value, str)
-                        else constant.value
-                    )
 
             return constants
 
@@ -110,7 +91,7 @@ class ConstantsService:
             raise e
 
     async def get_constant_by_id(
-        self, id: int, constant_model: type[ConstantsBase]
+        self, id: UUID, constant_model: type[ConstantsBase]
     ) -> List[ConstantResponseSchema]:
         """
         Fetch a constant by its ID.
@@ -119,12 +100,10 @@ class ConstantsService:
 
     async def update_constant(
         self,
-        id: int,
+        id: UUID,
         constant_model: type[ConstantsBase],
         value: str | object,
-        is_media_type: bool,
-        asset_type: str,
-        user_id: int,
+        user_id: UUID,
         description: Optional[str] = None,
     ) -> List[ConstantResponseSchema]:
         """
@@ -134,17 +113,6 @@ class ConstantsService:
             constant: List[ConstantResponseSchema] = (
                 await self.constants_repository.get_constant_by_id(constant_model, id)
             )
-
-            if is_media_type:
-                digital_asset_response = (
-                    await self.digital_asset_service.create_digital_asset(
-                        partner_id=0,
-                        asset_type=asset_type,
-                        input_file=value,
-                        user_id=user_id,
-                    )
-                )
-                value: int = digital_asset_response.id
 
             additional_info: dict = constant.additional_info or {}
             description: Optional[str] = description or constant.description
@@ -226,7 +194,7 @@ class ConstantsService:
             raise e
 
     async def rollback_constant(
-        self, id: int, target_version: int, constant_type: ConstantsTypes, user_id: int
+        self, id: UUID, target_version: int, constant_type: ConstantsTypes, user_id: UUID
     ) -> List[ConstantResponseSchema]:
         """
         Rollback the constant to the specified version. This will update the constant's value and version.

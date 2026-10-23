@@ -1,3 +1,4 @@
+from uuid import UUID
 import re
 from typing import Dict, List, Optional, Set, Union
 
@@ -9,7 +10,6 @@ from src.components.plan.utils import PlanUtils
 from src.components.wallet.enum import Currency
 
 DISALLOWED_LIMIT_KEYS: Set[str] = {
-    PlanCustomLimitKeys.Maglo.SERVICE_BOARDS,
     PlanCustomLimitKeys.Console.ACTIVE_USERS,
 }
 
@@ -352,7 +352,7 @@ class PlanUpdate(BaseModel, PlanValidationMixin):
 class PlanResponse(BaseModel):
     """Schema used only for API responses."""
 
-    id: int
+    id: UUID
     name: str
     description: Optional[str]
     price: Optional[float]
@@ -363,9 +363,9 @@ class PlanResponse(BaseModel):
     modules: List[str]
     plan_type: str
     is_active: bool
-    created_by: int
+    created_by: UUID
     created_at: int
-    updated_by: Optional[int]
+    updated_by: Optional[UUID]
     updated_at: Optional[int]
     is_purchased: bool = False
     tag: str

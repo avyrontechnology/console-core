@@ -41,7 +41,7 @@ class Plan(MetaData):
     tag = Column(String(30), nullable=False, index=True)
 
     service_name = Column(
-        String(100), nullable=False, index=True, default=str(Platform.MAGLO)
+        String(100), nullable=False, index=True, default=str(Platform.CONSOLE)
     )
 
     is_free_trial = Column(Boolean, default=False)

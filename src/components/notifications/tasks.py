@@ -1,3 +1,4 @@
+from uuid import UUID
 import asyncio
 import inspect
 from typing import List
@@ -22,7 +23,7 @@ celery_logger = CeleryLogger.get_logger()
 @celery.task(bind=True, name="dispatch_notification", acks_late=True, reject_on_worker_lost=True)
 def dispatch_notification_task(
     self,
-    user_id: int, 
+    user_id: UUID, 
     title: str, 
     body: str, 
     data: dict,

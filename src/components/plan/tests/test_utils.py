@@ -6,16 +6,16 @@ class TestPlanUtils:
     # split_modules_by_service
     # -------------------------------------------------------------------------
     def test_split_modules_by_service_basic(self):
-        modules = ["console:dashboard", "console:analytics", "babbler:boards"]
-        expected = {"console": ["dashboard", "analytics"], "babbler": ["boards"]}
+        modules = ["console:dashboard", "console:analytics", "talko:boards"]
+        expected = {"console": ["dashboard", "analytics"], "talko": ["boards"]}
         assert PlanUtils.split_modules_by_service(modules) == expected
 
     def test_split_modules_by_service_empty_list(self):
         assert PlanUtils.split_modules_by_service([]) == {}
 
     def test_split_modules_by_service_invalid_format(self):
-        modules = ["console-dashboard", "invalid", "babbler:boards"]
-        expected = {"babbler": ["boards"]}
+        modules = ["console-dashboard", "invalid", "talko:boards"]
+        expected = {"talko": ["boards"]}
         assert PlanUtils.split_modules_by_service(modules) == expected
 
     def test_split_modules_by_service_multiple_services(self):
@@ -31,9 +31,9 @@ class TestPlanUtils:
         assert PlanUtils.split_limits_by_service({}) == {}
 
     def test_split_limits_by_service_basic(self):
-        limits = {"SERVICE_BOARDS": 5}
+        limits = {"ACTIVE_USERS": 5}
 
-        expected = {"maglo": {"SERVICE_BOARDS": 5}}
+        expected = {"console": {"ACTIVE_USERS": 5}}
 
         assert PlanUtils.split_limits_by_service(limits) == expected
 
@@ -45,8 +45,8 @@ class TestPlanUtils:
         assert PlanUtils.split_limits_by_service(limits) == expected
 
     def test_split_limits_by_service_multiple_per_service(self):
-        limits = {"ACTIVE_USERS": 10, "SERVICE_BOARDS": 7}
+        limits = {"ACTIVE_USERS": 10}
 
-        expected = {"console": {"ACTIVE_USERS": 10}, "maglo": {"SERVICE_BOARDS": 7}}
+        expected = {"console": {"ACTIVE_USERS": 10}}
 
         assert PlanUtils.split_limits_by_service(limits) == expected

@@ -1,4 +1,5 @@
 """Wallet Service module."""
+from uuid import UUID
 from fastapi import Depends
 import asyncio
 import base64
@@ -15,8 +16,6 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
 
-from src.components.digital_assets.services import DigitalAssetEnum, DigitalAssetService, StorageHelper
-from src.components.wallet.constants import WalletEmailConstants
 from src.components.wallet.enum import (
     GRID_COLOR,
     HEADER_BG_COLOR,
@@ -39,7 +38,6 @@ from src.components.wallet.schema import WalletRPCResponse, WalletResponse, Wall
 from src.loggers.console_service_logger import ConsoleServiceLogger
 from dependency_injector.wiring import Provide
 from fastapi import Depends
-from src.components.services.email_service import EmailService
 
 class WalletService:
     """Service layer for wallet operations."""
@@ -50,7 +48,7 @@ class WalletService:
         self.__wallet_repository: WalletRepository = wallet_repository
         self.__logger: ConsoleServiceLogger = logger
 
-    async def get_wallet(self, partner_id: int) -> Wallet:
+    async def get_wallet(self, partner_id: UUID) -> Wallet:
         """Retrieve wallet details for the given partner."""
         try:
             wallet: Optional[Wallet] = (
@@ -68,6 +66,75 @@ class WalletService:
             raise
         except Exception as exc:
             self.__logger.error(f"Unexpected error in get_wallet: {exc}")
+            raise
+
+    async def debit_call_charge(
+        self,
+        partner_id: UUID,
+        amount: float,
+        currency: str,
+        call_id: str,
+        billed_minutes: float,
+        actor_id: UUID | None = None,
+    ) -> dict:
+        """Idempotent per-call debit for Talko ledger unification.
+
+        Find-or-debit on attributes.call_id: a retry returns the original
+        transaction instead of double-charging. Raises WalletNotFoundError
+        (no wallet = partner not provisioned) and InsufficientBalanceError.
+        Returns {transaction_id, amount, remaining_balance, already_charged}.
+        """
+        try:
+            wallet: Optional[Wallet] = (
+                await self.__wallet_repository.get_wallet_by_partner_id(partner_id)
+            )
+            if not wallet:
+                raise WalletNotFoundError(partner_id)
+            existing = await self.__wallet_repository.find_transaction_by_attribute(
+                wallet.id, "call_id", call_id
+            )
+            if existing is not None:
+                self.__logger.info(
+                    "Call {} already charged, returning original transaction {}".format(
+                        call_id, existing.id
+                    )
+                )
+                return {
+                    "transaction_id": existing.id,
+                    "amount": float(existing.amount),
+                    "remaining_balance": float(existing.remaining_balance),
+                    "already_charged": True,
+                }
+            updated = await self.__wallet_repository.perform_wallet_transaction(
+                current_user_id=actor_id or partner_id,
+                partner_id=partner_id,
+                transaction_type=TransactionType.DEBIT,
+                amount=Decimal(str(amount)),
+                service_name=ServiceName.TALKO,
+                description="call {} ({} min)".format(call_id, billed_minutes),
+                attributes={"call_id": call_id, "billed_minutes": billed_minutes},
+                # A call charge spends available balance, not frozen funds.
+                debit_from_wallet=True,
+            )
+            self.__logger.info(
+                "Charged call {} amount={} partner={}".format(
+                    call_id, amount, partner_id
+                )
+            )
+            return {
+                "transaction_id": updated.id,
+                "amount": float(amount),
+                "remaining_balance": float(updated.balance),
+                "already_charged": False,
+            }
+        except (WalletNotFoundError, InsufficientBalanceError) as exc:
+            raise
+        except Exception as exc:
+            self.__logger.error(
+                "Unexpected error in debit_call_charge call_id={}: {}".format(
+                    call_id, exc
+                )
+            )
             raise
 
 
@@ -140,7 +207,7 @@ class WalletService:
 
     async def get_wallet_transactions(
         self,
-        partner_id: int,
+        partner_id: UUID,
         start_date: Optional[int],
         end_date: Optional[int],
         limit: int,
@@ -204,7 +271,7 @@ class WalletService:
             )
             raise
 
-    async def create_wallet(self, partner_id: int) -> Wallet:
+    async def create_wallet(self, partner_id: UUID) -> Wallet:
         """
         Create a wallet for a given partner.
 
@@ -250,7 +317,7 @@ class WalletService:
 
     async def generate_statement(
         self,
-        partner_id: int,
+        partner_id: UUID,
         start_date: int,
         end_date: int,
         service_name: str | None,
@@ -389,8 +456,8 @@ class WalletService:
 
     async def perform_transaction(
         self,
-        current_user_id: int,
-        partner_id: int,
+        current_user_id: UUID,
+        partner_id: UUID,
         transaction_type: TransactionType,
         amount: float,
         service_name: ServiceName,
@@ -516,21 +583,12 @@ class WalletService:
             self.__logger.error(f"Got an exception while creating CSV : {exp}")
     
 
-    def __send_wallet_report_to_internal_partner(self, csv_url: str, timestamp:int, email = Depends(Provide['email_service'])):
-        try:
-
-            formatted_date = datetime.fromtimestamp(int(timestamp/1000)).strftime("%d-%B-%Y")
-            email.send_email(
-                to_emails=WalletEmailConstants.LIST_OF_RECIEVERS,
-                subject=WalletEmailConstants.SUBJECT,
-                body = {"report_period" : f"24 Hours {formatted_date}"},
-                html_template='wallet_report.html',
-                attachments = [{"filename" : f"wallet_status_{formatted_date}.csv", "content" : csv_url}]
-            )
-            self.__logger.info("email sent")
-        except Exception as exp:
-            self.__logger.info(f"got an issue : {exp}")
-            raise
+    def __send_wallet_report_to_internal_partner(self, csv_url: str, timestamp: int):
+        formatted_date = datetime.fromtimestamp(int(timestamp / 1000)).strftime("%d-%B-%Y")
+        self.__logger.info(
+            f"Wallet report email retired with the mailer; CSV ready (not sent): "
+            f"wallet_status_{formatted_date}.csv"
+        )
         
     
     async def send_partner_wallet_balance_email(self) -> None:

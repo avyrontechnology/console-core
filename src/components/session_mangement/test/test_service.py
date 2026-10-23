@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from types import SimpleNamespace
@@ -28,9 +29,9 @@ class TestUserSessionService:
     # CREATE SESSION TESTS
     # ----------------------------------------------------------------------
     async def test_create_user_session_success(self):
-        session_data = {"user_id": 1, "service_name": "abc"}
+        session_data = {"user_id": UUID("11111111-1111-1111-1111-111111111111"), "service_name": "abc"}
 
-        repo_response = SimpleNamespace(session_id="xyz123", user_id=1)
+        repo_response = SimpleNamespace(session_id="xyz123", user_id= UUID("11111111-1111-1111-1111-111111111111"))
         self.repo.create_user_session.return_value = repo_response
 
         result = await self.service.create_user_session(session_data)
@@ -44,7 +45,7 @@ class TestUserSessionService:
         )
 
     async def test_create_user_session_integrity_error(self):
-        session_data = {"user_id": 1}
+        session_data = {"user_id": UUID("11111111-1111-1111-1111-111111111111")}
 
         self.repo.create_user_session.side_effect = IntegrityError("bad", None, None)
 
@@ -54,7 +55,7 @@ class TestUserSessionService:
         assert result is None
 
     async def test_create_user_session_general_exception(self):
-        session_data = {"user_id": 1}
+        session_data = {"user_id": UUID("11111111-1111-1111-1111-111111111111")}
 
         self.repo.create_user_session.side_effect = Exception("boom")
 
@@ -143,7 +144,7 @@ class TestUserSessionService:
     # DEACTIVATE SESSIONS TESTS
     # ----------------------------------------------------------------------
     async def test_deactivate_user_sessions_success(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.repo.deactivate_all_sessions_by_user_id.return_value = 3
 
         result = await self.service.deactivate_user_sessions(user_id)
@@ -154,7 +155,7 @@ class TestUserSessionService:
         )
 
     async def test_deactivate_user_sessions_exception(self):
-        user_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.repo.deactivate_all_sessions_by_user_id.side_effect = Exception("oops")
 
         with pytest.raises(Exception):
@@ -166,14 +167,13 @@ class TestUserSessionService:
     # DEACTIVATE ALL BY PARTNER ID TESTS
     # ----------------------------------------------------------------------
     async def test_deactivate_all_sessions_by_partner_id_success(self):
-        partner_id = 99
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
         config = True
 
         self.repo.deactivate_all_sessions_by_partner_id.return_value = (
             2,  # deactivated_count
-            [1, 2]  # user_ids
+            [UUID("11111111-1111-1111-1111-111111111111"), UUID("22222222-2222-2222-2222-222222222222")]  # user_ids
         )
-        self.repo.deactivate_or_create_user_configs_by_user_ids.return_value = 2
 
         result = await self.service.deactivate_all_sessions_by_partner_id(
             partner_id, config
@@ -186,7 +186,7 @@ class TestUserSessionService:
         self.repo.deactivate_all_sessions_by_partner_id.assert_awaited_once()
 
     async def test_deactivate_all_sessions_by_partner_id_no_users(self):
-        partner_id = 99
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
 
         self.repo.deactivate_all_sessions_by_partner_id.return_value = (0, [])
 
@@ -200,7 +200,7 @@ class TestUserSessionService:
         )
 
     async def test_deactivate_all_sessions_by_partner_id_exception(self):
-        partner_id = 99
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
 
         self.repo.deactivate_all_sessions_by_partner_id.side_effect = Exception("bad")
 
@@ -215,7 +215,7 @@ class TestUserSessionService:
 
 
     async def test_deactivate_all_sessions_by_service_name_success(self):
-        service_name = "MAGLO"
+        service_name = "TALKO"
 
         self.repo.deactivate_all_sessions_by_service_name.return_value = 4
 
@@ -235,7 +235,7 @@ class TestUserSessionService:
         )
 
     async def test_deactivate_all_sessions_by_service_name_no_sessions(self):
-        service_name = "BABBLER"
+        service_name = "TALKO"
 
         self.repo.deactivate_all_sessions_by_service_name.return_value = 0
 

@@ -1,3 +1,4 @@
+from uuid import UUID
 import math
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
@@ -16,7 +17,6 @@ from src.components.order.constants import (
     AMOUNT_ADDED_IN_WALLET,
     DAYS_PER_MONTH,
     STATUS_MAPPING,
-    OrderEmailConstants,
     OrderType,
     PaymentMethod,
     ServiceSubscriptionStatus,
@@ -96,8 +96,8 @@ class OrderService:
     ) -> Dict:
         """Creates an order and initiates payment."""
         try:
-            partner_id: int = user_context.get("partner_id")
-            user_id: int = user_context.get("user_id")
+            partner_id: UUID = user_context.get("partner_id")
+            user_id: UUID = user_context.get("user_id")
             self.logger.info(f"Creating order for partner_id={partner_id}")
 
             duration_in_days = None
@@ -220,7 +220,7 @@ class OrderService:
                 )
             )
 
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
             order: Order = await self.order_repo.get_order_by_merchant_transaction_id(
                 merchant_transaction_id
             )
@@ -434,8 +434,8 @@ class OrderService:
             less than days until it activates.
         """
         try:
-            sales_user_id: int = current_user["user_id"]
-            partner_id: int = payload["partner_id"]
+            sales_user_id: UUID = current_user["user_id"]
+            partner_id: UUID = payload["partner_id"]
 
             self.logger.info(
                 "Manual order creation | partner_id={} plan_id={} sales_user={}".format(
@@ -568,7 +568,7 @@ class OrderService:
           - order_type          (str)  : FRESH | RENEWAL | UPGRADE | DOWNGRADE
         """
         try:
-            partner_ids: Optional[int] = filters.get("partner_ids")
+            partner_ids: Optional[List[UUID]] = filters.get("partner_ids")
 
             if partner_ids:
                 await partner_repo.validate_partner_ids(partner_ids)
@@ -793,7 +793,7 @@ class OrderService:
     async def get_billing_details(
         self,
         order_data: OrderBillingDetailsRequest,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         plan_repo: PlanRepository = Depends(Provide["plan_repository"]),
         entitlement_repo: EntitlementRepository = Depends(
             Provide["entitlement_repository"]
@@ -872,7 +872,7 @@ class OrderService:
         self,
         plan: Optional[Plan],
         active_entitlements: Dict,
-        partner_id: Optional[int],
+        partner_id: Optional[UUID],
     ) -> int:
         if not partner_id or not active_entitlements:
             if not plan:
@@ -1301,7 +1301,7 @@ class OrderService:
     # =========================================================================
 
     async def _validate_partner(
-        self, partner_id: int, partner_repo: PartnerRepository
+        self, partner_id: UUID, partner_repo: PartnerRepository
     ) -> None:
         partner = await partner_repo.get_by_id(partner_id)
         if not partner:
@@ -1313,7 +1313,7 @@ class OrderService:
                 "Partner with id {} is inactive.".format(partner_id)
             )
 
-    async def _validate_plan(self, plan_id: int, plan_repo: PlanRepository) -> Plan:
+    async def _validate_plan(self, plan_id: UUID, plan_repo: PlanRepository) -> Plan:
         """Validate plan exists, is active, and not free trial."""
         plan = await plan_repo.get_plan_by_id(plan_id, active_only=True)
         if not plan:
@@ -1325,7 +1325,7 @@ class OrderService:
         return plan
 
     def _validate_authentication(
-        self, order_data: OrderBillingDetailsRequest, partner_id: Optional[int]
+        self, order_data: OrderBillingDetailsRequest, partner_id: Optional[UUID]
     ):
         if partner_id is None and not order_data.plan_id:
             raise AuthenticationRequiredError(
@@ -1348,7 +1348,7 @@ class OrderService:
                 )
 
     async def _check_hierarchy_downgrade(
-        self, partner_id: int, new_plan: Plan, entitlement_repo: EntitlementRepository
+        self, partner_id: UUID, new_plan: Plan, entitlement_repo: EntitlementRepository
     ):
         active_entitlements = await entitlement_repo.get_all_active_entitlements(
             partner_id
@@ -1365,7 +1365,7 @@ class OrderService:
 
     async def _classify_manual_order(
         self,
-        partner_id: int,
+        partner_id: UUID,
         new_plan: Plan,
     ) -> tuple[str, Optional[Order]]:
         """
@@ -1425,7 +1425,7 @@ class OrderService:
             return OrderType.DOWNGRADE, latest_order
 
     async def _assert_no_active_entitlement(
-        self, entitlement_repo: EntitlementRepository, partner_id: int
+        self, entitlement_repo: EntitlementRepository, partner_id: UUID
     ) -> None:
         active_entitlements = await entitlement_repo.get_all_active_entitlements(
             partner_id
@@ -1441,7 +1441,7 @@ class OrderService:
     async def _assert_duration_within_scheduled_window(
         self,
         entitlement_repo: EntitlementRepository,
-        partner_id: int,
+        partner_id: UUID,
         requested_duration_days: int,
     ) -> None:
         """
@@ -1502,7 +1502,7 @@ class OrderService:
     async def _approve_and_provision_manual_order(
         self,
         order: Order,
-        sales_user_id: int,
+        sales_user_id: UUID,
         entitlement_service: EntitlementService,
         entitlement_repo: Optional[EntitlementRepository] = None,
         grace_service: Optional[GraceService] = None,
@@ -1541,7 +1541,7 @@ class OrderService:
     # UTILITY METHODS
     # =========================================================================
 
-    async def _get_active_entitlements(self, repo, partner_id: int) -> Dict:
+    async def _get_active_entitlements(self, repo, partner_id: UUID) -> Dict:
         entitlements = await repo.get_all_active_entitlements(partner_id)
         self.logger.info(
             f"Active entitlements | partner_id={partner_id} count={len(entitlements)}"
@@ -1588,9 +1588,9 @@ class OrderService:
         return services
 
     def _get_addon_price(self, addon_key: str) -> int:
-        ADD_ON_PRICE_PER_DAY = {
-            PlanCustomLimitKeys.Maglo.SERVICE_BOARDS: DbConstants.SERVICE_BOARD_ADD_ON_PRICE,
-        }
+        # SERVICE_BOARDS was the only priced add-on (product removed). Table kept
+        # (shape) for future priced add-ons; unknown keys price 0.
+        ADD_ON_PRICE_PER_DAY: Dict[str, int] = {}
         value = ADD_ON_PRICE_PER_DAY.get(addon_key, 0)
         try:
             return int(value)
@@ -1609,7 +1609,7 @@ class OrderService:
         }
         return order_type if order_type in valid else OrderType.FRESH
 
-    def _log_billing_request(self, partner_id: Optional[int], order_data):
+    def _log_billing_request(self, partner_id: Optional[UUID], order_data):
         self.logger.info(
             f"Calculating billing | partner_id={partner_id} "
             f"plan_id={order_data.plan_id} add_ons={order_data.add_ons}"
@@ -1640,7 +1640,7 @@ class OrderService:
         return await self.payment_service.create_order(initiate_payload, user_context)
 
     async def _handle_wallet_transaction(
-        self, order: Order, user_id: int, partner_id: int, wallet_service: WalletService
+        self, order: Order, user_id: UUID, partner_id: UUID, wallet_service: WalletService
     ) -> None:
         if not (order.plan_id and order.plan.plan_type == PlanType.WALLET):
             return
@@ -1654,7 +1654,7 @@ class OrderService:
             partner_id=partner_id,
             transaction_type=TransactionType.CREDIT,
             amount=self._get_wallet_credit_amount(order),
-            service_name=ServiceName.BABBLER,
+            service_name=ServiceName.TALKO,
             description=AMOUNT_ADDED_IN_WALLET,
             additional_info={"order_id": order.id},
             create_transaction=True,
@@ -1664,7 +1664,7 @@ class OrderService:
     async def _provision_on_payment_success(
         self,
         order: Order,
-        user_id: int,
+        user_id: UUID,
         entitlement_service: EntitlementService,
         wallet_service: WalletService,
         entitlement_repo: Optional[EntitlementRepository] = None,
@@ -1690,7 +1690,7 @@ class OrderService:
                 partner_id=order.partner_id,
                 transaction_type=TransactionType.CREDIT,
                 amount=self._get_wallet_credit_amount(order),
-                service_name=ServiceName.BABBLER,
+                service_name=ServiceName.TALKO,
                 description=AMOUNT_ADDED_IN_WALLET,
                 additional_info={"order_id": order.id},
                 create_transaction=False,
@@ -1710,7 +1710,7 @@ class OrderService:
     async def _settle_grace_for_order(
         self,
         order: Order,
-        user_id: int,
+        user_id: UUID,
         grace_service: GraceService,
         entitlement_repo: EntitlementRepository,
     ) -> None:
@@ -1800,25 +1800,16 @@ class OrderService:
 
     
     def __send_order_report_to_internal_partner(
-            self, 
-            attachments: List[dict]|dict, 
-            timestamp:int, 
-            email = Depends(Provide['email_service'])
+            self,
+            attachments: List[dict]|dict,
+            timestamp:int,
         ):
-        try:
-
-            formatted_date = datetime.fromtimestamp(int(timestamp/1000)).strftime("%d-%B-%Y")
-            email.send_email(
-                to_emails=OrderEmailConstants.LIST_OF_RECIEVERS,
-                subject=OrderEmailConstants.SUBJECT,
-                body = {"report_period" : f"7 days {formatted_date}"},
-                html_template='order_report.html',
-                attachments = attachments
-            )
-            self.logger.info("email sent")
-        except Exception as exp:
-            self.logger.info(f"got an issue : {exp}")
-            raise
+        formatted_date = datetime.fromtimestamp(int(timestamp/1000)).strftime("%d-%B-%Y")
+        count = len(attachments) if isinstance(attachments, list) else 1
+        self.logger.info(
+            f"Order report email retired with the mailer; {count} attachment(s) ready "
+            f"(not sent) for {formatted_date}"
+        )
 
 
     async def send_daily_order_report(

@@ -10,6 +10,7 @@ from fastapi import Depends
 from grpc import StatusCode
 from grpc_interceptor.exceptions import GrpcException
 from typing import Any, List, Optional
+from src.components.common.rpc_uuid import parse_uuid, parse_uuid_list, uuid_list_str, uuid_str
 from src.components.user.services import UserService
 from src.core.container import Container
 
@@ -26,7 +27,7 @@ class UserServiceGRPC(UserServiceServicer):
         context,
         user_service: UserService = Depends(Provide[Container.console_service]),
     ):
-        partner_id = request.partner_id
+        partner_id = parse_uuid(request.partner_id, "partner_id")
         role_hierarchy_level = request.role_hierarchy_level
 
         try:
@@ -37,7 +38,7 @@ class UserServiceGRPC(UserServiceServicer):
 
             response = [
                 UserDetail(
-                    user_id=user.user_id,
+                    user_id=uuid_str(user.user_id),
                     email=user.email,
                     name=user.name,
                     role=user.role,
@@ -60,17 +61,17 @@ class UserServiceGRPC(UserServiceServicer):
         context,
         user_service: UserService = Depends(Provide[Container.console_service]),
     ):
-        user_ids: List[int] = list(request.user_ids)
+        user_ids = parse_uuid_list(request.user_ids, "user_ids")
 
         try:
-            self.__logger.info(f"[gRPC]: Attempting to get current status for user_ids: {user_ids}")
+            self.__logger.info(f"[gRPC]: Attempting to get current status for user_ids: {uuid_list_str(user_ids)}")
             users_status: List[Any] = await user_service.get_users_availability_status(
                 user_ids
             )
 
             response: List[UserAvailabilityStatus] = [
                 UserAvailabilityStatus(
-                    user_id=user.user_id,
+                    user_id=uuid_str(user.user_id),
                     current_status=user.current_status,
                 )
                 for user in users_status
@@ -78,7 +79,7 @@ class UserServiceGRPC(UserServiceServicer):
 
             return GetUsersAvailabilityStatusResponse(users_availability_status=response)
         except Exception as exc:
-            self.__logger.error(f"[gRPC]: Error occurred while getting current status for user_ids: {user_ids}. error: {exc}")
+            self.__logger.error(f"[gRPC]: Error occurred while getting current status for user_ids: {uuid_list_str(user_ids)}. error: {exc}")
             raise GrpcException(
                 details=str(exc),
                 status_code=StatusCode.INTERNAL,

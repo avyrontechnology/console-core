@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Iterator, Optional
 
 from fastapi import HTTPException, status, Depends
@@ -7,7 +8,6 @@ from src.components.audit_log.schema import AuditLogSchema
 from src.components.audit_log.services import AuditService
 from src.components.auth.service import AuthService
 from src.components.auth.models import Role, Permission
-from src.components.cache.helper import CacheHelper
 from src.components.common.actions import AuditActions
 from src.components.common.constants import CurrentUserMap
 from src.components.common.resources import Resource
@@ -35,7 +35,6 @@ class DefaultRolePermissionService:
         console_service_logger: ConsoleServiceLogger,
         default_role_permission_repository: DefaultRolePermissionRepository,
         partner_config_service: PartnerConfigService,
-        cache_helper: CacheHelper,
     ):
         self.__audit_service: AuditService = audit_service
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
@@ -43,7 +42,6 @@ class DefaultRolePermissionService:
             default_role_permission_repository
         )
         self.__partner_config_service: PartnerConfigService = partner_config_service
-        self.__cache: CacheHelper = cache_helper
 
     async def add_default_role_permission(
         self, add_data: DefaultRolePermissionData, current_user: dict, auth_service: AuthService = Depends(Provide["auth_service"])
@@ -79,8 +77,8 @@ class DefaultRolePermissionService:
                 details="Partner role permission created with id: {}".format(result.id),
             )
             await self.__audit_service.log_action(log_entry)
-            # Baseline grant changes the RBAC set maglo caches per user.
-            await self.__cache.invalidate_user_permissions_cache()
+            # Role↔permission mapping changed: all cached slug lists are stale.
+            await self.__partner_config_service.bust_user_permissions()
             return result
         except AuthException as exec:
             self.__console_service_logger.error(
@@ -105,11 +103,11 @@ class DefaultRolePermissionService:
     async def get_default_role_permissons(self, current_user: dict) -> list:
         try:
             self.__console_service_logger.info("Fetching default role permissions...")
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             config = await self.__partner_config_service.get_partner_config_by_key(
                 partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
             )
-            filter_partner_id: Optional[int] = (
+            filter_partner_id: Optional[UUID] = (
                 partner_id if (config and config.value == True) else None
             )
             default_role_permissions = (
@@ -130,7 +128,7 @@ class DefaultRolePermissionService:
             )
             raise exec
 
-    async def get_default_role_permissons_by_role_id(self, role_id: int):
+    async def get_default_role_permissons_by_role_id(self, role_id: UUID):
         try:
             self.__console_service_logger.info(
                 "Fetching default role permissions by role id: {}".format(role_id)
@@ -156,7 +154,7 @@ class DefaultRolePermissionService:
 
     async def set_role_action_permissions(
         self,
-        role_id: int,
+        role_id: UUID,
         set_data: SetRoleActionPermissionsData,
         current_user: dict,
         auth_service: AuthService = Depends(Provide["auth_service"]),
@@ -167,7 +165,7 @@ class DefaultRolePermissionService:
         partner-owned role) so a partner can never edit a global default role
         (``partner_id IS NULL``) — that would leak across every partner. Enable →
         insert into the role's ``DefaultRolePermission`` baseline; disable → delete it
-        (and any partner-custom grant). maglo caches each user's resolved RBAC set
+        (and any partner-custom grant). downstream caches each user's resolved RBAC set
         (``GRPC_GET_USER_PERMISSIONS``, ONE_WEEK), so the changed slugs are busted
         below to make the effect immediate.
         """
@@ -244,9 +242,6 @@ class DefaultRolePermissionService:
             )
             await self.__audit_service.log_action(log_entry)
 
-            if changed:
-                await self.__cache.invalidate_user_permissions_cache()
-
             return SetRoleActionPermissionsResponse(
                 role_id=role_id,
                 partner_id=set_data.partner_id,
@@ -267,7 +262,7 @@ class DefaultRolePermissionService:
             raise exec
 
     async def delete_default_role_permission(
-        self, default_role_permission_id: int, current_user: dict
+        self, default_role_permission_id: UUID, current_user: dict
     ):
         try:
             self.__console_service_logger.info(
@@ -290,8 +285,8 @@ class DefaultRolePermissionService:
                 ),
             )
             await self.__audit_service.log_action(log_entry)
-            # Revoking a baseline grant changes the RBAC set maglo caches per user.
-            await self.__cache.invalidate_user_permissions_cache()
+            # Role↔permission mapping changed: all cached slug lists are stale.
+            await self.__partner_config_service.bust_user_permissions()
             return {"message": "Default role permission deleted successfully."}
         except DefaultRolePermissionException as exec:
             self.__console_service_logger.error(str(exec))

@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from datetime import datetime, timedelta
 from typing import Callable, List
@@ -27,7 +28,7 @@ class PartnerHomePageRepositories:
         )
         self.__console_service_logger: ConsoleServiceLogger = console_service_logger
 
-    async def get_partner_homepage_details(self, user_id: int) -> User:
+    async def get_partner_homepage_details(self, user_id: UUID) -> User:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -54,7 +55,7 @@ class PartnerHomePageRepositories:
             )
             raise exc
 
-    async def get_user_hierarchy(self, user_id: int) -> List[Role]:
+    async def get_user_hierarchy(self, user_id: UUID) -> List[Role]:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -79,7 +80,7 @@ class PartnerHomePageRepositories:
             )
             raise exc
 
-    async def partner_dashboard_cards(self, current_user_id: int) -> List[dict]:
+    async def partner_dashboard_cards(self, current_user_id: UUID) -> List[dict]:
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -120,16 +121,7 @@ class PartnerHomePageRepositories:
                             "key": DashboardFilters.PARTNERS_USING_TALKO,
                             "count": 0,
                         },
-                        {
-                            "title": PartnerDashboardCardsAttributes.PARTNERS_USING_BABLAR,
-                            "key": DashboardFilters.PARTNERS_USING_BABBLER,
-                            "count": 0,
-                        },
-                        {
-                            "title": PartnerDashboardCardsAttributes.PARTNERS_USING_MAGLO,
-                            "key": DashboardFilters.PARTNERS_USING_MAGLO,
-                            "count": 0,
-                        },
+
                     ]
 
                 # Total Partners
@@ -159,16 +151,6 @@ class PartnerHomePageRepositories:
                         func.sum(
                             case(
                                 (
-                                    (PartnerConfig.key == "is_maglo_enabled")
-                                    & (cast(PartnerConfig.value, String) == "true"),
-                                    1,
-                                ),
-                                else_=0,
-                            )
-                        ).label("partners_using_maglo"),
-                        func.sum(
-                            case(
-                                (
                                     (PartnerConfig.key == "is_talko_enabled")
                                     & (cast(PartnerConfig.value, String) == "true"),
                                     1,
@@ -176,23 +158,13 @@ class PartnerHomePageRepositories:
                                 else_=0,
                             )
                         ).label("partners_using_talko"),
-                        func.sum(
-                            case(
-                                (
-                                    (PartnerConfig.key == "is_babbler_enabled")
-                                    & (cast(PartnerConfig.value, String) == "true"),
-                                    1,
-                                ),
-                                else_=0,
-                            )
-                        ).label("partners_using_babbler"),
                     )
                     .select_from(Partner)
                     .join(PartnerConfig, Partner.id == PartnerConfig.partner_id)
                     .where(Partner.is_active == True)
                 )
 
-                partners_using_maglo, partners_using_talko, partners_using_babbler = (
+                (partners_using_talko,) = (
                     partner_configs_counts.one()
                 )
 
@@ -218,16 +190,7 @@ class PartnerHomePageRepositories:
                         "key": DashboardFilters.PARTNERS_USING_TALKO,
                         "count": partners_using_talko,
                     },
-                    {
-                        "title": PartnerDashboardCardsAttributes.PARTNERS_USING_BABLAR,
-                        "key": DashboardFilters.PARTNERS_USING_BABBLER,
-                        "count": partners_using_babbler,
-                    },
-                    {
-                        "title": PartnerDashboardCardsAttributes.PARTNERS_USING_MAGLO,
-                        "key": DashboardFilters.PARTNERS_USING_MAGLO,
-                        "count": partners_using_maglo,
-                    },
+
                 ]
 
                 self.__console_service_logger.info(
@@ -243,7 +206,7 @@ class PartnerHomePageRepositories:
             )
             raise ex
 
-    async def _get_parnter_by_id(self, parnter_id: int) -> Partner:
+    async def _get_parnter_by_id(self, parnter_id: UUID) -> Partner:
         self.__console_service_logger.info(
             "Getting Parnter with id: {}".format(parnter_id)
         )

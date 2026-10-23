@@ -24,7 +24,6 @@ class RoleFlagMapper:
             RoleActionFlagKeys.CAN_ASSUME_USER: True,
             RoleActionFlagKeys.CAN_VIEW_PLANS: True,
             RoleActionFlagKeys.CAN_VIEW_ORDER_HISTORY: True,
-            RoleActionFlagKeys.CAN_EDIT_BABBLER_PRICING: True,
             RoleActionFlagKeys.CAN_VIEW_API_ADMIN: False,
         },
         RoleLevel.ONBOARDING_ADMIN: {
@@ -41,7 +40,6 @@ class RoleFlagMapper:
             RoleActionFlagKeys.CAN_ASSUME_USER: False,
             RoleActionFlagKeys.CAN_VIEW_PLANS: False,
             RoleActionFlagKeys.CAN_VIEW_ORDER_HISTORY: False,
-            RoleActionFlagKeys.CAN_EDIT_BABBLER_PRICING: False,
             RoleActionFlagKeys.CAN_VIEW_API_ADMIN: False,
         },
         RoleLevel.ADMIN: {
@@ -57,7 +55,6 @@ class RoleFlagMapper:
             RoleActionFlagKeys.CAN_VIEW_PARTNER_CONFIG: False,
             RoleActionFlagKeys.CAN_VIEW_PLANS: False,
             RoleActionFlagKeys.CAN_VIEW_ORDER_HISTORY: False,
-            RoleActionFlagKeys.CAN_EDIT_BABBLER_PRICING: False,
             RoleActionFlagKeys.CAN_VIEW_API_ADMIN: True,
         },
         RoleLevel.MAINTAINER: {
@@ -73,7 +70,6 @@ class RoleFlagMapper:
             RoleActionFlagKeys.CAN_VIEW_PARTNER_CONFIG: True,
             RoleActionFlagKeys.CAN_VIEW_PLANS: False,
             RoleActionFlagKeys.CAN_VIEW_ORDER_HISTORY: False,
-            RoleActionFlagKeys.CAN_EDIT_BABBLER_PRICING: False,
             RoleActionFlagKeys.CAN_VIEW_API_ADMIN: False,
         },
     }

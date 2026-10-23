@@ -1,5 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+import uuid
+from sqlalchemy import Boolean, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.database.base_model import MetaData
 from src.core.db import Base
@@ -25,7 +27,7 @@ class States(MetaData):
     name = Column(String(128), nullable=False, index=True)
     slug = Column(String(128), unique=True, nullable=False)
     country_id = Column(
-        Integer, ForeignKey("console_countries.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True), ForeignKey("console_countries.id", ondelete="CASCADE"), index=True
     )
 
     # Relationship to Countries and Cities and user
@@ -43,7 +45,7 @@ class Cities(MetaData):
     name = Column(String(128), nullable=False, index=True)
     slug = Column(String(128), unique=True, nullable=False)
     state_id = Column(
-        Integer, ForeignKey("console_states.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True), ForeignKey("console_states.id", ondelete="CASCADE"), index=True
     )
 
     # Relationship to States and Users

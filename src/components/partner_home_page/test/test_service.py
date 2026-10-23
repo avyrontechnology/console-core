@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -32,13 +33,13 @@ class TestPartnerHomePageService:
 
     def _mock_common_homepage_repositories(self):
         """Shared repository/role-mapper scaffolding used by every
-        get_partner_homepage_details() happy-path test (user_id=partner_id=1)."""
+        get_partner_homepage_details() happy-path test (user_id=partner_id= UUID("11111111-1111-1111-1111-111111111111"))."""
         self.repository_mock.get_user_hierarchy = AsyncMock(
             return_value={"role_hierarchy_level": 2}
         )
         self.repository_mock.get_partner_homepage_details = AsyncMock(
             return_value={
-                "id": 1,
+                "id": UUID("11111111-1111-1111-1111-111111111111"),
                 "name": "John Doe",
                 "designation": "Manager",
                 "email": "jhon@exam.com",
@@ -74,13 +75,12 @@ class TestPartnerHomePageService:
     @pytest.mark.asyncio
     async def test_get_partner_homepage_details_success(self):
         """Test successful retrieval of partner homepage details."""
-        user_id = partner_id = 1
+        user_id = partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self._mock_common_homepage_repositories()
         partner_config_service_mock = self._mock_partner_config_service(
             [
-                {"key": "is_maglo_enabled", "value": True},
                 {"key": "is_talko_enabled", "value": False},
-                {"key": "is_babbler_enabled", "value": True},
+                {"key": "is_obotaai_enabled", "value": True},
             ]
         )
 
@@ -95,9 +95,8 @@ class TestPartnerHomePageService:
         assert result.partner_info.partner_id == partner_id
         assert result.partner_info.subscription_mode == SubscriptionModeEnum.SELF_SERVED
 
-        assert result.services_info.is_maglo_enabled is True
         assert result.services_info.is_talko_enabled is False
-        assert result.services_info.is_babbler_enabled is True
+        assert result.services_info.is_obotaai_enabled is True
 
         assert result.user_permissions.can_view_dashboard is True
         assert result.user_permissions.can_view_partners is True
@@ -120,11 +119,11 @@ class TestPartnerHomePageService:
         """New code: is_add_number_enabled must be surfaced in services_info,
         same as is_obotaai_enabled, so the home page reflects the live
         partner-config toggle rather than a stale value."""
-        user_id = partner_id = 1
+        user_id = partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self._mock_common_homepage_repositories()
         partner_config_service_mock = self._mock_partner_config_service(
             [
-                {"key": "is_maglo_enabled", "value": True},
+                {"key": "is_talko_enabled", "value": True},
                 {"key": "is_add_number_enabled", "value": True},
                 {"key": "is_obotaai_enabled", "value": True},
             ]
@@ -140,7 +139,7 @@ class TestPartnerHomePageService:
     @pytest.mark.asyncio
     async def test_get_partner_homepage_details_without_partner_config(self):
         """Test homepage details when no partner config is found."""
-        user_id = partner_id = 1
+        user_id = partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self._mock_common_homepage_repositories()
 
         # get_partner_config_by_key must be AsyncMock even when
@@ -160,9 +159,7 @@ class TestPartnerHomePageService:
         )
 
         # Assert — services_info should remain defaults (all False)
-        assert result.services_info.is_maglo_enabled is False
         assert result.services_info.is_talko_enabled is False
-        assert result.services_info.is_babbler_enabled is False
         assert result.services_info.is_add_number_enabled is False
         assert result.services_info.is_obotaai_enabled is False
 
@@ -185,8 +182,8 @@ class TestPartnerHomePageService:
     async def test_get_partner_homepage_details_unexpected_error(self):
         """Test unexpected error during retrieval of partner homepage details."""
         # Arrange
-        user_id = 1
-        partner_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
         self.repository_mock.get_user_hierarchy.side_effect = Exception(
             "Unexpected error"
         )
@@ -203,7 +200,7 @@ class TestPartnerHomePageService:
     async def test_partner_dashboard_cards_success(self):
         """Test successful retrieval of partner dashboard cards."""
         # Arrange
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_dashboard_cards = [
             {"title": "Total Partners", "count": 100},
             {"title": "Last Week Partners", "count": 10},
@@ -231,7 +228,7 @@ class TestPartnerHomePageService:
     async def test_partner_dashboard_cards_unexpected_error(self):
         """Test unexpected error during retrieval of partner dashboard cards."""
         # Arrange
-        current_user_id = 1
+        current_user_id= UUID("11111111-1111-1111-1111-111111111111")
         self.repository_mock.partner_dashboard_cards.side_effect = Exception(
             "Unexpected error"
         )
@@ -253,12 +250,12 @@ class TestPartnerHomePageService:
     async def test_get_partner_homepage_details_partner_fetch_failure(self):
         """Test unexpected error during partner fetch inside homepage details."""
 
-        user_id = 1
-        partner_id = 1
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         mock_hierarchy_details = {"role_hierarchy_level": 2}
         mock_user_information = {
-            "id": 1,
+            "id": UUID("11111111-1111-1111-1111-111111111111"),
             "name": "John Doe",
             "designation": "Manager",
             "email": "jhon@exam.com",

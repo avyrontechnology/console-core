@@ -8,7 +8,6 @@ from src.core.container import Container
 
 from src.loggers.console_celery_logger import CeleryLogger
 from src.console_celery.celery_app import celery
-from src.components.services.email_service import EmailService
 
 
 from datetime import timezone, datetime

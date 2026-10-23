@@ -1,4 +1,5 @@
 import uuid
+from uuid import UUID
 from contextlib import AbstractContextManager
 from datetime import datetime, timedelta, timezone
 from typing import Callable, List, Optional
@@ -39,7 +40,7 @@ class AuthRepository:
     async def add_role(
         self,
         user_role: RoleData,
-        user_id: int,
+        user_id: UUID,
     ) -> Role:
         try:
             async with self.__session_factory() as session:
@@ -69,7 +70,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def get_role_by_id(self, id: int) -> Role:
+    async def get_role_by_id(self, id: UUID) -> Role:
         try:
             async with self.__session_factory() as session:
                 query = select(Role).where(Role.id == id, Role.is_active == True)
@@ -93,7 +94,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def resolve_role_for_partner(self, role_id: int, partner_id: int) -> int:
+    async def resolve_role_for_partner(self, role_id: UUID, partner_id: UUID) -> int:
         """Return the partner-owned copy of role_id (matched by slug) if available, else role_id."""
         async with self.__session_factory() as session:
             result = await session.execute(select(Role.slug).where(Role.id == role_id))
@@ -112,7 +113,7 @@ class AuthRepository:
             return partner_role_id if partner_role_id is not None else role_id
 
     async def get_all_role(
-        self, is_internal_partner: bool, partner_id: Optional[int] = None
+        self, is_internal_partner: bool, partner_id: Optional[UUID] = None
     ) -> List[Role]:
         try:
             async with self.__session_factory() as session:
@@ -137,7 +138,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def delete_role(self, id: int, user_id: int) -> Role:
+    async def delete_role(self, id: UUID, user_id: UUID) -> Role:
         try:
             async with self.__session_factory() as session:
                 query = select(Role).where(Role.id == id, Role.is_active == True)
@@ -170,7 +171,7 @@ class AuthRepository:
     async def add_permission(
         self,
         user_permission: PermissionData,
-        user_id: int,
+        user_id: UUID,
     ) -> Permission:
         try:
             self.__auth_service_logger.info(
@@ -229,7 +230,7 @@ class AuthRepository:
             raise
 
     # get permission object by id
-    async def get_permission_by_id(self, id: int) -> Permission:
+    async def get_permission_by_id(self, id: UUID) -> Permission:
         try:
             async with self.__session_factory() as session:
                 query = select(Permission).where(
@@ -252,7 +253,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def delete_permission(self, id: int, user_id: int) -> Permission:
+    async def delete_permission(self, id: UUID, user_id: UUID) -> Permission:
         try:
             async with self.__session_factory() as session:
                 self.__auth_service_logger.info("Getting permission form DataBase")
@@ -287,7 +288,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def get_user_permission(self, user_id: int) -> List[str]:
+    async def get_user_permission(self, user_id: UUID) -> List[str]:
         try:
             async with self.__session_factory() as session:
                 self.__auth_service_logger.info(
@@ -322,7 +323,7 @@ class AuthRepository:
             )
             raise ex
 
-    async def get_role_by_user_id(self, user_id: int) -> dict:
+    async def get_role_by_user_id(self, user_id: UUID) -> dict:
         try:
             async with self.__session_factory() as session:
                 query = (
@@ -366,7 +367,7 @@ class AuthRepository:
             raise exc
 
     async def get_parent_users_by_role_id(
-        self, role_id: int, partner_id: int
+        self, role_id: UUID, partner_id: UUID
     ) -> List[User]:
         try:
             async with self.__session_factory() as session:
@@ -424,7 +425,7 @@ class AuthRepository:
             )
             raise exec
 
-    async def get_default_role_permission_for_user(self, user_id: int) -> List[str]:
+    async def get_default_role_permission_for_user(self, user_id: UUID) -> List[str]:
         """
         Fetch permission slugs for a user from DefaultRolePermission mapping.
         """
@@ -462,7 +463,7 @@ class AuthRepository:
             raise ex
 
     async def get_partner_role_permissions_by_partner_and_role(
-        self, partner_id: int, role_id: int
+        self, partner_id: UUID, role_id: UUID
     ) -> List[Permission]:
         """
         Fetch full Permission objects for a partner and role from PartnerRolePermission mapping.
@@ -490,7 +491,7 @@ class AuthRepository:
             raise ex
 
     async def get_default_role_permissions_by_role_id(
-        self, role_id: int
+        self, role_id: UUID
     ) -> List[Permission]:
         """
         Fetch full Permission objects for a role from DefaultRolePermission mapping.
@@ -517,7 +518,7 @@ class AuthRepository:
     async def get_default_role_permission_matrix(
         self,
         is_internal_permission: Optional[bool] = False,
-        filter_partner_id: Optional[int] = None,
+        filter_partner_id: Optional[UUID] = None,
     ):
         try:
             async with self.__session_factory() as session:
@@ -578,7 +579,7 @@ class AuthRepository:
             raise exec
 
     async def update_permission(
-        self, permission_id: int, permission_data: UpdatePermissionRquest
+        self, permission_id: UUID, permission_data: UpdatePermissionRquest
     ) -> Permission:
         try:
             async with self.__session_factory() as session:
@@ -634,7 +635,7 @@ class AuthRepository:
 
                 query = select(Permission.slug).where(Permission.is_internal == True)
                 result = await session.execute(query)
-                permissions: List[str] = result.fetchall()
+                permissions: List[str] = list(result.scalars().all())
                 return permissions
 
         except Exception as exc:
@@ -645,7 +646,7 @@ class AuthRepository:
 
     async def update_role(
         self,
-        role_id: int,
+        role_id: UUID,
         **role_data,
     ) -> Role:
         try:
@@ -712,7 +713,7 @@ class AuthRepository:
             raise ex
 
     async def create_otp(
-        self, user_id: int, otp_type: OtpType, additional_info: dict = None
+        self, user_id: UUID, otp_type: OtpType, additional_info: dict = None
     ) -> OTP:
         """
         Async method to create or update OTP for a user per type.
@@ -773,7 +774,7 @@ class AuthRepository:
             raise ex
 
     async def get_active_otp(
-        self, user_id: int, otp_type: OtpType, otp: str
+        self, user_id: UUID, otp_type: OtpType, otp: str
     ) -> OTP | None:
         """
         Fetch OTP for a user that is:
@@ -814,7 +815,7 @@ class AuthRepository:
 
         Args:
             is_internal_partner: When True, internal roles are included.
-                Maglo partners are never internal, so this defaults to False —
+                Partners are never internal by default, so this defaults to False —
                 only non-internal roles are returned unless explicitly requested.
 
         Returns:
@@ -854,7 +855,7 @@ class AuthRepository:
             self.__auth_service_logger.error("Error in get_all_roles: {}".format(exc))
             raise
 
-    async def get_ancestor_ids(self, user_id: int) -> List[int]:
+    async def get_ancestor_ids(self, user_id: UUID) -> List[int]:
         try:
             async with self.__session_factory() as session:
                 parent_cte = (

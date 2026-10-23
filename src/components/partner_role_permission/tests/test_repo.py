@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 import collections
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,8 +35,8 @@ class TestPartnerPermissionRepository:
 
     async def test_add_partner_permission_success(self):
         """Test adding a partner permission successfully."""
-        add_data = PartnerPermissionData(partner_id=1, role_id=1, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock subqueries for partner, role, and permission existence
         mock_result = MagicMock()
@@ -61,8 +62,8 @@ class TestPartnerPermissionRepository:
 
     async def test_add_partner_permission_unique_violation(self):
         """Test handling unique constraint violation during partner permission addition."""
-        add_data = PartnerPermissionData(partner_id=1, role_id=1, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Simulate UniqueViolationError during commit
         self.session.commit = AsyncMock(
@@ -76,8 +77,8 @@ class TestPartnerPermissionRepository:
 
     async def test_add_partner_permission_fk_constraint_violation(self):
         """Test handling foreign key constraint violation during partner permission addition."""
-        add_data = PartnerPermissionData(partner_id=1, role_id=1, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Simulate IntegrityError for foreign key constraint
         fk_error_message = "foreign key constraint"
@@ -93,7 +94,7 @@ class TestPartnerPermissionRepository:
     async def test_get_all_partner_role_permission(self):
         """Test retrieving all partner role permissions."""
         mock_partner_permission = PartnerRolePermission(
-            partner_id=1, role_id=1, permission_id=1
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111")
         )
 
         # Mock the query execution
@@ -109,7 +110,7 @@ class TestPartnerPermissionRepository:
     async def test_get_by_partner_id_partner_role_permission(self):
         """Test retrieving all partner role permissions by partner id."""
         mock_partner_permission = PartnerRolePermission(
-            partner_id=1, role_id=1, permission_id=1
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111")
         )
 
         # Mock the query execution
@@ -124,7 +125,7 @@ class TestPartnerPermissionRepository:
 
     async def test_get_by_partner_id_not_found(self):
         """Test retrieving partner permissions by partner ID when no permissions exist."""
-        partner_id = 99
+        partner_id= UUID("99999999-9999-9999-9999-999999999999")
 
         # Mock the query execution to return an empty list
         mock_result = MagicMock()
@@ -135,13 +136,13 @@ class TestPartnerPermissionRepository:
             await self.repository.get_by_partner_id(partner_id)
 
         # Verify the exception message
-        assert str(exc_info.value) == "Partner Role Permission not found, id: 99"
+        assert str(exc_info.value) == "Partner Role Permission not found, id: 99999999-9999-9999-9999-999999999999"
 
     async def test_get_partner_role_permission_by_id(self):
         """Test retrieving a partner role permission by ID."""
 
         mock_partner_permission = PartnerRolePermission(
-            id=1, partner_id=1, role_id=1, permission_id=1
+            id= UUID("11111111-1111-1111-1111-111111111111"), partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111")
         )
 
         # Mock the query execution to return a single result
@@ -151,7 +152,7 @@ class TestPartnerPermissionRepository:
         )
         self.session.execute = AsyncMock(return_value=mock_result)
 
-        result = await self.repository.get_partner_role_permission_by_id(1)
+        result = await self.repository.get_partner_role_permission_by_id(UUID("11111111-1111-1111-1111-111111111111"))
 
         assert result.id == mock_partner_permission.id
         assert result.partner_id == mock_partner_permission.partner_id
@@ -159,8 +160,8 @@ class TestPartnerPermissionRepository:
     async def test_add_partner_permission_partner_not_found(self):
         """Test adding partner permission when partner does not exist."""
 
-        add_data = PartnerPermissionData(partner_id=99, role_id=1, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("99999999-9999-9999-9999-999999999999"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the result to show partner does not exist
         mock_result = MagicMock()
@@ -177,8 +178,8 @@ class TestPartnerPermissionRepository:
     async def test_add_partner_permission_permission_not_found(self):
         """Test adding partner permission when permission does not exist."""
 
-        add_data = PartnerPermissionData(partner_id=1, role_id=1, permission_id=99)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("99999999-9999-9999-9999-999999999999"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the result to show permission does not exist
         mock_result = MagicMock()
@@ -195,8 +196,8 @@ class TestPartnerPermissionRepository:
     async def test_add_partner_permission_role_not_found(self):
         """Test adding partner permission when role does not exist."""
 
-        add_data = PartnerPermissionData(partner_id=1, role_id=99, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("99999999-9999-9999-9999-999999999999"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the result to show role does not exist
         mock_result = MagicMock()
@@ -212,7 +213,7 @@ class TestPartnerPermissionRepository:
 
     async def test_delete_partner_role_permission_success(self):
         """Test deleting a partner role permission successfully."""
-        permission_id = 1
+        permission_id= UUID("11111111-1111-1111-1111-111111111111")
         mock_permission = PartnerRolePermission(id=permission_id)
 
         # Mock the query execution to return the permission object
@@ -234,7 +235,7 @@ class TestPartnerPermissionRepository:
 
     async def test_get_by_id_partner_role_permission_general_exception(self):
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the query execution to raise a general exception
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
@@ -246,7 +247,7 @@ class TestPartnerPermissionRepository:
 
     async def test_delete_partner_role_permission_general_exception(self):
 
-        partner_id = 1
+        partner_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the query execution to raise a general exception
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
@@ -268,8 +269,8 @@ class TestPartnerPermissionRepository:
 
     async def test_add_partner_permission_general_exception(self):
 
-        add_data = PartnerPermissionData(partner_id=1, role_id=1, permission_id=1)
-        user_id = 1
+        add_data = PartnerPermissionData(partner_id= UUID("11111111-1111-1111-1111-111111111111"), role_id= UUID("11111111-1111-1111-1111-111111111111"), permission_id= UUID("11111111-1111-1111-1111-111111111111"))
+        user_id= UUID("11111111-1111-1111-1111-111111111111")
 
         # Mock the query execution to raise a general exception
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
@@ -287,9 +288,9 @@ class TestPartnerPermissionRepository:
         self.session.execute = AsyncMock(return_value=mock_result)
 
         with pytest.raises(PartnerRolePermissionException) as exc_info:
-            await self.repository.delete_partner_role_permission(1)
+            await self.repository.delete_partner_role_permission(UUID("11111111-1111-1111-1111-111111111111"))
 
-        assert "Partner Role Permission not found, id: 1" in str(exc_info.value)
+        assert "Partner Role Permission not found, id: 11111111-1111-1111-1111-111111111111" in str(exc_info.value)
 
     async def test_get_partner_role_permission_by_id_not_found(self):
 
@@ -299,9 +300,9 @@ class TestPartnerPermissionRepository:
         self.session.execute = AsyncMock(return_value=mock_result)
 
         with pytest.raises(PartnerRolePermissionException) as exc_info:
-            await self.repository.get_partner_role_permission_by_id(1)
+            await self.repository.get_partner_role_permission_by_id(UUID("11111111-1111-1111-1111-111111111111"))
 
-        assert "Partner Role Permission not found, id: 1" in str(exc_info.value)
+        assert "Partner Role Permission not found, id: 11111111-1111-1111-1111-111111111111" in str(exc_info.value)
 
     async def test_get_partner_role_permission_by_id_general_exception(self):
 
@@ -309,7 +310,7 @@ class TestPartnerPermissionRepository:
         self.session.execute = AsyncMock(side_effect=Exception("Unexpected error"))
 
         with pytest.raises(Exception) as exc_info:
-            await self.repository.get_partner_role_permission_by_id(1)
+            await self.repository.get_partner_role_permission_by_id(UUID("11111111-1111-1111-1111-111111111111"))
 
         assert "Unexpected error" in str(exc_info.value)
 
@@ -335,13 +336,13 @@ class TestPartnerPermissionRepository:
             ],
         )
         mock_row = Row(
-            partner_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
             partner_name="PartnerA",
-            role_id=2,
+            role_id= UUID("22222222-2222-2222-2222-222222222222"),
             role_name="Admin",
             category="Category1",
             slug="perm_slug",
-            permission_id=101,
+            permission_id= UUID("10110110-1101-1011-0110-110110110110"),
             created_at=1234567890,
             description="desc",
             display_text="Permission Display",
@@ -364,7 +365,7 @@ class TestPartnerPermissionRepository:
     async def test_get_partner_role_permission_matrix_catches_custom_exception(self):
         """Test that PartnerRolePermissionException is logged and re-raised."""
         key = "IS_CUSTOM_ROLE_PERMISSION_ENABLED"
-        partner_id = 123
+        partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         # Patch the repository method to raise the custom exception directly
         with patch.object(

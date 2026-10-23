@@ -1,5 +1,6 @@
 """Custom exception definitions for Wallet operations."""
 
+from uuid import UUID
 from src.components.common.errors import NotFoundError
 
 
@@ -8,7 +9,7 @@ class WalletNotFoundError(NotFoundError):
 
     entity_name: str = "wallet"
 
-    def __init__(self, partner_id: int) -> None:
+    def __init__(self, partner_id: UUID) -> None:
         super().__init__(partner_id)
 
 
@@ -17,7 +18,7 @@ class WalletAlreadyExistsError(Exception):
 
     entity_name: str = "wallet"
 
-    def __init__(self, partner_id: int) -> None:
+    def __init__(self, partner_id: UUID) -> None:
         super().__init__(
             f"{self.entity_name} already exists for partner id: {partner_id}"
         )

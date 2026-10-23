@@ -38,9 +38,7 @@ class PaginationConstants:
 
 
 class DashboardFilters(Enum):
-    PARTNERS_USING_MAGLO = "partners_using_maglo"
     PARTNERS_USING_TALKO = "partners_using_talko"
-    PARTNERS_USING_BABBLER = "partners_using_babbler"
     PARTNERS_GT_FIFTY_LICENSES = "partners_gt_fifty_licenses"
     PARTNERS_LAST_SEVEN_DAYS = "partners_last_seven_days"
 

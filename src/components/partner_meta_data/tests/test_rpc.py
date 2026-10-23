@@ -1,3 +1,4 @@
+from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -28,7 +29,7 @@ class TestPartnerMetaDataServiceGrpc:
         """Fixture for gRPC request"""
 
         class MockRequest:
-            partner_id = 123
+            partner_id= UUID("12312312-3123-1231-2312-312312312312")
 
         return MockRequest()
 

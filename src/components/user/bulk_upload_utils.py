@@ -11,9 +11,6 @@ def build_bulk_upload_headers(flags: Dict[str, bool]) -> List[str]:
     # Optional columns
     headers.extend(BulkUploadColumns.OPTIONAL)
     # Conditional columns
-    if flags.get("is_teams_enabled"):
-        headers.append(BulkUploadColumns.TEAM)
-
     if flags.get("is_partner_custom_roles_enabled"):
         headers.append(BulkUploadColumns.CUSTOM_ROLE)
 

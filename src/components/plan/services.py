@@ -1,5 +1,6 @@
 """Plan service layer."""
 
+from uuid import UUID
 from typing import List, Optional
 
 from src.components.plan.errors import PlanNotFoundError
@@ -16,7 +17,7 @@ class PlanService:
         self.__plan_repository: PlanRepository = plan_repository
         self.__logger: ConsoleServiceLogger = logger
 
-    async def create_plan(self, plan_data: PlanBase, user_id: int) -> Plan:
+    async def create_plan(self, plan_data: PlanBase, user_id: UUID) -> Plan:
         """Create new plan."""
         self.__logger.info(
             "Service: create_plan started name={}".format(plan_data.name)
@@ -35,7 +36,7 @@ class PlanService:
 
     async def get_active_plans(
         self,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         service_name: Optional[str] = None,
         plan_type: Optional[str] = None,
         duration: Optional[int] = None,
@@ -56,7 +57,7 @@ class PlanService:
             )
             raise
 
-    async def get_plan_by_id(self, plan_id: int) -> Plan:
+    async def get_plan_by_id(self, plan_id: UUID) -> Plan:
         """Get a single plan or raise PlanNotFoundError."""
         try:
             self.__logger.info("Service: get_plan_by_id started id={}".format(plan_id))
@@ -74,7 +75,7 @@ class PlanService:
             raise
 
     async def update_plan(
-        self, plan_id: int, plan_data: PlanUpdate, user_id: int
+        self, plan_id: UUID, plan_data: PlanUpdate, user_id: UUID
     ) -> Plan:
         """Update an existing plan."""
         self.__logger.info("Service: update_plan started id={}".format(plan_id))
@@ -96,7 +97,7 @@ class PlanService:
             )
             raise
 
-    async def delete_plan(self, plan_id: int, user_id: int) -> None:
+    async def delete_plan(self, plan_id: UUID, user_id: UUID) -> None:
         """Soft delete a plan."""
         try:
             self.__logger.info("Service: delete_plan started id={}".format(plan_id))

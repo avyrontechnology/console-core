@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Any, List, Optional, Set
 
 from dependency_injector.wiring import Provide, inject
@@ -22,7 +23,6 @@ from src.components.plan.mapper import SERVICE_FEATURE_MAPPER
 from src.components.plan.models import Plan
 from src.components.plan.schema import PlanBase, PlanResponse, PlanUpdate
 from src.components.plan.services import PlanService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.core.container import Container
 from src.loggers.console_service_logger import ConsoleServiceLogger
@@ -38,7 +38,7 @@ class PlanController:
         response_model=PlanResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_plan")
     @inject
     async def create_plan(
         request: Request,
@@ -52,7 +52,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             created_plan: Plan = await plan_service.create_plan(plan_data, user_id)
             logger.info(f"Controller: create_plan succeeded id={created_plan.id}")
@@ -84,7 +84,7 @@ class PlanController:
 
     @plan_router.get("/get-plans", response_model=List[PlanResponse])
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_active_plans")
     async def get_active_plans(
         request: Request,
         service_name: Optional[str] = None,
@@ -129,9 +129,9 @@ class PlanController:
                     )
                 )
 
-            partner_id: Optional[int] = None
+            partner_id: Optional[UUID] = None
             if hasattr(request.state, "user") and request.state.user:
-                partner_id: int = request.state.user.get("partner_id")
+                partner_id: UUID = request.state.user.get("partner_id")
                 logger.info(
                     f"Controller: get_active_plans authenticated request partner_id={partner_id}"
                 )
@@ -155,10 +155,10 @@ class PlanController:
 
     @plan_router.get("/get-plan-by-id/{plan_id}", response_model=PlanResponse)
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_plan_by_id")
     async def get_plan_by_id(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -186,10 +186,10 @@ class PlanController:
 
     @plan_router.patch("/update-plan/{plan_id}", response_model=PlanResponse)
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_plan")
     async def update_plan(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_data: PlanUpdate,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
@@ -200,7 +200,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             updated_plan: Plan = await plan_service.update_plan(
                 plan_id, plan_data, user_id
@@ -238,10 +238,10 @@ class PlanController:
 
     @plan_router.delete("/delete-plan/{plan_id}")
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_plan")
     async def delete_plan(
         request: Request,
-        plan_id: int,
+        plan_id: UUID,
         plan_service: PlanService = Depends(Provide[Container.plan_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -251,7 +251,7 @@ class PlanController:
 
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get("user_id")
+            user_id: UUID = current_user.get("user_id")
 
             await plan_service.delete_plan(plan_id, user_id)
             logger.info(f"Controller: delete_plan succeeded id={plan_id}")
@@ -270,7 +270,7 @@ class PlanController:
 
     @plan_router.get("/get-modules")
     @inject
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_modules")
     async def get_modules(
         request: Request,
         service_name: Optional[str] = None,

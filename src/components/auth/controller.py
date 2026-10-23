@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -51,9 +52,8 @@ from src.components.location.errors import (
     CountryNotFoundError,
     StateNotFoundError,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
-from src.components.user.errors import PublisherExistsError, UserNotFoundError
+from src.components.user.errors import UserNotFoundError
 from src.components.user.models import User
 from src.components.user.schema import Contrasts
 from src.components.user.services import UserService
@@ -200,11 +200,6 @@ class AuthController:
                 "Unexpected error during signup: {}".format(str(ex))
             )
             return ResourceConflictResponse(str(ex))
-        except PublisherExistsError as exc:
-            console_service_logger.error(
-                "Publisher already exists while creating new user: {}".format(str(exc))
-            )
-            return ResourceConflictResponse(str(exc))
         except Exception as ex:
             console_service_logger.error(
                 "Unexpected error during signup: {}".format(repr(ex))
@@ -215,7 +210,7 @@ class AuthController:
         "/role",
         response_model=RoleResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_role")
     @inject
     async def create_role(
         request: Request,
@@ -246,7 +241,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/role", response_model=List[RoleResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_roles")
     @inject
     async def get_roles(
         request: Request,
@@ -257,7 +252,7 @@ class AuthController:
     ):
         try:
             current_user: dict = request.state.user
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             console_service_logger.info("Attempting to get roles...")
             roles = await auth_service.get_all_role(partner_id)
             console_service_logger.info(
@@ -278,11 +273,11 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/role/{id}", response_model=RoleResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_role_by_id")
     @inject
     async def get_role_by_id(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -305,11 +300,11 @@ class AuthController:
 
     # soft delete role change is_activate=false and is_delete=true
     @auth_router.delete("/role/{id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_roles")
     @inject
     async def delete_roles(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -336,7 +331,7 @@ class AuthController:
         response_model=PermissionResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_permission")
     @inject
     async def create_permission(
         request: Request,
@@ -368,8 +363,43 @@ class AuthController:
             )
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
+    @auth_router.get("/user/permissions", response_model=List[str])
+    @permission_check("console:get_user_permissions")
+    @inject
+    async def get_user_permissions(
+        request: Request,
+        auth_service: AuthService = Depends(Provide[Container.auth_service]),
+        partner_config_service: PartnerConfigService = Depends(
+            Provide[Container.partner_config_service]
+        ),
+        console_service_logger: ConsoleServiceLogger = Depends(
+            Provide[Container.console_service_logger]
+        ),
+    ):
+        """Permission slugs granted to the calling user.
+
+        The homepage payload carries UI feature flags (can_view_users, ...),
+        not RBAC slugs, so clients gate on this instead. Uses the same
+        resolution as enforcement (default role + partner grants) so the UI
+        never disagrees with the API.
+        """
+        try:
+            user_id: UUID = request.state.user.get(CurrentUserMap.USER_ID)
+            console_service_logger.info(
+                "Fetching permission slugs for user: {}".format(user_id)
+            )
+            permissions: List[str] = (
+                await partner_config_service.custom_role_permission_check(user_id)
+            )
+            return SuccessResponse(jsonable_encoder(permissions))
+        except Exception as ex:
+            console_service_logger.error(
+                "Unexpected error while fetching user permissions: {}".format(repr(ex))
+            )
+            return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
+
     @auth_router.get("/permission", response_model=List[PermissionResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_all_permission")
     @inject
     async def get_all_permission(
         request: Request,
@@ -382,7 +412,7 @@ class AuthController:
         try:
             console_service_logger.info("checking is user is internal or not")
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             if not await user_service.is_user_internal(user_id):
                 console_service_logger.warning(
                     "User with id {} is not an internal user, cannot fetch internal permissions.".format(
@@ -412,11 +442,11 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/permission/{id}", response_model=PermissionResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_permission_by_id")
     @inject
     async def get_permission_by_id(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -443,11 +473,11 @@ class AuthController:
 
     # soft delete permission change is_activate=false and is_delete=true
     @auth_router.delete("/permission/{id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:delete_permission")
     @inject
     async def delete_permission(
         request: Request,
-        id: int,
+        id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -472,7 +502,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.post("/reset_password")
-    @permission_check(PermissionDependency)
+    @permission_check("console:reset_password")
     @inject
     async def reset_password(
         request: Request,
@@ -508,12 +538,12 @@ class AuthController:
         "/get_parents/{role_id}/partner/{partner_id}",
         response_model=list[Contrasts.ParentUserResponse],
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_parent_users_by_role_id")
     @inject
     async def get_parent_users_by_role_id(
         request: Request,
-        role_id: int,
-        partner_id: int,
+        role_id: UUID,
+        partner_id: UUID,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -527,11 +557,11 @@ class AuthController:
 
             current_user: dict = request.state.user
 
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
 
             user_details: User = await user_service.get_user_details(current_user_id)
 
-            current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
             current_user_hierarchy: int = user_details.get(
                 CurrentUserMap.ROLE_HIERARCHY_LEVEL
@@ -565,7 +595,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/get_permissions_for_all_roles", response_model=dict)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_default_role_permission_matrix")
     @inject
     async def get_default_role_permission_matrix(
         request: Request,
@@ -581,10 +611,10 @@ class AuthController:
         try:
             console_service_logger.info("fetching permissions for all the roles.")
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
 
-            filter_partner_id: Optional[int] = None
+            filter_partner_id: Optional[UUID] = None
             if not is_internal_permission:
                 config = await partner_config_service.get_partner_config_by_key(
                     partner_id, PartnerConfigEnum.IS_PARTNER_CUSTOM_ROLES_ENABLED.value
@@ -616,11 +646,11 @@ class AuthController:
         "/permission/{permission_id}",
         response_model=UpdatePermissionResponse,
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_permission")
     @inject
     async def update_permission(
         request: Request,
-        permission_id: int,
+        permission_id: UUID,
         permission_data: UpdatePermissionRquest,
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
@@ -656,12 +686,12 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.post("/assume_user/{user_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:assume_user")
     @inject
     async def assume_user(
         request: Request,
         svc_name: ServiceNames,
-        user_id: int = Path(..., ge=1, le=2_147_483_647),
+        user_id: UUID = Path(..., description="User ID to assume."),
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -693,7 +723,7 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.get("/categories")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_categories")
     @inject
     async def get_categories(
         request: Request,
@@ -715,7 +745,7 @@ class AuthController:
             return InternalServerErrorResponse(detail=str(exec))
 
     @auth_router.get("/resources")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_permission_title_by_category_name")
     @inject
     async def get_permission_title_by_category_name(
         request: Request,
@@ -739,11 +769,11 @@ class AuthController:
             return InternalServerErrorResponse(ErrorMsg.INTERNAL_SERVER_ERROR)
 
     @auth_router.patch("/role/{role_id}")
-    @permission_check(PermissionDependency)
+    @permission_check("console:update_role")
     @inject
     async def update_role(
         request: Request,
-        role_id: int,
+        role_id: UUID,
         role_data: UpdateRoleRequest = Body(...),
         auth_service: AuthService = Depends(Provide[Container.auth_service]),
         console_service_logger: ConsoleServiceLogger = Depends(

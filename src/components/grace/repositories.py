@@ -1,5 +1,6 @@
 """Grace Period Repository."""
 
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, List, Optional, Tuple
 
@@ -27,12 +28,12 @@ class GraceRepository:
 
     async def create_grace(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
         remark: str,
         granted_days: int,
         attempt_number: int,
-        created_by: int,
+        created_by: UUID,
     ) -> GracePeriod:
         """
         Insert a new ACTIVE grace record.
@@ -85,7 +86,7 @@ class GraceRepository:
     # =========================================================================
 
     async def get_active_grace(
-        self, partner_id: int, service_name: str
+        self, partner_id: UUID, service_name: str
     ) -> Optional[GracePeriod]:
         """
         Return the single ACTIVE grace record for partner + service if it exists
@@ -106,7 +107,7 @@ class GraceRepository:
             result = await session.execute(stmt)
             return result.scalars().first()
 
-    async def get_all_active_for_partner(self, partner_id: int) -> List[GracePeriod]:
+    async def get_all_active_for_partner(self, partner_id: UUID) -> List[GracePeriod]:
         """
         Return all ACTIVE grace records for a partner across all services.
         Filters by end_date > now as a safety net for delayed Celery runs.
@@ -127,7 +128,7 @@ class GraceRepository:
             return list(result.scalars().all())
 
     async def get_all_for_service(
-        self, partner_id: int, service_name: str
+        self, partner_id: UUID, service_name: str
     ) -> List[GracePeriod]:
         """Return all grace records for a partner + service, ordered by attempt_number ASC."""
         async with self.session_factory() as session:
@@ -142,7 +143,7 @@ class GraceRepository:
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def get_all_for_partner(self, partner_id: int) -> List[GracePeriod]:
+    async def get_all_for_partner(self, partner_id: UUID) -> List[GracePeriod]:
         """
         Return all grace records for a partner across all services,
         ordered by created_at ASC.
@@ -157,7 +158,7 @@ class GraceRepository:
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def count_attempts(self, partner_id: int, service_name: str) -> int:
+    async def count_attempts(self, partner_id: UUID, service_name: str) -> int:
         """Return total count of grace records for partner + service (all statuses)."""
         async with self.session_factory() as session:
             stmt = select(func.count(GracePeriod.id)).where(
@@ -168,7 +169,7 @@ class GraceRepository:
             return result.scalar() or 0
 
     async def get_unsettled_for_service(
-        self, partner_id: int, service_name: str
+        self, partner_id: UUID, service_name: str
     ) -> List[GracePeriod]:
         """
         Return all ACTIVE or EXPIRED (unsettled) grace records for partner + service,
@@ -194,9 +195,9 @@ class GraceRepository:
 
     async def settle_all(
         self,
-        partner_id: int,
+        partner_id: UUID,
         service_name: str,
-        order_id: int,
+        order_id: UUID,
         payment_date_ms: int,
     ) -> Tuple[Optional[int], int]:
         """

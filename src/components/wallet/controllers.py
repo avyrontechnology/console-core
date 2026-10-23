@@ -1,5 +1,6 @@
 """Wallet Controller module."""
 
+from uuid import UUID
 import json
 from typing import Any, Dict, Optional
 
@@ -20,7 +21,6 @@ from src.components.common.response import (
 )
 from src.components.partner.models import Partner
 from src.components.partner.services import PartnerService
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.wallet.enum import ServiceName, TransactionType, PartnerTimeZone
 from src.components.wallet.errors import (
@@ -46,12 +46,12 @@ class WalletController:
     wallet_router = APIRouter()
 
     @wallet_router.get("", summary="Get wallet details")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_wallet")
     @inject
     async def get_wallet(
         request: Request,
         api_key: Optional[str] = Header(None, alias="API-KEY"),
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         wallet_service: WalletService = Depends(Provide[Container.wallet_service]),
         logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
@@ -61,7 +61,7 @@ class WalletController:
     ) -> SuccessResponse:
         """Retrieve wallet details for the current partner."""
         current_user: dict = request.state.user
-        current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         try:
             effective_partner_id = await WalletHelper.resolve_partner_id_with_api_key(
                 current_user,
@@ -105,11 +105,11 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(exc))
 
     @wallet_router.get("/transactions", summary="Get wallet transactions")
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_wallet_transactions")
     @inject
     async def get_wallet_transactions(
         request: Request,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key: Optional[str] = Header(None, alias="API-KEY"),
         limit: int = Query(..., ge=1, le=100),
         offset: int = Query(..., ge=1),
@@ -127,7 +127,7 @@ class WalletController:
     ) -> SuccessResponse:
         """Retrieve paginated wallet transaction history."""
         current_user: dict = request.state.user
-        current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         try:
             effective_partner_id = await WalletHelper.resolve_partner_id_with_api_key(
                 current_user,
@@ -207,11 +207,11 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(exc))
 
     @wallet_router.get("/transaction-statement", response_class=FileResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:download_transaction_statement")
     @inject
     async def download_transaction_statement(
         request: Request,
-        partner_id: Optional[int] = None,
+        partner_id: Optional[UUID] = None,
         api_key: Optional[str] = Header(None, alias="API-KEY"),
         partner_timezone: Optional[str] = PartnerTimeZone.ASIA_KOLKATA,
         start_date: int = Query(...),
@@ -227,7 +227,7 @@ class WalletController:
     ):
         """Download wallet transaction statement as PDF."""
         current_user: dict = request.state.user
-        current_user_partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+        current_user_partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
         try:
             effective_partner_id = await WalletHelper.resolve_partner_id_with_api_key(
                 current_user,
@@ -266,7 +266,7 @@ class WalletController:
             return InternalServerErrorResponse(detail=str(e))
 
     @wallet_router.post("/transaction", summary="Perform wallet transaction")
-    @permission_check(PermissionDependency)
+    @permission_check("console:perform_wallet_transaction")
     @inject
     async def perform_wallet_transaction(
         request: Request,
@@ -287,7 +287,7 @@ class WalletController:
                 pid=partner_id,
             )
         )
-        current_user_id: int = request.state.user.get(CurrentUserMap.USER_ID)
+        current_user_id: UUID = request.state.user.get(CurrentUserMap.USER_ID)
 
         try:
             wallet: WalletResponse = await wallet_service.perform_transaction(

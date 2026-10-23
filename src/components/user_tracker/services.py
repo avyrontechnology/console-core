@@ -1,4 +1,5 @@
 import uuid
+from uuid import UUID
 from typing import Dict, List, Optional, Set
 
 from src.components.common.constants import CurrentUserMap
@@ -201,8 +202,8 @@ class UserTrackerService:
 
     async def get_user_availability_status(
         self,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
     ) -> UserAvailabilityStatusResponse:
         """
         Returns current_status (with icon), standard_statuses, and active custom
@@ -253,7 +254,7 @@ class UserTrackerService:
             )
             raise
 
-    async def is_valid_status(self, partner_id: int, status: str) -> bool:
+    async def is_valid_status(self, partner_id: UUID, status: str) -> bool:
         """
         Return whether `status` is a standard status or an active custom status
         for this partner. Used by other components (e.g. user profile update)
@@ -265,8 +266,8 @@ class UserTrackerService:
 
     async def update_user_status(
         self,
-        user_id: int,
-        partner_id: int,
+        user_id: UUID,
+        partner_id: UUID,
         new_status: str,
         status_icon: Optional[str] = None,
     ) -> UpdateUserStatusResponse:
@@ -331,8 +332,8 @@ class UserTrackerService:
     async def update_custom_statuses(
         self,
         current_user: dict,
-        partner_id: int,
-        updated_by: int,
+        partner_id: UUID,
+        updated_by: UUID,
         edit_custom_statuses: Dict[str, CustomStatusEditItem],
         add_custom_statuses: List[CustomStatusAddItem],
     ) -> UpdateCustomStatusesResponse:

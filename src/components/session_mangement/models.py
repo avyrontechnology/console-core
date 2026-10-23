@@ -1,4 +1,5 @@
-from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String
+import uuid
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -11,7 +12,7 @@ class UserSession(MetaData):
 
     session_id = Column(String, primary_key=True, index=True)
     user_id = Column(
-        Integer, ForeignKey("console_users.id"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("console_users.id"), nullable=False, index=True
     )
     ip_address = Column(String)
     device_info = Column(String)

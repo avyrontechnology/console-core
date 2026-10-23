@@ -1,3 +1,4 @@
+from uuid import UUID
 from contextlib import AbstractContextManager
 from typing import Callable, Iterator, Optional
 
@@ -36,7 +37,7 @@ class DefaultRolePermissionRepository:
     async def add_default_role_permission(
         self,
         add_data: DefaultRolePermissionData,
-        user_id: int,
+        user_id: UUID,
     ) -> DefaultRolePermission:
         try:
             async with self.__session_factory() as session:
@@ -118,7 +119,7 @@ class DefaultRolePermissionRepository:
             )
             raise exc
 
-    async def get_default_role_permissions(self, partner_id: Optional[int] = None):
+    async def get_default_role_permissions(self, partner_id: Optional[UUID] = None):
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -155,7 +156,7 @@ class DefaultRolePermissionRepository:
             )
             raise exec
 
-    async def get_default_role_permissions_by_role_id(self, role_id: int):
+    async def get_default_role_permissions_by_role_id(self, role_id: UUID):
         try:
             async with self.__session_factory() as session:
                 self.__console_service_logger.info(
@@ -227,11 +228,11 @@ class DefaultRolePermissionRepository:
 
     async def set_role_action_permissions(
         self,
-        role_id: int,
-        partner_id: int,
+        role_id: UUID,
+        partner_id: UUID,
         enable_ids: set,
         disable_ids: set,
-        user_id: int,
+        user_id: UUID,
     ) -> tuple:
         """Diff a partner-owned role's action-flag permissions in one transaction.
 
@@ -304,7 +305,7 @@ class DefaultRolePermissionRepository:
 
     async def delete_default_role_permission(
         self,
-        default_role_permission_id: int,
+        default_role_permission_id: UUID,
     ):
         try:
             async with self.__session_factory() as session:

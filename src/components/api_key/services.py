@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Optional
 
 from src.components.api_key.constants import ApiKeyResponseMessage, ExceptionMessages
@@ -33,8 +34,8 @@ class ApiKeyService:
 
     async def generate_api_key(self, current_user: dict) -> ApiKeyResponse:
         try:
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
-            partner_id: int = current_user.get(CurrentUserMap.PARTNER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
+            partner_id: UUID = current_user.get(CurrentUserMap.PARTNER_ID)
             self.__console_service_logger.info(
                 f"Attempting to generate api key for partner: {partner_id}"
             )
@@ -84,7 +85,7 @@ class ApiKeyService:
     async def get_api_key(
         self,
         current_user: dict = None,
-        partner_id: int = None,
+        partner_id: UUID = None,
         auth_service: AuthService = None,
     ) -> Optional[ApiKeyResponse]:
 
@@ -126,7 +127,7 @@ class ApiKeyService:
             )
             raise ex
 
-    async def workflow_get_api_key(self, partner_id: int) -> Optional[ApiKeyResponse]:
+    async def workflow_get_api_key(self, partner_id: UUID) -> Optional[ApiKeyResponse]:
 
         try:
             self.__console_service_logger.info(
@@ -154,9 +155,10 @@ class ApiKeyService:
     async def re_generate_api_key(
         self,
         current_user: dict = None,
-        partner_id: int = None,
+        partner_id: UUID = None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
         auth_service: AuthService = None,
     ) -> ApiKeyResponse:
 
@@ -175,9 +177,10 @@ class ApiKeyService:
                 await self.__validate_user_context(user_context, partner_id)
             elif current_user:
                 # Auto-derive from the generating user. user_context is strictly
-                # {"user_id": <int>} — no other entries are allowed.
+                # {"user_id": <uuid-string>} — no other entries are allowed.
+                # Stringified: user_context persists in a JSON column.
                 user_context = {
-                    "user_id": current_user.get(CurrentUserMap.USER_ID)
+                    "user_id": str(current_user.get(CurrentUserMap.USER_ID))
                 }
 
             self.__console_service_logger.info(
@@ -202,6 +205,7 @@ class ApiKeyService:
                 current_user_id=user_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=expires_at,
             )
 
             self.__console_service_logger.info(
@@ -217,7 +221,7 @@ class ApiKeyService:
             raise ex
 
     async def inactivate_api_key(
-        self, partner_id: int, current_user: dict
+        self, partner_id: UUID, current_user: dict
     ) -> ApiKeyResponse | None:
         """
         Inactivate (disable) the active API key associated with the given partner.
@@ -231,7 +235,7 @@ class ApiKeyService:
             ApiKeyResponse: Confirmation message if successful.
         """
         try:
-            current_user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            current_user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             self.__console_service_logger.info(
                 f"Attempting to inactivate API key for partner_id={partner_id} by user_id={current_user_id}"
             )
@@ -266,7 +270,7 @@ class ApiKeyService:
         self,
         *,
         current_user: dict | None,
-        partner_id: int | None,
+        partner_id: UUID | None,
         auth_service: AuthService,
     ) -> tuple[int, int | None]:
         """
@@ -303,7 +307,7 @@ class ApiKeyService:
         """Reject any scope string that is not a known, active permission slug.
 
         ``scopes`` is expected to be a list[str] of RBAC permission slugs
-        (e.g. ``maglo:list_leads``). An empty list is valid (clears scopes).
+        (e.g. ``talko:list_leads``). An empty list is valid (clears scopes).
         """
         if not scopes:
             return
@@ -324,10 +328,12 @@ class ApiKeyService:
             )
 
     async def __validate_user_context(
-        self, user_context: dict, partner_id: int
+        self, user_context: dict, partner_id: UUID
     ) -> None:
-        """user_context is restricted to exactly ``{"user_id": <int>}`` where
+        """user_context is restricted to exactly ``{"user_id": <uuid>}`` where
         ``user_id`` is a real user of ``partner_id``. Any other key is rejected.
+        Accepts UUID objects and UUID strings (JSON round-trips).
+        Normalizes the dict in place to the uuid-string form for JSON storage.
         """
         if not isinstance(user_context, dict):
             raise ApiKeyException(ExceptionMessages.INVALID_USER_CONTEXT)
@@ -341,8 +347,17 @@ class ApiKeyService:
             )
 
         uid = user_context.get("user_id")
-        if not isinstance(uid, int) or isinstance(uid, bool):
+        if isinstance(uid, UUID):
+            pass
+        elif isinstance(uid, str):
+            try:
+                uid = UUID(uid)
+            except (ValueError, AttributeError, TypeError):
+                raise ApiKeyException(ExceptionMessages.INVALID_USER_ID_IN_CONTEXT)
+        else:
             raise ApiKeyException(ExceptionMessages.INVALID_USER_ID_IN_CONTEXT)
+
+        user_context["user_id"] = str(uid)
 
         try:
             await self.__user_repository.get_user_by_user_id(uid, partner_id)
@@ -354,9 +369,10 @@ class ApiKeyService:
     async def update_api_key_metadata(
         self,
         current_user: dict = None,
-        partner_id: int = None,
+        partner_id: UUID = None,
         scopes: list | None = None,
         user_context: dict | None = None,
+        expires_at: int | None = None,
         auth_service: AuthService = None,
     ) -> ApiKeyResponse:
         """Update ``scopes`` / ``user_context`` on the partner's active API key
@@ -385,6 +401,7 @@ class ApiKeyService:
                 current_user_id=user_id,
                 scopes=scopes,
                 user_context=user_context,
+                expires_at=expires_at,
             )
 
             if not row:
@@ -402,7 +419,7 @@ class ApiKeyService:
             )
             raise ex
 
-    async def generated_api_key_while_partner_onboarding(self, partner_id: int):
+    async def generated_api_key_while_partner_onboarding(self, partner_id: UUID):
         try:
             self.__console_service_logger.info(
                 f"Generating API key during onboarding for partner_id={partner_id}"

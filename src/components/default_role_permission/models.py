@@ -1,5 +1,7 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, UniqueConstraint, func
+import uuid
+from sqlalchemy import Column, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.components.auth.models import Permission, Role
 from src.components.database.base_model import MetaData
@@ -12,18 +14,18 @@ class DefaultRolePermission(MetaData):
     __tablename__ = "console_default_role_permission"
 
     role_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_role.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )  # FK
     permission_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("console_permission.id", ondelete="RESTRICT"),
         index=True,
         nullable=False,
     )  # FK
-    created_by = Column(Integer, ForeignKey("console_users.id", ondelete="RESTRICT"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("console_users.id", ondelete="RESTRICT"))
 
     # Relations
     role = relationship("Role", lazy="select")

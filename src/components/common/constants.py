@@ -17,18 +17,7 @@ class CurrentUserMap:
     SUPER_ADMIN_ROLE_HIERARCHY_LEVEL: int = 0
 
 
-# app config constants
-
-
-class MagloAppConfig:
-    ANDROID_LATEST_VERSION = "1.0.12"
-    IOS_LATEST_VERSION = "1.0.11"
-
-
-class BabblerAppConfig:
-
-    ANDROID_LATEST_VERSION = "2.3.0"
-    IOS_LATEST_VERSION = "2.2.0"
+# app config constants (retired product apps removed; navbar marquee lives on)
 
 
 class FieldType(Enum):
@@ -39,6 +28,7 @@ class FieldType(Enum):
     FLOAT = "float"
     BOOLEAN = "boolean"
     DICT = "dict"
+    UUID = "uuid"
 
 
 class Limits:

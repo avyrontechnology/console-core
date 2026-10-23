@@ -1,8 +1,10 @@
 """Tests for Grace Period Pydantic schemas — GrantGraceRequest, GraceResponse, GraceStatusResponse."""
 
+from uuid import UUID
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from src.components.db_constants.loader.constant import DbConstants
 from src.components.grace.constants import GraceStatus
@@ -16,7 +18,7 @@ NOW_MS = 1_700_000_000_000
 
 
 def _validate(
-    partner_id=10, granted_days=7, remark="Valid remark", *, validated=None, error=None
+    partner_id= UUID("10101010-1010-1010-1010-101010101010"), granted_days=7, remark="Valid remark", *, validated=None, error=None
 ):
     req = GrantGraceRequest(
         partner_id=partner_id,
@@ -51,7 +53,7 @@ class TestGrantGraceRequestValidatePayload:
     def test_valid_payload_returns_dict_and_no_error(self):
         validated, error = _validate()
         assert error is None
-        assert validated["partner_id"] == 10
+        assert validated["partner_id"] == UUID("10101010-1010-1010-1010-101010101010")
         assert validated["granted_days"] == 7
         assert validated["remark"] == "Valid remark"
 
@@ -70,30 +72,32 @@ class TestGrantGraceRequestValidatePayload:
 
     def test_partner_id_zero_fails(self):
         _, error = _validate(
-            partner_id=0, validated={}, error="partner_id must be at least 1"
+            partner_id=UUID("00000000-0000-0000-0000-000000000000"), validated={}, error="partner_id must be a valid UUID"
         )
         assert error is not None
 
     def test_partner_id_negative_fails(self):
         _, error = _validate(
-            partner_id=-5, validated={}, error="partner_id must be at least 1"
+            partner_id=-5, validated={}, error="partner_id must be a valid UUID"
         )
         assert error is not None
 
     def test_partner_id_string_fails(self):
         _, error = _validate(
-            partner_id="abc", validated={}, error="partner_id must be an integer"
+            partner_id="abc", validated={}, error="partner_id must be a valid UUID"
         )
         assert error is not None
 
     def test_partner_id_one_passes(self):
-        validated, error = _validate(partner_id=1)
+        validated, error = _validate(partner_id= UUID("11111111-1111-1111-1111-111111111111"))
         assert error is None
-        assert validated["partner_id"] == 1
+        assert validated["partner_id"] == UUID("11111111-1111-1111-1111-111111111111")
 
     def test_partner_id_large_valid_value_passes(self):
-        validated, error = _validate(partner_id=2_147_483_647)
-        assert error is None
+        _, error = _validate(
+            partner_id=2_147_483_647, validated={}, error="partner_id must be a valid UUID"
+        )
+        assert error is not None
 
     # ── granted_days ──────────────────────────────────────────────────────────
 
@@ -118,7 +122,7 @@ class TestGrantGraceRequestValidatePayload:
     def test_granted_days_one_passes(self):
         validated, error = _validate(
             granted_days=1,
-            validated={"partner_id": 10, "granted_days": 1, "remark": "r"},
+            validated={"partner_id": UUID("10101010-1010-1010-1010-101010101010"), "granted_days": 1, "remark": "r"},
         )
         assert error is None
         assert validated["granted_days"] == 1
@@ -213,8 +217,8 @@ class TestGraceResponse:
 
     def _minimal(self, **overrides):
         defaults = dict(
-            grace_id=1,
-            partner_id=10,
+            grace_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="console",
             granted_days=7,
             attempt_number=1,
@@ -228,8 +232,8 @@ class TestGraceResponse:
 
     def test_all_required_fields_accepted(self):
         resp = self._minimal()
-        assert resp.grace_id == 1
-        assert resp.partner_id == 10
+        assert resp.grace_id== UUID("11111111-1111-1111-1111-111111111111")
+        assert resp.partner_id== UUID("10101010-1010-1010-1010-101010101010")
         assert resp.service_name == "console"
         assert resp.granted_days == 7
         assert resp.attempt_number == 1
@@ -254,16 +258,16 @@ class TestGraceResponse:
             remark="special reason",
             consumed_days=3,
             settled_at=NOW_MS + 3 * 86_400_000,
-            settled_by_order_id=42,
-            created_by=99,
+            settled_by_order_id= UUID("42424242-4242-4242-4242-424242424242"),
+            created_by= UUID("99999999-9999-9999-9999-999999999999"),
             created_at=NOW_MS,
             granted_by_name="Alice",
         )
         assert resp.remark == "special reason"
         assert resp.consumed_days == 3
         assert resp.settled_at == NOW_MS + 3 * 86_400_000
-        assert resp.settled_by_order_id == 42
-        assert resp.created_by == 99
+        assert resp.settled_by_order_id== UUID("42424242-4242-4242-4242-424242424242")
+        assert resp.created_by== UUID("99999999-9999-9999-9999-999999999999")
         assert resp.granted_by_name == "Alice"
 
     # ── status values ─────────────────────────────────────────────────────────
@@ -283,8 +287,8 @@ class TestGraceResponse:
         assert isinstance(resp.end_date, int)
 
     def test_grace_id_is_integer(self):
-        resp = self._minimal(grace_id=999)
-        assert resp.grace_id == 999
+        resp = self._minimal(grace_id= UUID("99999999-9999-9999-9999-999999999999"))
+        assert resp.grace_id== UUID("99999999-9999-9999-9999-999999999999")
 
     # ── model serialisation ───────────────────────────────────────────────────
 
@@ -320,7 +324,7 @@ class TestGraceStatusResponse:
 
     def _minimal(self, **overrides):
         defaults = dict(
-            partner_id=10,
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="console",
             has_active_grace=False,
             total_attempts_used=0,
@@ -333,7 +337,7 @@ class TestGraceStatusResponse:
 
     def test_basic_structure_no_active_grace(self):
         resp = self._minimal()
-        assert resp.partner_id == 10
+        assert resp.partner_id== UUID("10101010-1010-1010-1010-101010101010")
         assert resp.service_name == "console"
         assert resp.has_active_grace is False
         assert resp.current_grace is None
@@ -354,8 +358,8 @@ class TestGraceStatusResponse:
 
     def test_with_current_grace_nested(self):
         grace_resp = GraceResponse(
-            grace_id=1,
-            partner_id=10,
+            grace_id= UUID("11111111-1111-1111-1111-111111111111"),
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="console",
             granted_days=7,
             attempt_number=1,
@@ -371,7 +375,7 @@ class TestGraceStatusResponse:
         )
         assert resp.has_active_grace is True
         assert resp.current_grace is not None
-        assert resp.current_grace.grace_id == 1
+        assert resp.current_grace.grace_id== UUID("11111111-1111-1111-1111-111111111111")
         assert resp.current_grace.service_name == "console"
 
     # ── numeric boundaries ────────────────────────────────────────────────────
@@ -392,11 +396,11 @@ class TestGraceStatusResponse:
 
     def test_created_by_and_granted_by_name_accepted(self):
         resp = self._minimal(
-            created_by=99,
+            created_by= UUID("99999999-9999-9999-9999-999999999999"),
             created_at=NOW_MS,
             granted_by_name="Alice",
         )
-        assert resp.created_by == 99
+        assert resp.created_by== UUID("99999999-9999-9999-9999-999999999999")
         assert resp.created_at == NOW_MS
         assert resp.granted_by_name == "Alice"
 
@@ -421,8 +425,8 @@ class TestGraceStatusResponse:
 
     def test_model_dump_with_nested_grace_serialises_correctly(self):
         grace_resp = GraceResponse(
-            grace_id=2,
-            partner_id=10,
+            grace_id= UUID("22222222-2222-2222-2222-222222222222"),
+            partner_id= UUID("10101010-1010-1010-1010-101010101010"),
             service_name="boards",
             granted_days=3,
             attempt_number=1,
@@ -433,5 +437,5 @@ class TestGraceStatusResponse:
         )
         resp = self._minimal(has_active_grace=True, current_grace=grace_resp)
         dumped = resp.model_dump()
-        assert dumped["current_grace"]["grace_id"] == 2
+        assert dumped["current_grace"]["grace_id"] == UUID("22222222-2222-2222-2222-222222222222")
         assert dumped["current_grace"]["consumed_days"] == 3

@@ -31,7 +31,6 @@ class RoleActionFlagKeys:
     CAN_ASSUME_USER: str = "can_assume_user"
     CAN_VIEW_PLANS: str = "can_view_plans"
     CAN_VIEW_ORDER_HISTORY: str = "can_view_order_history"
-    CAN_EDIT_BABBLER_PRICING: str = "can_edit_babbler_pricing"
     CAN_VIEW_API_ADMIN: str = "can_view_api_admin"
 
 
@@ -40,6 +39,4 @@ class PartnerDashboardCardsAttributes:
     LAST_WEEK_PARTNERS: str = "Last 7 Days Partners"
     PARTNERS_MORE_THAN_FIFTY_LICENSES: str = "Partners > 50 Licenses"
     PARTNERS_USING_HOLLAR: str = "Partners Using Hollar"
-    PARTNERS_USING_BABLAR: str = "Partners Using Babbler"
-    PARTNERS_USING_MAGLO: str = "Partners Using Maglo"
     INCOMPLETE_REGISTRATIONS: str = "Incomplete Registrations"

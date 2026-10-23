@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -14,7 +15,6 @@ from src.components.common.response import (
     SuccessResponse,
     UnauthorizedResponse,
 )
-from src.components.rbac.permission_dependency import PermissionDependency
 from src.components.rbac.permission_injector import permission_check
 from src.components.user.errors import UserNotFoundError
 from src.components.user.services import UserService
@@ -42,7 +42,7 @@ class UserConfigController:
     user_config_router = APIRouter()
 
     @user_config_router.post("/user-config", response_model=UserConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:create_user_config")
     @inject
     async def create_user_config(
         request: Request,
@@ -109,7 +109,7 @@ class UserConfigController:
             return InternalServerErrorResponse()
 
     @user_config_router.get("/user-config", response_model=UserConfigResponse)
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_config_by_key")
     @inject
     async def get_user_config_by_key(
         request: Request,
@@ -123,7 +123,7 @@ class UserConfigController:
     ):
         try:
             current_user: dict = request.state.user
-            user_id: int = current_user.get(CurrentUserMap.USER_ID)
+            user_id: UUID = current_user.get(CurrentUserMap.USER_ID)
             console_service_logger.info(
                 "Attempting to fetch user config for user id: {}".format(user_id)
             )
@@ -155,12 +155,12 @@ class UserConfigController:
     @user_config_router.patch(
         "/user-configs/{partner_id}", response_model=List[UpdateUserConfigResponse]
     )
-    @permission_check(PermissionDependency)
+    @permission_check("console:upsert_user_config")
     @inject
     async def upsert_user_config(
         request: Request,
-        partner_id: int,
-        user_ids: List[int] = Query(
+        partner_id: UUID,
+        user_ids: List[UUID] = Query(
             ..., description="List of user IDs whose configurations need to be updated."
         ),
         update_user_config_data: UserConfigData = Body(
@@ -201,11 +201,11 @@ class UserConfigController:
             return InternalServerErrorResponse()
 
     @user_config_router.get("/user-configs", response_model=List[UserConfigResponse])
-    @permission_check(PermissionDependency)
+    @permission_check("console:get_user_configs_by_user_id")
     @inject
     async def get_user_configs_by_user_id(
         request: Request,
-        user_id: Optional[int] = None,
+        user_id: Optional[UUID] = None,
         console_service_logger: ConsoleServiceLogger = Depends(
             Provide[Container.console_service_logger]
         ),

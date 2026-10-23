@@ -1,3 +1,4 @@
+from uuid import UUID
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -48,8 +49,8 @@ async def test_create_release_note_success(repository, mock_session):
         description="Test Desc",
         markup="Test Markup",   
         da_file_path="file.pdf",
-        partner_id=10,
-        user_id=1,
+        partner_id= UUID("10101010-1010-1010-1010-101010101010"),
+        user_id= UUID("11111111-1111-1111-1111-111111111111"),
         svc_name="TEST_SERVICE",
     )
 
@@ -72,8 +73,8 @@ async def test_create_release_note_exception(repository, mock_session):
             title="Test",
             description="Desc",
             da_file_path="file.pdf",
-            partner_id=1,
-            user_id=1,
+            partner_id= UUID("11111111-1111-1111-1111-111111111111"),
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             svc_name="TEST_SERVICE",
         )
 
@@ -146,7 +147,7 @@ async def test_get_all_release_notes_success(repository, mock_session):
 
     mock_session.execute.return_value = result_mock
 
-    result = await repository.get_all_release_notes(partner_id=10)
+    result = await repository.get_all_release_notes(partner_id= UUID("10101010-1010-1010-1010-101010101010"))
 
     assert result == release_notes
 
@@ -162,7 +163,7 @@ async def test_get_all_release_notes_empty(repository, mock_session):
 
     mock_session.execute.return_value = result_mock
 
-    result = await repository.get_all_release_notes(partner_id=10)
+    result = await repository.get_all_release_notes(partner_id= UUID("10101010-1010-1010-1010-101010101010"))
 
     assert result == []
 
@@ -194,12 +195,12 @@ async def test_update_release_note_success(repository, mock_session):
     updated_history = ["v1", "v2"]
 
     result = await repository.update_release_note(
-        release_note_id=1,
+        release_note_id= UUID("11111111-1111-1111-1111-111111111111"),
         title="Updated Title",
         description="Updated Desc",
         markup="Updated Markup",  
         da_file_path="new.pdf",
-        user_id=2,
+        user_id= UUID("22222222-2222-2222-2222-222222222222"),
         version_history=updated_history,
     )
 
@@ -208,7 +209,7 @@ async def test_update_release_note_success(repository, mock_session):
     assert result.markup == "Updated Markup"
     assert result.da_file_path == "new.pdf"
     assert result.version_history == updated_history
-    assert result.updated_by == 2
+    assert result.updated_by== UUID("22222222-2222-2222-2222-222222222222")
 
     mock_session.commit.assert_called_once()
     mock_session.refresh.assert_called_once()
@@ -226,12 +227,12 @@ async def test_update_release_note_not_found(repository, mock_session):
     mock_session.execute.return_value = result_mock
 
     result = await repository.update_release_note(
-        release_note_id=1,
+        release_note_id= UUID("11111111-1111-1111-1111-111111111111"),
         title="Title",
         description="Desc",
         markup="Markup",   
         da_file_path="file.pdf",
-        user_id=1,
+        user_id= UUID("11111111-1111-1111-1111-111111111111"),
         version_history=[],
     )
 
@@ -245,12 +246,12 @@ async def test_update_release_note_exception(repository, mock_session):
 
     with pytest.raises(Exception):
         await repository.update_release_note(
-            release_note_id=1,
+            release_note_id= UUID("11111111-1111-1111-1111-111111111111"),
             title="T",
             description="D",
             markup="Markup",   
             da_file_path="f.pdf",
-            user_id=1,
+            user_id= UUID("11111111-1111-1111-1111-111111111111"),
             version_history=[],
         )
 
